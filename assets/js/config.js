@@ -4,7 +4,7 @@
  */
 window.AKYLLA_CONFIG = {
   "storeName": "Akylla Store",
-  "tagline": "Eletrônicos e acessórios de informática",
+  "tagline": "Eletrônicos e Acessórios de Informática",
   "city": "Goiânia/GO",
   "whatsapp": "5562991657619",
   "whatsappDisplay": "(62) 99165-7619",
