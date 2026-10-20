@@ -119,6 +119,7 @@ test('páginas identificam o vendedor e não dependem do Google Fonts', function
   ['index.html', 'privacidade.html', 'termos.html'].forEach(function (file) {
     var html = read(file);
     assert.match(html, /CPF \d{3}\.\d{3}\.\d{3}-\d{2}/, file + ': sem identificação do vendedor');
+    assert.match(html, /CEP \d{5}-\d{3}/, file + ': sem endereço do vendedor');
     assert.doesNotMatch(html, /fonts\.(googleapis|gstatic)\.com/, file + ': ainda carrega Google Fonts');
   });
   assert.ok(fs.existsSync(path.join(ROOT, 'assets/fonts/dm-sans-latin.woff2')));

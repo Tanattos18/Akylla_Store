@@ -259,7 +259,7 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 - [ ] Revisar as fotos marcadas como **ilustrativas** e, se possível, substituir pelas fotos reais do estoque.
 - [ ] Revisar garantia, entrega, trocas e condições de pagamento.
 - [x] Identificar o vendedor (nome e CPF) no rodapé e nas páginas legais. — Feito em 20/10/2026.
-- [ ] Incluir o **endereço físico** da loja (exigido pelo Decreto 7.962/2013) e, se houver, um e-mail de contato.
+- [x] Incluir o **endereço físico** da loja (Decreto 7.962/2013). — Rua Capauam, Conj. Res. Aruanã III, CEP 74740-450 (falta o número do imóvel, se houver).
 - [ ] Adicionar links de redes sociais, se existirem (não foram inventados).
 - [ ] Configurar domínio próprio e atualizar `og:image` para uma URL absoluta.
 - [ ] Testar o QR PIX em um app bancário (sem concluir o pagamento).
