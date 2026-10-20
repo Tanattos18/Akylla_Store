@@ -1,0 +1,931 @@
+/*
+ * Akylla Store — interações da landing page
+ * Catálogo, filtros, sacola local e checkout PIX.
+ */
+(function () {
+  'use strict';
+
+  document.documentElement.classList.add('js');
+
+  var CONFIG = window.AKYLLA_CONFIG || {};
+  var PRODUCTS = window.AKYLLA_PRODUCTS || [];
+  var CATEGORIES = window.AKYLLA_CATEGORIES || [];
+  var Pix = window.AkyllaPix || {};
+  var qrFactory = window.qrcode;
+  var STORAGE_KEY = 'akylla-cart-v1';
+  var PAGE_SIZE = 8;
+
+  var productMap = new Map(PRODUCTS.map(function (product) {
+    return [product.id, product];
+  }));
+
+  var state = {
+    filter: 'todos',
+    query: '',
+    sort: 'featured',
+    visibleCount: PAGE_SIZE,
+    cart: [],
+    order: null,
+    pixPayload: ''
+  };
+
+  var els = {
+    header: document.querySelector('.site-header'),
+    productGrid: document.getElementById('productGrid'),
+    catalogEmpty: document.getElementById('catalogEmpty'),
+    resultCount: document.getElementById('resultCount'),
+    loadMore: document.getElementById('loadMore'),
+    filterRow: document.getElementById('filterRow'),
+    searchInput: document.getElementById('searchInput'),
+    searchShortcut: document.getElementById('searchShortcut'),
+    sortSelect: document.getElementById('sortSelect'),
+    cartOpen: document.getElementById('cartOpen'),
+    cartDrawer: document.getElementById('cartDrawer'),
+    cartItems: document.getElementById('cartItems'),
+    cartEmpty: document.getElementById('cartEmpty'),
+    cartFoot: document.getElementById('cartFoot'),
+    cartTotal: document.getElementById('cartTotal'),
+    cartCount: document.getElementById('cartCount'),
+    checkoutBtn: document.getElementById('checkoutBtn'),
+    emptyBrowse: document.getElementById('emptyBrowse'),
+    mobileMenu: document.getElementById('mobileMenu'),
+    menuToggle: document.getElementById('menuToggle'),
+    checkoutDialog: document.getElementById('checkoutDialog'),
+    checkoutItems: document.getElementById('checkoutItems'),
+    checkoutTotal: document.getElementById('checkoutTotal'),
+    orderId: document.getElementById('orderId'),
+    pixTotal: document.getElementById('pixTotal'),
+    pixKey: document.getElementById('pixKey'),
+    pixPayloadPreview: document.getElementById('pixPayloadPreview'),
+    pixQr: document.getElementById('pixQr'),
+    copyKey: document.getElementById('copyKey'),
+    copyPix: document.getElementById('copyPix'),
+    downloadQr: document.getElementById('downloadQr'),
+    sendProof: document.getElementById('sendProof'),
+    backToCart: document.getElementById('backToCart'),
+    toast: document.getElementById('toast'),
+    pixHolder: document.querySelector('.pix-holder strong')
+  };
+
+  var toastTimer = null;
+  var searchTimer = null;
+
+  /* ----------------------------- utilidades ----------------------------- */
+
+  function formatBRL(cents) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(Number(cents || 0) / 100);
+  }
+
+  function escapeHTML(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char];
+    });
+  }
+
+  function normalizeText(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function whatsappLink(message) {
+    var number = String(CONFIG.whatsapp || '').replace(/\D/g, '');
+    var text = message || CONFIG.whatsappMessage || '';
+    return 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
+  }
+
+  function categoryLabel(categoryId) {
+    var category = CATEGORIES.find(function (item) {
+      return item.id === categoryId;
+    });
+    return category ? category.label : categoryId;
+  }
+
+  function productById(id) {
+    return productMap.get(id) || null;
+  }
+
+  function toast(message) {
+    if (!els.toast) return;
+    els.toast.textContent = message;
+    els.toast.classList.add('is-visible');
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      els.toast.classList.remove('is-visible');
+    }, 2800);
+  }
+
+  function syncBodyLock() {
+    var hasOpenDialog = [els.mobileMenu, els.cartDrawer, els.checkoutDialog].some(function (dialog) {
+      return dialog && dialog.open;
+    });
+    document.body.classList.toggle('is-locked', hasOpenDialog);
+
+    if (els.cartOpen) {
+      els.cartOpen.setAttribute('aria-expanded', els.cartDrawer && els.cartDrawer.open ? 'true' : 'false');
+    }
+    if (els.menuToggle) {
+      els.menuToggle.setAttribute('aria-expanded', els.mobileMenu && els.mobileMenu.open ? 'true' : 'false');
+    }
+  }
+
+  function openDialog(dialog) {
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute('open', '');
+    }
+    syncBodyLock();
+  }
+
+  function closeDialog(dialog) {
+    if (!dialog) return;
+    if (dialog.open && typeof dialog.close === 'function') {
+      dialog.close();
+    } else {
+      dialog.removeAttribute('open');
+      syncBodyLock();
+    }
+  }
+
+  /* ------------------------------- sacola ------------------------------- */
+
+  function loadCart() {
+    try {
+      var raw = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]');
+      if (!Array.isArray(raw)) return [];
+
+      var seen = new Set();
+      return raw.reduce(function (cart, entry) {
+        var id = String(entry && entry.id ? entry.id : '');
+        if (!id || seen.has(id) || !productById(id)) return cart;
+        var quantity = Math.max(1, Math.min(99, parseInt(entry.qty, 10) || 1));
+        seen.add(id);
+        cart.push({ id: id, qty: quantity });
+        return cart;
+      }, []);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveCart() {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.cart));
+    } catch (error) {
+      /* Modo privado ou armazenamento indisponível: a sacola continua na sessão. */
+    }
+  }
+
+  function getCartItems() {
+    return state.cart.reduce(function (items, entry) {
+      var product = productById(entry.id);
+      if (product) items.push({ product: product, qty: entry.qty });
+      return items;
+    }, []);
+  }
+
+  function cartQuantity() {
+    return state.cart.reduce(function (total, entry) {
+      return total + entry.qty;
+    }, 0);
+  }
+
+  function cartTotal() {
+    return getCartItems().reduce(function (total, item) {
+      return total + item.product.price * item.qty;
+    }, 0);
+  }
+
+  function addToCart(id) {
+    var product = productById(id);
+    if (!product) return;
+
+    var entry = state.cart.find(function (item) {
+      return item.id === id;
+    });
+
+    if (entry) {
+      entry.qty = Math.min(99, entry.qty + 1);
+    } else {
+      state.cart.push({ id: id, qty: 1 });
+    }
+
+    saveCart();
+    renderCart();
+    toast(product.shortName + ' adicionado à sacola.');
+  }
+
+  function changeQuantity(id, delta) {
+    var entry = state.cart.find(function (item) {
+      return item.id === id;
+    });
+    if (!entry) return;
+
+    entry.qty += delta;
+    if (entry.qty < 1) {
+      state.cart = state.cart.filter(function (item) {
+        return item.id !== id;
+      });
+    } else {
+      entry.qty = Math.min(99, entry.qty);
+    }
+
+    saveCart();
+    renderCart();
+  }
+
+  function removeFromCart(id) {
+    var product = productById(id);
+    state.cart = state.cart.filter(function (item) {
+      return item.id !== id;
+    });
+    saveCart();
+    renderCart();
+    if (product) toast(product.shortName + ' removido da sacola.');
+  }
+
+  function renderCart() {
+    var items = getCartItems();
+    var quantity = cartQuantity();
+    var total = cartTotal();
+    var isEmpty = items.length === 0;
+
+    if (els.cartCount) {
+      els.cartCount.textContent = String(quantity);
+      els.cartCount.setAttribute('aria-label', quantity + (quantity === 1 ? ' item no carrinho' : ' itens no carrinho'));
+    }
+
+    if (els.cartTotal) els.cartTotal.textContent = formatBRL(total);
+    if (els.cartFoot) els.cartFoot.hidden = isEmpty;
+    if (els.cartEmpty) els.cartEmpty.hidden = !isEmpty;
+    if (els.cartItems) els.cartItems.hidden = isEmpty;
+
+    if (!els.cartItems) return;
+
+    if (isEmpty) {
+      els.cartItems.innerHTML = '';
+      return;
+    }
+
+    els.cartItems.innerHTML = items.map(function (item, index) {
+      var product = item.product;
+      var lineTotal = product.price * item.qty;
+      return [
+        '<article class="cart-item" data-id="' + escapeHTML(product.id) + '">',
+        '  <div class="cart-thumb visual--' + escapeHTML(product.visual) + '" aria-hidden="true">',
+        '    <svg viewBox="0 0 64 64"><use href="#icon-' + escapeHTML(product.visual) + '"></use></svg>',
+        '  </div>',
+        '  <div class="cart-item-main">',
+        '    <h3>' + escapeHTML(product.shortName) + '</h3>',
+        '    <p class="cart-item-code">Cód. ' + escapeHTML(product.code) + ' • ' + escapeHTML(product.brand) + '</p>',
+        '    <div class="cart-item-controls">',
+        '      <div class="qty-control" aria-label="Quantidade de ' + escapeHTML(product.shortName) + '">',
+        '        <button type="button" data-qty="-1" data-id="' + escapeHTML(product.id) + '" aria-label="Diminuir quantidade"' + (item.qty <= 1 ? ' disabled' : '') + '>',
+        '          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-minus"></use></svg>',
+        '        </button>',
+        '        <span class="qty-value">' + item.qty + '</span>',
+        '        <button type="button" data-qty="1" data-id="' + escapeHTML(product.id) + '" aria-label="Aumentar quantidade"' + (item.qty >= 99 ? ' disabled' : '') + '>',
+        '          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
+        '        </button>',
+        '      </div>',
+        '      <button class="remove-item" type="button" data-remove="' + escapeHTML(product.id) + '" aria-label="Remover ' + escapeHTML(product.shortName) + ' da sacola">',
+        '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-trash"></use></svg>',
+        '      </button>',
+        '    </div>',
+        '  </div>',
+        '  <strong class="cart-item-price">' + formatBRL(lineTotal) + '</strong>',
+        '</article>'
+      ].join('\n');
+    }).join('');
+
+    if (els.cartItems.firstElementChild) {
+      els.cartItems.firstElementChild.style.setProperty('--i', '0');
+    }
+  }
+
+  /* ------------------------------ catálogo ------------------------------ */
+
+  function filteredProducts() {
+    var query = normalizeText(state.query.trim());
+    var list = PRODUCTS.filter(function (product) {
+      if (state.filter !== 'todos' && product.category !== state.filter) return false;
+      if (!query) return true;
+
+      var haystack = normalizeText([
+        product.name,
+        product.shortName,
+        product.brand,
+        product.model,
+        product.code,
+        product.description,
+        categoryLabel(product.category)
+      ].join(' '));
+
+      return haystack.indexOf(query) !== -1;
+    });
+
+    if (state.sort === 'price-asc') {
+      list.sort(function (a, b) { return a.price - b.price; });
+    } else if (state.sort === 'price-desc') {
+      list.sort(function (a, b) { return b.price - a.price; });
+    } else if (state.sort === 'name-asc') {
+      list.sort(function (a, b) {
+        return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+      });
+    }
+
+    return list;
+  }
+
+  function productCard(product, index) {
+    var category = categoryLabel(product.category);
+    return [
+      '<article class="product-card" style="--i:' + index + '">',
+      '  <div class="product-media visual--' + escapeHTML(product.visual) + '">',
+      '    <span class="product-brand">' + escapeHTML(product.brand) + '</span>',
+      '    <svg class="product-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#icon-' + escapeHTML(product.visual) + '"></use></svg>',
+      '    <span class="product-model">' + escapeHTML(product.model) + '</span>',
+      '  </div>',
+      '  <div class="product-body">',
+      '    <p class="product-kicker">' + escapeHTML(category) + ' • Cód. ' + escapeHTML(product.code) + '</p>',
+      '    <h3>' + escapeHTML(product.name) + '</h3>',
+      '    <p class="product-desc">' + escapeHTML(product.description) + '</p>',
+      '    <div class="product-bottom">',
+      '      <span class="price-wrap">',
+      '        <span class="price-label">à vista no PIX</span>',
+      '        <span class="price">' + formatBRL(product.price) + '</span>',
+      '      </span>',
+      '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="Adicionar ' + escapeHTML(product.name) + ' à sacola">',
+      '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
+      '      </button>',
+      '    </div>',
+      '  </div>',
+      '</article>'
+    ].join('\n');
+  }
+
+  function renderProducts() {
+    if (!els.productGrid) return;
+
+    var list = filteredProducts();
+    var visible = list.slice(0, state.visibleCount);
+
+    els.productGrid.innerHTML = visible.map(productCard).join('');
+
+    if (els.catalogEmpty) els.catalogEmpty.hidden = list.length !== 0;
+    if (els.loadMore) els.loadMore.hidden = list.length <= visible.length;
+
+    if (els.resultCount) {
+      if (!list.length) {
+        els.resultCount.textContent = 'Nenhum produto encontrado.';
+      } else {
+        var filterSuffix = state.filter === 'todos' ? '' : ' em ' + categoryLabel(state.filter);
+        if (visible.length < list.length) {
+          els.resultCount.textContent = 'Mostrando ' + visible.length + ' de ' + list.length + ' produtos' + filterSuffix + '.';
+        } else {
+          els.resultCount.textContent = list.length + (list.length === 1 ? ' produto' : ' produtos') + filterSuffix + '.';
+        }
+      }
+    }
+  }
+
+  function setFilter(filterId, shouldScroll) {
+    var exists = CATEGORIES.some(function (category) {
+      return category.id === filterId;
+    });
+    if (!exists) return;
+
+    state.filter = filterId;
+    state.visibleCount = PAGE_SIZE;
+
+    if (els.filterRow) {
+      Array.prototype.forEach.call(els.filterRow.querySelectorAll('[data-filter]'), function (chip) {
+        var active = chip.dataset.filter === filterId;
+        chip.classList.toggle('is-active', active);
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+
+    renderProducts();
+
+    if (shouldScroll) {
+      var target = document.getElementById('produtos');
+      if (target) {
+        window.setTimeout(function () {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 30);
+      }
+    }
+  }
+
+  /* ------------------------------- checkout ----------------------------- */
+
+  function createOrderId() {
+    return 'AK-' + Date.now().toString(36).slice(-6).toUpperCase();
+  }
+
+  function createTxid() {
+    return ('AK' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5))
+      .replace(/[^A-Za-z0-9]/g, '')
+      .toUpperCase()
+      .slice(0, 25);
+  }
+
+  function buildProofMessage(order) {
+    var lines = order.items.map(function (item) {
+      return '• ' + item.qty + 'x ' + item.product.shortName + ' — ' + formatBRL(item.product.price * item.qty);
+    });
+
+    return [
+      'Olá! Fiz um pedido na Akylla Store.',
+      '',
+      'Pedido: ' + order.id,
+      '',
+      lines.join('\n'),
+      '',
+      'Total: ' + formatBRL(order.total),
+      '',
+      'Vou enviar o comprovante do PIX agora.'
+    ].join('\n');
+  }
+
+  function renderQrCode(payload) {
+    if (!els.pixQr) return;
+
+    if (typeof qrFactory !== 'function') {
+      els.pixQr.innerHTML = '<p class="pix-qr-fallback">QR indisponível. Use o código copia e cola.</p>';
+      return;
+    }
+
+    try {
+      var qr = qrFactory(0, 'M');
+      qr.addData(payload);
+      qr.make();
+      els.pixQr.innerHTML = qr.createSvgTag({
+        cellSize: 4,
+        margin: 4,
+        scalable: true,
+        alt: { text: 'QR Code PIX do pedido ' + (state.order ? state.order.id : '') },
+        title: { text: 'PIX Akylla Store' }
+      });
+    } catch (error) {
+      els.pixQr.innerHTML = '<p class="pix-qr-fallback">Não foi possível gerar o QR. Use o código copia e cola.</p>';
+      console.error('Falha ao gerar o QR Code PIX:', error);
+    }
+  }
+
+  function renderCheckout() {
+    var order = state.order;
+    if (!order) return;
+
+    if (els.orderId) els.orderId.textContent = order.id;
+    if (els.pixTotal) els.pixTotal.textContent = formatBRL(order.total);
+    if (els.checkoutTotal) els.checkoutTotal.textContent = formatBRL(order.total);
+
+    if (els.checkoutItems) {
+      els.checkoutItems.innerHTML = order.items.map(function (item) {
+        return [
+          '<li class="summary-item">',
+          '  <div>',
+          '    <p class="summary-item-name">' + escapeHTML(item.product.shortName) + '</p>',
+          '    <p class="summary-item-meta">' + item.qty + 'x • ' + formatBRL(item.product.price) + ' cada</p>',
+          '  </div>',
+          '  <span class="summary-item-price">' + formatBRL(item.product.price * item.qty) + '</span>',
+          '</li>'
+        ].join('\n');
+      }).join('');
+    }
+
+    if (els.sendProof) {
+      els.sendProof.href = whatsappLink(buildProofMessage(order));
+    }
+
+    if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
+    if (els.pixHolder) els.pixHolder.textContent = CONFIG.pixHolder || '';
+
+    try {
+      state.pixPayload = Pix.buildPixPayload({
+        key: CONFIG.pixKey,
+        merchantName: CONFIG.pixMerchantName,
+        city: CONFIG.pixCity,
+        amountCents: order.total,
+        txid: order.txid,
+        description: 'Pedido ' + order.id
+      });
+
+      if (els.pixPayloadPreview) els.pixPayloadPreview.textContent = state.pixPayload;
+      renderQrCode(state.pixPayload);
+    } catch (error) {
+      state.pixPayload = '';
+      if (els.pixPayloadPreview) els.pixPayloadPreview.textContent = 'Não foi possível gerar o código PIX.';
+      if (els.pixQr) {
+        els.pixQr.innerHTML = '<p class="pix-qr-fallback">Use a chave PIX ao lado e informe o valor do pedido.</p>';
+      }
+      console.error('Falha ao montar o payload PIX:', error);
+    }
+  }
+
+  function openCheckout() {
+    var items = getCartItems();
+    if (!items.length) {
+      toast('Sua sacola está vazia. Escolha um produto primeiro.');
+      return;
+    }
+
+    state.order = {
+      id: createOrderId(),
+      txid: createTxid(),
+      items: items,
+      total: items.reduce(function (total, item) {
+        return total + item.product.price * item.qty;
+      }, 0)
+    };
+
+    renderCheckout();
+
+    closeDialog(els.cartDrawer);
+    openDialog(els.checkoutDialog);
+
+    if (els.checkoutDialog) {
+      els.checkoutDialog.scrollTop = 0;
+    }
+  }
+
+  /* ------------------------------ clipboard ----------------------------- */
+
+  function fallbackCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.top = '-9999px';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+
+    var copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch (error) {
+      copied = false;
+    }
+
+    area.remove();
+    return copied;
+  }
+
+  function copyText(text, successMessage) {
+    if (!text) {
+      toast('O código ainda não foi gerado.');
+      return;
+    }
+
+    var fallback = function () {
+      var copied = fallbackCopy(text);
+      toast(copied ? successMessage : 'Não foi possível copiar. Selecione o código manualmente.');
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast(successMessage);
+      }).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  /* ------------------------------- download ----------------------------- */
+
+  function triggerDownload(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 2000);
+  }
+
+  function downloadQrCode() {
+    var svg = els.pixQr ? els.pixQr.querySelector('svg') : null;
+    if (!svg) {
+      toast('O QR Code ainda não está disponível.');
+      return;
+    }
+
+    var serialized = new XMLSerializer().serializeToString(svg);
+    var svgBlob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
+    var svgUrl = URL.createObjectURL(svgBlob);
+    var filenameBase = 'akylla-pix-' + (state.order ? state.order.id : 'pedido');
+
+    var image = new Image();
+    image.onload = function () {
+      var size = 800;
+      var canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      var context = canvas.getContext('2d');
+
+      if (!context) {
+        URL.revokeObjectURL(svgUrl);
+        triggerDownload(svgBlob, filenameBase + '.svg');
+        return;
+      }
+
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, size, size);
+      context.drawImage(image, 0, 0, size, size);
+      URL.revokeObjectURL(svgUrl);
+
+      canvas.toBlob(function (pngBlob) {
+        if (pngBlob) {
+          triggerDownload(pngBlob, filenameBase + '.png');
+          toast('QR Code baixado em PNG.');
+        } else {
+          triggerDownload(svgBlob, filenameBase + '.svg');
+        }
+      }, 'image/png');
+    };
+
+    image.onerror = function () {
+      URL.revokeObjectURL(svgUrl);
+      triggerDownload(svgBlob, filenameBase + '.svg');
+      toast('QR Code baixado em SVG.');
+    };
+
+    image.src = svgUrl;
+  }
+
+  /* -------------------------------- eventos ----------------------------- */
+
+  function setupCatalog() {
+    if (els.searchInput) {
+      els.searchInput.addEventListener('input', function () {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(function () {
+          state.query = els.searchInput.value;
+          state.visibleCount = PAGE_SIZE;
+          renderProducts();
+        }, 140);
+      });
+    }
+
+    if (els.sortSelect) {
+      els.sortSelect.addEventListener('change', function () {
+        state.sort = els.sortSelect.value;
+        state.visibleCount = PAGE_SIZE;
+        renderProducts();
+      });
+    }
+
+    if (els.filterRow) {
+      els.filterRow.addEventListener('click', function (event) {
+        var chip = event.target.closest('[data-filter]');
+        if (!chip) return;
+        setFilter(chip.dataset.filter, false);
+      });
+    }
+
+    if (els.loadMore) {
+      els.loadMore.addEventListener('click', function () {
+        state.visibleCount += PAGE_SIZE;
+        renderProducts();
+
+        if (els.loadMore.hidden === false) {
+          var focusTarget = els.productGrid.querySelector('.product-card:nth-child(' + (state.visibleCount - PAGE_SIZE + 1) + ')');
+          if (focusTarget) {
+            focusTarget.setAttribute('tabindex', '-1');
+            focusTarget.focus({ preventScroll: true });
+          }
+        }
+      });
+    }
+
+    if (els.productGrid) {
+      els.productGrid.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-add]');
+        if (!button) return;
+
+        addToCart(button.dataset.add);
+
+        var original = button.innerHTML;
+        button.classList.add('is-added');
+        button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-check"></use></svg>';
+        window.setTimeout(function () {
+          if (!button.isConnected) return;
+          button.classList.remove('is-added');
+          button.innerHTML = original;
+        }, 1100);
+      });
+    }
+
+    var filterLinks = document.querySelectorAll('[data-filter-link]');
+    Array.prototype.forEach.call(filterLinks, function (link) {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        var menu = link.closest('dialog');
+        if (menu && menu.open) closeDialog(menu);
+        setFilter(link.dataset.filterLink, true);
+      });
+    });
+
+    if (els.searchShortcut) {
+      els.searchShortcut.addEventListener('click', function () {
+        var target = document.getElementById('produtos');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(function () {
+          if (els.searchInput) els.searchInput.focus({ preventScroll: true });
+        }, 420);
+      });
+    }
+  }
+
+  function setupCart() {
+    if (els.cartOpen) {
+      els.cartOpen.addEventListener('click', function () {
+        renderCart();
+        openDialog(els.cartDrawer);
+      });
+    }
+
+    if (els.cartItems) {
+      els.cartItems.addEventListener('click', function (event) {
+        var quantityButton = event.target.closest('[data-qty]');
+        if (quantityButton) {
+          changeQuantity(quantityButton.dataset.id, Number(quantityButton.dataset.qty));
+          return;
+        }
+
+        var removeButton = event.target.closest('[data-remove]');
+        if (removeButton) {
+          removeFromCart(removeButton.dataset.remove);
+        }
+      });
+    }
+
+    if (els.checkoutBtn) {
+      els.checkoutBtn.addEventListener('click', openCheckout);
+    }
+
+    if (els.emptyBrowse) {
+      els.emptyBrowse.addEventListener('click', function () {
+        closeDialog(els.cartDrawer);
+        var target = document.getElementById('produtos');
+        if (target) {
+          window.setTimeout(function () {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 60);
+        }
+      });
+    }
+  }
+
+  function setupCheckout() {
+    if (els.copyKey) {
+      els.copyKey.addEventListener('click', function () {
+        copyText(CONFIG.pixKey, 'Chave PIX copiada.');
+      });
+    }
+
+    if (els.copyPix) {
+      els.copyPix.addEventListener('click', function () {
+        copyText(state.pixPayload, 'Código PIX copiado. Cole no app do seu banco.');
+      });
+    }
+
+    if (els.downloadQr) {
+      els.downloadQr.addEventListener('click', downloadQrCode);
+    }
+
+    if (els.backToCart) {
+      els.backToCart.addEventListener('click', function () {
+        closeDialog(els.checkoutDialog);
+        renderCart();
+        openDialog(els.cartDrawer);
+      });
+    }
+  }
+
+  function setupDialogs() {
+    if (els.menuToggle) {
+      els.menuToggle.addEventListener('click', function () {
+        openDialog(els.mobileMenu);
+      });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('dialog'), function (dialog) {
+      dialog.addEventListener('click', function (event) {
+        if (event.target === dialog) closeDialog(dialog);
+      });
+      dialog.addEventListener('close', syncBodyLock);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-close-dialog]'), function (button) {
+      button.addEventListener('click', function () {
+        var dialog = document.getElementById(button.dataset.closeDialog);
+        closeDialog(dialog);
+      });
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-close-mobile]'), function (link) {
+      link.addEventListener('click', function () {
+        if (els.mobileMenu && els.mobileMenu.open) closeDialog(els.mobileMenu);
+      });
+    });
+  }
+
+  function setupReveal() {
+    var elements = document.querySelectorAll([
+      '.section-head',
+      '.about-copy',
+      '.about-stats',
+      '.step-card',
+      '.policy-card',
+      '.faq-intro',
+      '.faq-list',
+      '.cta-final-copy'
+    ].join(','));
+
+    Array.prototype.forEach.call(elements, function (element) {
+      element.classList.add('reveal');
+    });
+
+    if (!('IntersectionObserver' in window)) {
+      Array.prototype.forEach.call(elements, function (element) {
+        element.classList.add('is-visible');
+      });
+      return;
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 14% 0px' });
+
+    Array.prototype.forEach.call(elements, function (element) {
+      observer.observe(element);
+    });
+  }
+
+  function setupGlobalLinks() {
+    var defaultLink = whatsappLink(CONFIG.whatsappMessage);
+    Array.prototype.forEach.call(document.querySelectorAll('a[data-whatsapp]'), function (link) {
+      link.href = defaultLink;
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-year]'), function (element) {
+      element.textContent = String(CONFIG.year || new Date().getFullYear());
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-whatsapp-display]'), function (element) {
+      element.textContent = CONFIG.whatsappDisplay || '';
+    });
+
+    if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
+    if (els.pixHolder) els.pixHolder.textContent = CONFIG.pixHolder || '';
+  }
+
+  /* --------------------------------- init ------------------------------- */
+
+  state.cart = loadCart();
+  setupGlobalLinks();
+  renderProducts();
+  renderCart();
+  setupCatalog();
+  setupCart();
+  setupCheckout();
+  setupDialogs();
+  setupReveal();
+
+  if (els.header) {
+    var updateHeader = function () {
+      els.header.classList.toggle('is-scrolled', window.scrollY > 8);
+    };
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+  }
+
+  window.addEventListener('storage', function (event) {
+    if (event.key !== STORAGE_KEY) return;
+    state.cart = loadCart();
+    renderCart();
+  });
+})();

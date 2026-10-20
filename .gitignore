@@ -1,0 +1,27 @@
+# Sistema
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependências e artefatos
+node_modules/
+dist/
+build/
+*.log
+
+# Ambiente
+.env
+.env.*
+!.env.example
+
+# Documentos de referência com dados pessoais
+# Não versionar o cupom, a chave PIX em TXT nem a imagem original.
+Cupon_Fiscal_Itens.pdf
+Chave*PIX.txt
+WhatsApp Image*.jpeg
