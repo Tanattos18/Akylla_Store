@@ -22,7 +22,8 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 
 - Hero section com foto real da vitrine, cards flutuantes e CTAs.
 - Catálogo com 22 produtos extraídos do cupom fiscal de 19/10/2026.
-- Busca por nome, modelo, marca ou código.
+- Fotos dos produtos, ficha técnica e modal de detalhes com resumo, especificações e adição à sacola.
+- Busca por nome, modelo, marca, código ou especificação.
 - Filtros por categoria e ordenação por preço/nome.
 - Paginação progressiva ("Ver mais produtos").
 - Sacola persistida em `localStorage`, com quantidade, remoção e total.
@@ -43,7 +44,7 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 - A confirmação do pedido é **manual**, após o envio do comprovante no WhatsApp.
 - A sacola fica apenas no navegador do cliente (`localStorage`).
 - Para confirmação automática, painel administrativo, controle de estoque ou emissão de pedidos, será necessário integrar um backend e um PSP (Mercado Pago, Efí, Asaas, PagSeguro etc.).
-- As imagens dos produtos no catálogo são **ilustrações SVG** por categoria. A foto da vitrine é real. Há um aviso disso na página.
+- As fotos dos produtos são **imagens de referência** de fabricantes, distribuidores e lojas parceiras. Itens sem foto exata do modelo/versão usam uma imagem representativa da mesma linha e recebem o selo **“Imagem ilustrativa”** no card e no modal. Cores, versões e disponibilidade devem ser confirmadas pelo WhatsApp antes da compra.
 
 ---
 
@@ -58,7 +59,8 @@ Akylla_Store/
 │   ├── img/
 │   │   ├── favicon.svg
 │   │   ├── hero-loja.jpg
-│   │   └── og-cover.jpg
+│   │   ├── og-cover.jpg
+│   │   └── products/      # 22 fotos WebP 700×700 (produtos)
 │   ├── js/
 │   │   ├── app.js       # catálogo, sacola, filtros, checkout e diálogos
 │   │   ├── config.js    # WhatsApp, PIX, textos institucionais e ano
@@ -154,6 +156,21 @@ window.AKYLLA_CONFIG = {
 
 Os textos de garantia, entrega e pagamento estão no `index.html` (seções `#garantia`, `#faq` e rodapé) e em `config.js`. Revise-os antes de publicar.
 
+### Fotos e informações dos produtos
+
+As fotos ficam em `assets/img/products/` e foram padronizadas em **WebP 700×700**, com fundo claro e recorte para o produto. As fontes são páginas de fabricantes, distribuidores e lojas brasileiras (Basike, Inova, Inovar, Mercado Livre e parceiros).
+
+- `image`: caminho da foto exibida no card.
+- `imageAlt`: descrição textual da foto para acessibilidade.
+- `illustrative: true`: marca o produto com o aviso **“Imagem ilustrativa”** no card e no modal. Use quando a foto não for exatamente do modelo/versão vendida.
+- `summary`: texto curto do card.
+- `description`: texto completo do modal.
+- `specs`: lista de especificações exibida no modal.
+
+Para substituir uma foto, gere um WebP quadrado (recomendado: 700×700) e mantenha o mesmo nome de arquivo, ou atualize o campo `image` do produto. Se a foto for exata, remova `illustrative: true`. Se for representativa, mantenha o aviso.
+
+> As imagens são usadas como referência comercial. Marcas, modelos e direitos das fotos pertencem aos respectivos titulares. Se alguma imagem não puder ser utilizada, substitua o arquivo ou entre em contato com o responsável pela loja.
+
 ---
 
 ## PIX: como funciona
@@ -212,7 +229,7 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 - [ ] Confirmar o telefone/WhatsApp da loja em `config.js` (o número usado veio do cupom).
 - [ ] Confirmar a chave PIX, o nome do recebedor e a cidade.
 - [ ] Revisar os 22 preços e a disponibilidade dos produtos.
-- [ ] Substituir as ilustrações por fotos reais, se desejar.
+- [ ] Revisar as fotos marcadas como **ilustrativas** e, se possível, substituir pelas fotos reais do estoque.
 - [ ] Revisar garantia, entrega, trocas e condições de pagamento.
 - [ ] Adicionar **CNPJ/CPF e endereço da Akylla Store** no rodapé. O CNPJ e o endereço que aparecem no topo do cupom são do **emitente/fornecedor**, não da Akylla; por isso não foram publicados.
 - [ ] Adicionar links de redes sociais, se existirem (não foram inventados).
@@ -263,10 +280,11 @@ Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages qua
 ## Créditos e licenças
 
 - **Foto da vitrine:** imagem fornecida pela loja.
-- **Ilustrações de produto:** SVGs originais criados para este projeto.
+- **Fotos dos produtos:** imagens de referência de fabricantes, distribuidores e lojas parceiras (Basike, Inova, Inovar, Mercado Livre e outros). Direitos reservados aos respectivos titulares; itens sem foto exata estão sinalizados como **“Imagem ilustrativa”**.
+- **Ícones e fallback de produto:** SVGs originais criados para este projeto.
 - **QR Code:** [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) de Kazuhiko Arase, licença MIT (cabeçalho original preservado em `assets/vendor/qrcode.js`).
 - **Fontes:** Sora e DM Sans, via Google Fonts (carregadas por CDN; há fallback para fontes do sistema).
-- **Ícones:** SVGs originais no sprite inline do `index.html`.
+- **Ícones da interface:** SVGs originais no sprite inline do `index.html`.
 
 ---
 

@@ -172,7 +172,7 @@
     </symbol>
   </svg>
 
-  <div class="announcement">
+  <aside class="announcement" aria-label="Informações da loja">
     <div class="container announcement-inner">
       <span class="announcement-item"><span class="pulse-dot" aria-hidden="true"></span> PIX à vista</span>
       <span class="announcement-sep" aria-hidden="true"></span>
@@ -180,7 +180,7 @@
       <span class="announcement-sep hide-sm" aria-hidden="true"></span>
       <span class="announcement-item hide-sm">Atendimento em Goiânia/GO</span>
     </div>
-  </div>
+  </aside>
 
   <header class="site-header" id="topo">
     <div class="container header-inner">
@@ -661,6 +661,48 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
       </button>
       <button class="btn btn-ghost-dark btn-block" type="button" data-close-dialog="cartDrawer">Continuar comprando</button>
+    </div>
+  </dialog>
+
+  <!-- Detalhes do produto -->
+  <dialog class="product-dialog" id="productDialog" aria-labelledby="productDialogName">
+    <div class="product-dialog-shell">
+      <button class="product-dialog-close" type="button" data-close-dialog="productDialog" aria-label="Fechar detalhes do produto">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-close"></use></svg>
+      </button>
+
+      <div class="product-dialog-media" id="productDialogMedia" data-media>
+        <img class="product-dialog-photo" id="productDialogImg" alt="" width="700" height="700" decoding="async">
+        <svg class="product-dialog-icon" id="productDialogFallback" viewBox="0 0 64 64" aria-hidden="true"><use href="#icon-watch"></use></svg>
+        <span class="media-note product-dialog-note" id="productDialogNote" hidden>Imagem ilustrativa</span>
+      </div>
+
+      <div class="product-dialog-body">
+        <p class="product-kicker" id="productDialogBrand"></p>
+        <h2 id="productDialogName"></h2>
+        <p class="product-dialog-code" id="productDialogCode"></p>
+        <p class="product-dialog-desc" id="productDialogDesc"></p>
+
+        <dl class="spec-list" id="productDialogSpecs"></dl>
+
+        <div class="product-dialog-buy">
+          <span class="price-wrap">
+            <span class="price-label">à vista no PIX</span>
+            <span class="price" id="productDialogPrice">R$ 0,00</span>
+          </span>
+          <button class="btn btn-primary" type="button" id="productDialogAdd">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-bag"></use></svg>
+            Adicionar à sacola
+          </button>
+        </div>
+
+        <a class="product-dialog-wa" id="productDialogWa" href="#" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
+          Tirar dúvida no WhatsApp
+        </a>
+
+        <p class="product-dialog-fine">Fotos e especificações de referência. Consulte a disponibilidade e as cores pelo WhatsApp antes de finalizar.</p>
+      </div>
     </div>
   </dialog>
 

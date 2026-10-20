@@ -50,6 +50,19 @@
     emptyBrowse: document.getElementById('emptyBrowse'),
     mobileMenu: document.getElementById('mobileMenu'),
     menuToggle: document.getElementById('menuToggle'),
+    productDialog: document.getElementById('productDialog'),
+    productDialogMedia: document.getElementById('productDialogMedia'),
+    productDialogImg: document.getElementById('productDialogImg'),
+    productDialogFallback: document.getElementById('productDialogFallback'),
+    productDialogBrand: document.getElementById('productDialogBrand'),
+    productDialogName: document.getElementById('productDialogName'),
+    productDialogCode: document.getElementById('productDialogCode'),
+    productDialogDesc: document.getElementById('productDialogDesc'),
+    productDialogSpecs: document.getElementById('productDialogSpecs'),
+    productDialogPrice: document.getElementById('productDialogPrice'),
+    productDialogAdd: document.getElementById('productDialogAdd'),
+    productDialogWa: document.getElementById('productDialogWa'),
+    productDialogNote: document.getElementById('productDialogNote'),
     checkoutDialog: document.getElementById('checkoutDialog'),
     checkoutItems: document.getElementById('checkoutItems'),
     checkoutTotal: document.getElementById('checkoutTotal'),
@@ -69,6 +82,7 @@
 
   var toastTimer = null;
   var searchTimer = null;
+  var activeProductId = null;
 
   /* ----------------------------- utilidades ----------------------------- */
 
@@ -115,6 +129,19 @@
     return productMap.get(id) || null;
   }
 
+  function wireImageFallback(image) {
+    if (!image) return;
+    var media = image.closest('[data-media]');
+
+    function fallback() {
+      image.hidden = true;
+      if (media) media.classList.add('is-fallback');
+    }
+
+    image.addEventListener('error', fallback);
+    if (image.complete && image.naturalWidth === 0) fallback();
+  }
+
   function toast(message) {
     if (!els.toast) return;
     els.toast.textContent = message;
@@ -126,7 +153,7 @@
   }
 
   function syncBodyLock() {
-    var hasOpenDialog = [els.mobileMenu, els.cartDrawer, els.checkoutDialog].some(function (dialog) {
+    var hasOpenDialog = [els.mobileMenu, els.cartDrawer, els.checkoutDialog, els.productDialog].some(function (dialog) {
       return dialog && dialog.open;
     });
     document.body.classList.toggle('is-locked', hasOpenDialog);
@@ -284,7 +311,8 @@
       var lineTotal = product.price * item.qty;
       return [
         '<article class="cart-item" data-id="' + escapeHTML(product.id) + '">',
-        '  <div class="cart-thumb visual--' + escapeHTML(product.visual) + '" aria-hidden="true">',
+        '  <div class="cart-thumb visual--' + escapeHTML(product.visual) + (product.image ? '' : ' is-fallback') + '" aria-hidden="true" data-media>',
+        product.image ? '    <img class="cart-thumb-photo" src="' + escapeHTML(product.image) + '" alt="" loading="lazy" decoding="async" width="700" height="700" data-photo>' : '',
         '    <svg viewBox="0 0 64 64"><use href="#icon-' + escapeHTML(product.visual) + '"></use></svg>',
         '  </div>',
         '  <div class="cart-item-main">',
@@ -310,8 +338,91 @@
       ].join('\n');
     }).join('');
 
+    Array.prototype.forEach.call(els.cartItems.querySelectorAll('img[data-photo]'), wireImageFallback);
+
     if (els.cartItems.firstElementChild) {
       els.cartItems.firstElementChild.style.setProperty('--i', '0');
+    }
+  }
+
+  /* --------------------------- detalhes do produto --------------------------- */
+
+  function renderProductDialog(product) {
+    if (!product) return;
+    activeProductId = product.id;
+
+    if (els.productDialogBrand) {
+      els.productDialogBrand.textContent = product.brand + ' • ' + categoryLabel(product.category);
+    }
+    if (els.productDialogName) els.productDialogName.textContent = product.name;
+    if (els.productDialogCode) {
+      els.productDialogCode.textContent = 'Cód. ' + product.code + ' • Modelo ' + product.model;
+    }
+    if (els.productDialogDesc) els.productDialogDesc.textContent = product.description;
+    if (els.productDialogPrice) els.productDialogPrice.textContent = formatBRL(product.price);
+
+    if (els.productDialogSpecs) {
+      els.productDialogSpecs.innerHTML = (product.specs || []).map(function (spec) {
+        return [
+          '<div class="spec-row">',
+          '  <dt>' + escapeHTML(spec.label) + '</dt>',
+          '  <dd>' + escapeHTML(spec.value) + '</dd>',
+          '</div>'
+        ].join('');
+      }).join('');
+    }
+
+    if (els.productDialogFallback) {
+      var use = els.productDialogFallback.querySelector('use');
+      if (use) use.setAttribute('href', '#icon-' + product.visual);
+    }
+
+    if (els.productDialogImg) {
+      els.productDialogImg.hidden = false;
+      els.productDialogImg.alt = product.imageAlt || product.name;
+      if (els.productDialogMedia) els.productDialogMedia.classList.remove('is-fallback');
+
+      if (product.image) {
+        els.productDialogImg.src = product.image;
+      } else {
+        els.productDialogImg.removeAttribute('src');
+        els.productDialogImg.hidden = true;
+        if (els.productDialogMedia) els.productDialogMedia.classList.add('is-fallback');
+      }
+    }
+
+    if (els.productDialogNote) els.productDialogNote.hidden = !product.illustrative;
+
+    if (els.productDialogWa) {
+      els.productDialogWa.href = whatsappLink(
+        'Olá! Tenho uma dúvida sobre ' + product.name + ' (cód. ' + product.code + ').'
+      );
+    }
+  }
+
+  function openProductDialog(id) {
+    var product = productById(id);
+    if (!product) return;
+    renderProductDialog(product);
+    openDialog(els.productDialog);
+  }
+
+  function setupProductDialog() {
+    if (!els.productDialog) return;
+
+    if (els.productDialogImg) {
+      els.productDialogImg.addEventListener('error', function () {
+        els.productDialogImg.hidden = true;
+        if (els.productDialogMedia) els.productDialogMedia.classList.add('is-fallback');
+      });
+    }
+
+    if (els.productDialogAdd) {
+      els.productDialogAdd.addEventListener('click', function () {
+        if (!activeProductId) return;
+        addToCart(activeProductId);
+        closeDialog(els.productDialog);
+      });
     }
   }
 
@@ -329,7 +440,9 @@
         product.brand,
         product.model,
         product.code,
+        product.summary,
         product.description,
+        (product.specs || []).map(function (spec) { return spec.label + ' ' + spec.value; }).join(' '),
         categoryLabel(product.category)
       ].join(' '));
 
@@ -351,23 +464,31 @@
 
   function productCard(product, index) {
     var category = categoryLabel(product.category);
+    var productName = escapeHTML(product.name);
+    var mediaLabel = 'Ver detalhes de ' + product.name + ' — ' + product.brand + ' ' + product.model + (product.illustrative ? '. Imagem ilustrativa' : '');
     return [
       '<article class="product-card" style="--i:' + index + '">',
-      '  <div class="product-media visual--' + escapeHTML(product.visual) + '">',
-      '    <span class="product-brand">' + escapeHTML(product.brand) + '</span>',
+      '  <button class="product-media visual--' + escapeHTML(product.visual) + (product.image ? '' : ' is-fallback') + '" type="button" data-view="' + escapeHTML(product.id) + '" data-media aria-label="' + escapeHTML(mediaLabel) + '">',
+      '    <span class="product-brand" aria-hidden="true">' + escapeHTML(product.brand) + '</span>',
+      product.image ? '    <img class="product-photo" src="' + escapeHTML(product.image) + '" alt="' + escapeHTML(product.imageAlt || product.name) + '" loading="lazy" decoding="async" width="700" height="700" data-photo>' : '',
       '    <svg class="product-icon" viewBox="0 0 64 64" aria-hidden="true"><use href="#icon-' + escapeHTML(product.visual) + '"></use></svg>',
-      '    <span class="product-model">' + escapeHTML(product.model) + '</span>',
-      '  </div>',
+      '    <span class="product-model" aria-hidden="true">' + escapeHTML(product.model) + '</span>',
+      product.illustrative ? '    <span class="media-note" aria-hidden="true">Imagem ilustrativa</span>' : '',
+      '  </button>',
       '  <div class="product-body">',
       '    <p class="product-kicker">' + escapeHTML(category) + ' • Cód. ' + escapeHTML(product.code) + '</p>',
-      '    <h3>' + escapeHTML(product.name) + '</h3>',
-      '    <p class="product-desc">' + escapeHTML(product.description) + '</p>',
+      '    <h3><button class="product-name" type="button" data-view="' + escapeHTML(product.id) + '">' + productName + '</button></h3>',
+      '    <p class="product-desc">' + escapeHTML(product.summary || product.description) + '</p>',
+      '    <button class="details-link" type="button" data-view="' + escapeHTML(product.id) + '">',
+      '      Ver detalhes',
+      '      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>',
+      '    </button>',
       '    <div class="product-bottom">',
       '      <span class="price-wrap">',
       '        <span class="price-label">à vista no PIX</span>',
       '        <span class="price">' + formatBRL(product.price) + '</span>',
       '      </span>',
-      '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="Adicionar ' + escapeHTML(product.name) + ' à sacola">',
+      '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="Adicionar ' + productName + ' à sacola">',
       '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
       '      </button>',
       '    </div>',
@@ -383,6 +504,7 @@
     var visible = list.slice(0, state.visibleCount);
 
     els.productGrid.innerHTML = visible.map(productCard).join('');
+    Array.prototype.forEach.call(els.productGrid.querySelectorAll('img[data-photo]'), wireImageFallback);
 
     if (els.catalogEmpty) els.catalogEmpty.hidden = list.length !== 0;
     if (els.loadMore) els.loadMore.hidden = list.length <= visible.length;
@@ -718,6 +840,12 @@
 
     if (els.productGrid) {
       els.productGrid.addEventListener('click', function (event) {
+        var viewButton = event.target.closest('[data-view]');
+        if (viewButton) {
+          openProductDialog(viewButton.dataset.view);
+          return;
+        }
+
         var button = event.target.closest('[data-add]');
         if (!button) return;
 
@@ -911,6 +1039,7 @@
   renderCart();
   setupCatalog();
   setupCart();
+  setupProductDialog();
   setupCheckout();
   setupDialogs();
   setupReveal();
