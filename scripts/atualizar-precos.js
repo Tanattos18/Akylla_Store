@@ -1,22 +1,17 @@
 #!/usr/bin/env node
 /*
- * Atualiza os preços e o estoque do catálogo (assets/js/products.js) a partir
- * da planilha local Planilha_Precificacao_Produtos.xlsx (não versionada).
+ * Compara o catálogo do site (assets/js/products.js) com a planilha local
+ * Planilha_Precificacao_Produtos.xlsx (não versionada): preço sugerido pela
+ * fórmula e quantidade em estoque. NÃO altera o site — preço e estoque são
+ * editados pelo painel (admin/).
  *
  * Uso:
- *   node scripts/atualizar-precos.js            # aplica preços e estoque
- *   node scripts/atualizar-precos.js --check    # só compara (sai com erro se houver diferença)
+ *   node scripts/atualizar-precos.js            # relatório site × planilha
  *   node scripts/atualizar-precos.js outra.xlsx # usa outra planilha
  *
- * Os produtos são casados pelo código (coluna A da aba "Precificação" com o
- * campo `code` do products.js). O estoque vem da coluna C (Quantidade).
- *
- * O preço é SEMPRE recalculado aqui com a fórmula da planilha —
+ * O preço sugerido é sempre recalculado com a fórmula da planilha —
  * (custo + custo extra) ÷ (1 − margem − taxas), arredondado para cima (B7) —
- * em vez de usar o valor salvo pelo Excel na coluna K. Assim, fórmulas
- * quebradas (ex.: #REF! depois de ordenar a planilha) não zeram preços.
- * Custo extra, margem e taxas por linha só valem se forem números digitados;
- * se a célula tiver fórmula, usa os valores gerais de B5, B4 e B6.
+ * em vez de usar o valor salvo pelo Excel (fórmulas quebradas não zeram preços).
  *
  * Sem dependências: lê o .xlsx (zip) com o zlib nativo do Node.
  */
@@ -167,7 +162,6 @@ function brl(cents) {
 
 function main() {
   var args = process.argv.slice(2);
-  var checkOnly = args.indexOf('--check') >= 0;
   var sheet = args.filter(function (a) { return a.indexOf('--') !== 0; })[0] ||
     path.join(ROOT, 'Planilha_Precificacao_Produtos.xlsx');
 
@@ -177,62 +171,31 @@ function main() {
   }
 
   var result = pricesFromSheet(sheet);
-  var source = fs.readFileSync(PRODUCTS_FILE, 'utf8');
+  var catalog = require(path.join(ROOT, 'admin', 'formato.js')).parseProducts(fs.readFileSync(PRODUCTS_FILE, 'utf8'));
+  var diffs = [];
   var seen = {};
-  var changes = [];
 
-  /* Troca o `price` e cria/atualiza o `stock` logo abaixo dele, casando pelo `code`. */
-  var pattern = /shortName: '([^']+)'([^{}]*?)code: '([^']+)'([^{}]*?)\n(\s*)price: (\d+),(?:\n\s*stock: (\d+),)?/g;
-  var updated = source.replace(pattern, function (match, name, beforeCode, code, beforePrice, indent, current, currentStock) {
-    seen[code] = true;
-
-    var price = Number(current);
-    var target = result.prices[code];
-    if (target != null && target !== price) {
-      changes.push({ code: code, name: name, what: 'preço', from: brl(price), to: brl(target) });
-      price = target;
-    }
-
-    var qty = currentStock != null ? Number(currentStock) : null;
-    var targetQty = result.stock[code];
-    if (targetQty != null && targetQty !== qty) {
-      changes.push({ code: code, name: name, what: 'estoque', from: qty == null ? '—' : qty + ' un.', to: targetQty + ' un.' });
-      qty = targetQty;
-    }
-
-    return "shortName: '" + name + "'" + beforeCode + "code: '" + code + "'" + beforePrice +
-      '\n' + indent + 'price: ' + price + ',' + (qty != null ? '\n' + indent + 'stock: ' + qty + ',' : '');
+  catalog.products.forEach(function (p) {
+    seen[p.code] = true;
+    var price = result.prices[p.code];
+    if (price != null && price !== p.price) diffs.push('  ' + p.code.padEnd(6) + ' ' + p.shortName.padEnd(26) + ' preço   site ' + brl(p.price) + ' · planilha sugere ' + brl(price));
+    var qty = result.stock[p.code];
+    if (qty != null && qty !== p.stock) diffs.push('  ' + p.code.padEnd(6) + ' ' + p.shortName.padEnd(26) + ' estoque site ' + p.stock + ' · planilha ' + qty);
   });
-
-  var missingInSite = Object.keys(result.prices).filter(function (code) { return !seen[code]; });
-  var missingInSheet = Object.keys(seen).filter(function (code) { return result.prices[code] == null; });
 
   console.log('Planilha: ' + path.basename(sheet) + ' — margem ' + Math.round(result.margin * 100) +
     '%, taxas ' + Math.round(result.tax * 100) + '%, arredondamento ' + brl(Math.round(result.step * 100)));
+  console.log('O painel (admin/) é quem manda no preço e no estoque. Este relatório só compara com a planilha.');
 
   if (result.warnings.length) {
     console.log('Atenção: o Excel mostra preços diferentes da fórmula (confira a coluna E — use $B$5):');
     result.warnings.forEach(function (w) { console.log('  ' + w); });
   }
+  var missing = Object.keys(result.prices).filter(function (code) { return !seen[code]; });
+  if (missing.length) console.log('Na planilha, mas fora do site: ' + missing.join(', '));
 
-  changes.forEach(function (c) {
-    console.log('  ' + c.code.padEnd(6) + ' ' + c.name.padEnd(26) + ' ' + c.what.padEnd(8) + ' ' + c.from + ' → ' + c.to);
-  });
-  if (missingInSite.length) console.log('Na planilha, mas fora do site: ' + missingInSite.join(', '));
-  if (missingInSheet.length) console.log('No site, mas fora da planilha: ' + missingInSheet.join(', '));
-
-  if (!changes.length) {
-    console.log('Preços e estoque já batem com a planilha.');
-    return;
-  }
-
-  if (checkOnly) {
-    console.log(changes.length + ' diferença(s). Rode sem --check para aplicar.');
-    process.exit(1);
-  }
-
-  fs.writeFileSync(PRODUCTS_FILE, updated);
-  console.log(changes.length + ' alteração(ões) aplicada(s) em assets/js/products.js.');
+  if (!diffs.length) console.log('Site e planilha batem.');
+  else { console.log(diffs.length + ' diferença(s) — ajuste pelo painel se quiser seguir a planilha:'); diffs.forEach(function (d) { console.log(d); }); }
 }
 
 if (require.main === module) {

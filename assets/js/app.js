@@ -8,7 +8,10 @@
   document.documentElement.classList.add('js');
 
   var CONFIG = window.AKYLLA_CONFIG || {};
-  var PRODUCTS = window.AKYLLA_PRODUCTS || [];
+  /* Produtos marcados como ocultos no painel (`hidden: true`) não aparecem no site. */
+  var PRODUCTS = (window.AKYLLA_PRODUCTS || []).filter(function (product) {
+    return product && !product.hidden;
+  });
   var CATEGORIES = window.AKYLLA_CATEGORIES || [];
   var Pix = window.AkyllaPix || {};
   var qrFactory = window.qrcode;

@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /Akylla_Store/admin/
 
 Sitemap: https://tanattos18.github.io/Akylla_Store/sitemap.xml

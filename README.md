@@ -51,6 +51,20 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 
 ---
 
+## Painel administrativo (`/admin/`)
+
+Endereço: <https://tanattos18.github.io/Akylla_Store/admin/> (não aparece no site nem nos buscadores).
+
+O painel edita o site **sem servidor**: cada “Publicar” vira um commit na `main` pela API do GitHub e o GitHub Pages atualiza o site em ~1 minuto. Funciona no celular.
+
+- **Estoque:** −1 (vendi) / +1 (repus), quantidade e preço de cada produto numa lista só.
+- **Produtos:** criar, editar, duplicar, ocultar (rascunho) e excluir; nome, código, marca, modelo, categoria, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e **fotos** (enviar do celular/PC, escolher a principal, ordenar e remover). As fotos são convertidas no próprio navegador para WebP 700×700 com fundo branco. Fotos removidas são apagadas do repositório ao publicar.
+- **Calculadora de preço:** custo ÷ (1 − margem), arredondado para cima em R$ 0,10 (mesma regra da planilha). **O custo não é salvo** — o repositório é público.
+- **Loja:** WhatsApp, chave PIX, recebedor, textos de atendimento e **foto da vitrine** (gera as versões 1000 e 640 px).
+- **Segurança:** o painel usa uma chave *fine-grained* do GitHub limitada ao repositório **Akylla_Store** com permissão **Contents: Read and write** (passo a passo na tela de entrada). A chave fica só no navegador (aba atual, ou no aparelho se marcar “Lembrar”). Se perder o aparelho, revogue a chave em github.com/settings/personal-access-tokens.
+- **Conflitos:** se os dados mudarem por outro lugar (ex.: um push do PC) enquanto o painel está aberto, ele não sobrescreve — pede para recarregar.
+- Os arquivos `assets/js/products.js` e `assets/js/config.js` agora são JSON atribuído a `window.*` (formato em `admin/formato.js`). Dá para editar à mão, mas o painel reescreve a formatação.
+
 ## Estrutura de arquivos
 
 ```
@@ -143,17 +157,7 @@ Cada produto segue este formato:
 ```
 
 - `price` está em **centavos** para evitar erros de arredondamento.
-- **Fonte dos preços:** a planilha local `Planilha_Precificacao_Produtos.xlsx` (não versionada — contém custos). A margem padrão é 30% sobre o preço de venda: `preço = custo do cupom ÷ 0,7`, arredondado para cima no múltiplo de R$ 0,10. Os 22 preços do catálogo foram aplicados por essa fórmula em 20/10/2026. Para reprecificar, ajuste a planilha (margem em B4, custos na coluna D) e rode:
-
-  ```bash
-  node scripts/atualizar-precos.js --check   # mostra o que mudaria
-  node scripts/atualizar-precos.js           # aplica no products.js
-  ```
-
-  O script casa os produtos pelo `code` (coluna A da planilha) e não precisa de nenhuma instalação além do Node.
-
-- **Estoque:** o mesmo script copia a coluna C (Quantidade) da planilha para o campo `stock` de cada produto. O site mostra “Em estoque”, “Restam N unidades”, “Última unidade” ou “Esgotado”, limita a quantidade na sacola e bloqueia a compra de itens esgotados. Ao vender ou repor, atualize a quantidade na planilha e rode o script.
-- O script **sempre recalcula** o preço pela fórmula (não usa o valor salvo pelo Excel) e avisa se o Excel estiver mostrando outro valor — sinal de fórmula quebrada.
+- **Preço e estoque são editados pelo painel** (`/admin/`). A planilha local `Planilha_Precificacao_Produtos.xlsx` (não versionada — contém custos) serve para calcular custo e margem; `node scripts/atualizar-precos.js` mostra um **relatório** comparando o site com a planilha (não altera nada).
 - `visual` deve ser um dos ícones disponíveis: `watch`, `headphones`, `earbuds`, `drone`, `cable`, `charger`, `powerbank`, `mic`.
 - `category` deve existir em `window.AKYLLA_CATEGORIES`.
 - Para adicionar um produto, copie um bloco e use um `id` único.

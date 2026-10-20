@@ -82,17 +82,11 @@ test('estoque é inteiro e não negativo', function () {
   });
 });
 
-test('preços e estoque batem com a planilha (quando ela está na pasta)', function (t) {
-  var sheet = path.join(ROOT, 'Planilha_Precificacao_Produtos.xlsx');
-  if (!fs.existsSync(sheet)) {
-    t.skip('planilha não versionada — teste só roda localmente');
-    return;
-  }
-  var sheetData = require('../scripts/atualizar-precos.js').pricesFromSheet(sheet);
-  PRODUCTS.forEach(function (p) {
-    assert.equal(p.price, sheetData.prices[p.code], p.code + ' ' + p.shortName + ': preço diferente da planilha');
-    assert.equal(p.stock, sheetData.stock[p.code], p.code + ' ' + p.shortName + ': estoque diferente da planilha');
-  });
+test('formato do catálogo e da configuração é lido e regravado sem perdas', function () {
+  var F = require('../admin/formato.js');
+  var catalog = F.parseProducts(read('assets/js/products.js'));
+  assert.equal(F.serializeProducts(catalog.categories, catalog.products), read('assets/js/products.js'));
+  assert.equal(F.serializeConfig(F.parseConfig(read('assets/js/config.js'))), read('assets/js/config.js'));
 });
 
 /* ----------------------------------- PIX ----------------------------------- */
@@ -143,4 +137,26 @@ test('scripts e estilos referenciados existem', function () {
       assert.ok(fs.existsSync(path.join(ROOT, ref)), file + ': arquivo não encontrado ' + ref);
     });
   });
+});
+
+/* --------------------------------- painel --------------------------------- */
+
+test('painel: arquivos existem, scripts compilam e a política de segurança está ativa', function () {
+  ['admin/index.html', 'admin/admin.css', 'admin/admin.js', 'admin/formato.js'].forEach(function (file) {
+    assert.ok(fs.existsSync(path.join(ROOT, file)), 'faltando ' + file);
+  });
+  new vm.Script(read('admin/admin.js'), { filename: 'admin.js' });
+  new vm.Script(read('admin/formato.js'), { filename: 'formato.js' });
+  var html = read('admin/index.html');
+  assert.match(html, /Content-Security-Policy/);
+  assert.match(html, /connect-src https:\/\/api\.github\.com/);
+  assert.match(html, /noindex/);
+  assert.match(read('robots.txt'), /Disallow: \/Akylla_Store\/admin\//);
+  html.replace(/(?:src|href)="(\.\.\/assets\/[^"?#]+|[a-z]+\.(?:js|css))/g, function (_, ref) {
+    assert.ok(fs.existsSync(path.join(ROOT, 'admin', ref)), 'admin/index.html: arquivo não encontrado ' + ref);
+  });
+});
+
+test('produtos ocultos não aparecem na loja', function () {
+  assert.match(read('assets/js/app.js'), /!product\.hidden/);
 });
