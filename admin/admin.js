@@ -482,6 +482,7 @@
     form.elements.text.value = promo.text || '';
     form.elements.percent.value = promo.percent == null ? '' : promo.percent;
     form.elements.until.value = promo.until || '';
+    form.elements.marginPercent.value = String(state.config.marginPercent || 30);
     updatePromoWarn();
   }
 
@@ -489,9 +490,28 @@
     var promo = generalPromo();
     var max = Number(promo.percent) || 0;
     state.products.forEach(function (p) { if (promoMode(p) === 'propria') max = Math.max(max, Number(p.promo.percent) || 0); });
-    var warn = '';
-    if (max > 25) warn = 'Atenção: com a margem de 30% da planilha, descontos acima de ~25% deixam pouco lucro e acima de 30% vendem abaixo do custo (maior desconto agora: ' + max + '%).';
-    if (promo.active && promo.until && promo.until < Promo.toDay()) warn = (warn ? warn + ' ' : '') + 'A data da promoção geral já passou: os produtos que seguem a geral estão sem desconto.';
+    var warns = [];
+    /* Lucro que sobra: preço = custo ÷ (1 − margem); com desconto d → margem final = 1 − (1 − margem) ÷ (1 − d). */
+    var margin = (Number(state.config.marginPercent) || 30) / 100;
+    var left = max > 0 ? 1 - (1 - margin) / (1 - max / 100) : margin;
+    if (max > 0 && left <= 0) warns.push('Com a margem de ' + Math.round(margin * 100) + '% da planilha, um desconto de ' + max + '% vende ABAIXO DO CUSTO.');
+    else if (max > 0 && left < 0.1) warns.push('Com a margem de ' + Math.round(margin * 100) + '%, o desconto de ' + max + '% deixa só ~' + Math.round(left * 100) + '% de lucro.');
+    else if (max > 0) warns.push('Lucro estimado com o maior desconto (' + max + '%): ~' + Math.round(left * 100) + '% do preço de venda.');
+
+    /* O preço riscado precisa ter sido praticado: recomendamos 30 dias desde a última mudança de preço. */
+    var since = state.config.pricesSince;
+    if (since && promo.active) {
+      var ready = new Date(since + 'T12:00:00');
+      ready.setDate(ready.getDate() + 30);
+      var readyDay = Promo.toDay(ready);
+      if (Promo.toDay() < readyDay) {
+        warns.push('ATENÇÃO: os preços atuais valem desde ' + since.split('-').reverse().join('/') +
+          '. Para o preço riscado ser verdadeiro (e evitar problema com o Procon), ligue a promoção só a partir de ' +
+          readyDay.split('-').reverse().join('/') + '.');
+      }
+    }
+    if (promo.active && promo.until && promo.until < Promo.toDay()) warns.push('A data da promoção geral já passou: os produtos que seguem a geral estão sem desconto.');
+    var warn = warns.join(' ');
     $('#promoWarn').textContent = warn;
     $('#promoWarn').hidden = !warn;
   }
@@ -564,6 +584,7 @@
     else if (input.name === 'text') promo.text = input.value;
     else if (input.name === 'percent') promo.percent = Math.max(0, Math.min(Promo.MAX_PERCENT, Number(String(input.value).replace(',', '.')) || 0));
     else if (input.name === 'until') promo.until = input.value;
+    else if (input.name === 'marginPercent') state.config.marginPercent = Math.max(1, Math.min(95, Number(String(input.value).replace(',', '.')) || 30));
     else return;
     afterPromoChange();
   }
@@ -601,6 +622,7 @@
     $('#deleteProductBtn').hidden = index == null;
     $('#editorError').hidden = true;
     $('#calcCost').value = ''; $('#calcResult').textContent = '—'; $('#calcApply').disabled = true;
+    $('#calcMargin').value = String(state.config.marginPercent || 30);
     renderSpecs(product.specs || []);
     renderPhotos();
     $('#editor').showModal();
@@ -802,6 +824,13 @@
     if (!config.pixKey) { toast('A chave PIX não pode ficar vazia.', 5000); return; }
     if (config.pixKey !== state.original.config.pixKey &&
       !confirm('Você mudou a CHAVE PIX. Todos os QR Codes passarão a usar:\n\n' + config.pixKey + '\n\nConfirma?')) return;
+
+    /* Guarda a data da última mudança de preço (base da regra dos 30 dias da promoção). */
+    var priceChanged = state.products.some(function (p) {
+      var old = state.original.products.find(function (o) { return o.id === p.id; });
+      return old && old.price !== p.price;
+    });
+    if (priceChanged) state.config.pricesSince = Promo.toDay();
 
     var deletes = photosToDelete();
     var used = referencedPhotos(state.products);

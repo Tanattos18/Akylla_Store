@@ -87,6 +87,7 @@
         <label class="full">Texto da faixa <input name="text" maxlength="80" placeholder="Descontos de inauguração"></label>
         <label>Desconto padrão (%) <input name="percent" type="number" min="0" max="90" step="0.5" inputmode="decimal"></label>
         <label>Válida até (último dia) <input name="until" type="date"></label>
+        <label>Margem usada na planilha (%) <input name="marginPercent" type="number" min="1" max="95" step="1" inputmode="numeric"></label>
         <p class="muted full">O desconto sai do preço atual de cada produto (que aparece riscado). O cliente paga o valor com desconto, inclusive no PIX. Os preços cadastrados não mudam: no dia seguinte ao fim, o site volta sozinho ao preço normal.</p>
         <p class="warn full" id="promoWarn" hidden></p>
         <div class="full promo-bulk">
@@ -220,6 +221,6 @@
 
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
-  <script src="admin.js?v=20261020-3"></script>
+  <script src="admin.js?v=20261020-4"></script>
 </body>
 </html>
