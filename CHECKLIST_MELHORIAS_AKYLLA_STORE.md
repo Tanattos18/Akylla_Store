@@ -278,15 +278,26 @@ Fase futura, caso desejada:
 
 ## 5. Registro de execução
 
+Execução única e contínua em 20/10/2026 (branch `main`, commit base `1b76b6d`), autorizada pelo responsável para todas as etapas, incluindo push.
+
 | Etapa | Data | Commit | Testes | Resultado | Pendências |
 |---|---|---|---|---|---|
-| 0 — Diagnóstico | | | | | |
-| 1 — Identidade visual | | | | | |
-| 2 — Navegação/mobile | | | | | |
-| 3 — Catálogo | | | | | |
-| 4 — Sacola/PIX | | | | | |
-| 5 — Confiança/privacidade | | | | | |
-| 6 — SEO | | | | | |
-| 7 — Performance | | | | | |
-| 8 — Acessibilidade | | | | | |
-| 9 — Regressão/entrega | | | | | |
+| 0 — Diagnóstico | 20/10/2026 | `d256cb1` (segurança) | Git, assets, sintaxe, CRC | Estrutura confirmada; histórico sem dados pessoais; "Nada encontrado" é o estado vazio nativo | — |
+| 1 — Identidade visual | 20/10/2026 | `feat: corrige preços do hero…` | Conferência de preços vs catálogo | Preços do hero corrigidos (W31 R$ 95,90 / drone R$ 299,00) | Logo oficial em arquivo |
+| 2 — Navegação/mobile | 20/10/2026 | `feat: corrige preços do hero…` | jsdom + revisão de breakpoints | `defer`, footer institucional, reduced-motion no JS | Teste em dispositivo real |
+| 3 — Catálogo | 20/10/2026 | `feat: corrige preços do hero…` | 22 produtos, busca sem acento/caixa alta, filtros, ordenação, "Ver mais", limpar filtros | 21/21 ✅ | — |
+| 4 — Sacola/PIX | 20/10/2026 | `feat: corrige preços do hero…` | Sacola, persistência, storage corrompido, payload/CRC/campo 54, QR, WhatsApp | 18/18 ✅ (inclui fix do download do QR) | Leitura no app bancário |
+| 5 — Confiança/privacidade | 20/10/2026 | `feat: adiciona privacidade, termos, robots e sitemap` | Revisão de textos vs funcionamento real | `privacidade.html` + `termos.html` criados; sem dados inventados | Confirmar WhatsApp/PIX/preços; CNPJ/endereço/redes sociais |
+| 6 — SEO | 20/10/2026 | `feat: adiciona privacidade, termos, robots e sitemap` | XML do sitemap, canonical/OG, semântica | `robots.txt` + `sitemap.xml` (3 URLs) | — |
+| 7 — Performance | 20/10/2026 | `feat: corrige preços do hero…` | Tamanhos de asset, scripts, lazy loading | Sem dependências novas; hero 99 KB; `defer` aplicado | — |
+| 8 — Acessibilidade | 20/10/2026 | `feat: corrige preços do hero…` | aria-pressed, alt, role=group, foco, reduced-motion, contraste | Ajustes aplicados | Zoom 200% e teclado em navegador real |
+| 9 — Regressão/entrega | 20/10/2026 | `docs: atualiza README e plano de melhorias` | Smoke test completo (jsdom) + Node | **47/47 ✅** | Testes manuais pós-deploy |
+
+### Pendências que exigem decisão do responsável
+
+1. Logo oficial em arquivo (SVG/PNG) para cabeçalho e favicon — hoje o ícone é genérico e o checklist proíbe inventar caminhos.
+2. Confirmação formal de WhatsApp, chave PIX, nome do recebedor, cidade, preços e disponibilidade.
+3. CNPJ/CPF, endereço e redes sociais da Akylla (o endereço do cupom é do fornecedor e **não** foi publicado).
+4. Leitura do QR PIX no app do banco pelo responsável, sem concluir o pagamento.
+5. Definição de prazos de entrega/frete, caso a operação queira sair do "combinado pelo WhatsApp".
+6. Revisão jurídica eventual dos textos de garantia/entrega (as páginas legais refletem o funcionamento real e o CDC).

@@ -27,6 +27,7 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 - Filtros por categoria e ordenação por preço/nome.
 - Paginação progressiva ("Ver mais produtos").
 - Sacola persistida em `localStorage`, com quantidade, remoção e total.
+- Estado vazio do catálogo com opção de **limpar busca e filtros**.
 - Checkout PIX com:
   - QR Code gerado no navegador;
   - payload EMV/PIX com valor exato do pedido e CRC16 válido;
@@ -34,6 +35,8 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
   - download do QR em PNG (fallback SVG);
   - resumo do pedido e link para envio do comprovante no WhatsApp.
 - Seções de sobre, como funciona, garantia, entrega, pagamento, privacidade, FAQ e contato.
+- Páginas de **Política de Privacidade** e **Termos de Uso**, alinhadas ao funcionamento real (LGPD e CDC).
+- `robots.txt` e `sitemap.xml` para indexação.
 - Menu mobile, drawer de carrinho e modal de checkout com `<dialog>` nativo.
 - Foco visível, contraste WCAG AA, suporte a `prefers-reduced-motion` e navegação por teclado.
 - Layout responsivo testado de 320px a 1440px.
@@ -53,6 +56,10 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 ```
 Akylla_Store/
 ├── index.html
+├── privacidade.html   # Política de privacidade (LGPD)
+├── termos.html        # Termos de uso (CDC)
+├── robots.txt
+├── sitemap.xml
 ├── assets/
 │   ├── css/
 │   │   └── styles.css
@@ -68,6 +75,9 @@ Akylla_Store/
 │   │   └── products.js  # catálogo (22 produtos, preços em centavos)
 │   └── vendor/
 │       └── qrcode.js    # qrcode-generator 2.0.4 (MIT)
+├── docs/
+│   └── PLANO_MELHORIAS_AKYLLA_STORE.md   # auditoria, testes e pendências
+├── CHECKLIST_MELHORIAS_AKYLLA_STORE.md
 ├── .gitattributes
 ├── .gitignore
 └── README.md
@@ -167,6 +177,8 @@ As fotos ficam em `assets/img/products/` e foram padronizadas em **WebP 700×700
 - `description`: texto completo do modal.
 - `specs`: lista de especificações exibida no modal.
 
+> Os cards flutuantes do hero (`index.html`) citam preços fixos de produtos em destaque. Se alterar `price` no `products.js`, atualize também esses valores para manter a consistência.
+
 Para substituir uma foto, gere um WebP quadrado (recomendado: 700×700) e mantenha o mesmo nome de arquivo, ou atualize o campo `image` do produto. Se a foto for exata, remova `illustrative: true`. Se for representativa, mantenha o aviso.
 
 > As imagens são usadas como referência comercial. Marcas, modelos e direitos das fotos pertencem aos respectivos titulares. Se alguma imagem não puder ser utilizada, substitua o arquivo ou entre em contato com o responsável pela loja.
@@ -237,7 +249,16 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 - [ ] Testar o QR PIX em um app bancário (sem concluir o pagamento).
 - [ ] Verificar o site no celular real e em navegadores diferentes.
 - [ ] Se o repositório for público, conferir se nenhum documento pessoal foi commitado.
-- [ ] Considerar uma política de privacidade e termos de uso separados.
+- [x] Considerar uma política de privacidade e termos de uso separados. — Criados `privacidade.html` e `termos.html` (revisar se a operação mudar).
+
+### Qualidade e testes
+
+- A auditoria completa, os testes executados (47 asserções em DOM real + validação PIX no Node) e as pendências estão em [`docs/PLANO_MELHORIAS_AKYLLA_STORE.md`](docs/PLANO_MELHORIAS_AKYLLA_STORE.md).
+- Validação rápida do gerador PIX no Node:
+
+```bash
+node -e "global.window=global; require('./assets/js/pix.js'); const v=window.AkyllaPix.validatePixPayload(window.AkyllaPix.buildPixPayload({key:'SUA_CHAVE',merchantName:'NOME',city:'GOIANIA',amountCents:9590,txid:'AKTESTE',description:'Pedido teste'})); console.log(v.valid, v.fields['54'])"
+```
 
 > As informações jurídicas da página são referências gerais ao CDC (garantia legal de 90 dias para bens duráveis e direito de arrependimento de 7 dias em compras fora do estabelecimento). Elas não substituem a orientação de um advogado ou contador.
 
