@@ -161,12 +161,12 @@ COMECE PELA ETAPA 0. Apresente o diagnóstico com evidências e o plano prioriza
 - [ ] Criar commit/cópia de segurança antes de mudanças significativas.
 
 ### B. Logo e vitrine
-- [ ] Adicionar a logo aprovada ao repositório.
-- [ ] Ajustar logo do cabeçalho sem distorcer proporção.
-- [ ] Atualizar favicon se houver arquivo apropriado.
-- [ ] Substituir banner temporário pela arte aprovada.
-- [ ] Verificar recorte do banner em desktop e celular.
-- [ ] Padronizar preto, grafite, branco/cinza e laranja.
+- [ ] Adicionar a logo aprovada ao repositório. — Provisório (20/10/2026): ícone recortado do "A" da arte `Logo_Vitrine.png`; trocar pelo arquivo vetorial (SVG) quando houver.
+- [x] Ajustar logo do cabeçalho sem distorcer proporção.
+- [x] Atualizar favicon se houver arquivo apropriado.
+- [x] Substituir banner temporário pela arte aprovada.
+- [x] Verificar recorte do banner em desktop e celular.
+- [x] Padronizar preto, grafite, branco/cinza e laranja.
 - [ ] Melhorar tipografia, espaçamento, botões e cards.
 - [ ] Confirmar legibilidade dos textos sobre o banner.
 - [ ] Não adicionar promessas comerciais não confirmadas.

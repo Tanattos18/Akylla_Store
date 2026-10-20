@@ -20,7 +20,7 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 
 ### O que está implementado
 
-- Hero section com banner da vitrine, cards flutuantes e CTAs.
+- Hero section com a arte quadrada da vitrine (clicável para o WhatsApp), cards flutuantes e CTAs; paleta preto + laranja da marca (`--brand: #ff8a00`).
 - Catálogo com 22 produtos extraídos do cupom fiscal de 19/10/2026.
 - Fotos dos produtos, ficha técnica e modal de detalhes com resumo, especificações e adição à sacola.
 - Busca por nome, modelo, marca, código ou especificação.
@@ -65,8 +65,9 @@ Akylla_Store/
 │   │   └── styles.css
 │   ├── fonts/           # DM Sans e Sora (woff2 locais, licença OFL)
 │   ├── img/
-│   │   ├── favicon.svg
-│   │   ├── hero-loja.jpg
+│   │   ├── favicon.png      # ícone da aba (o "A" da logo)
+│   │   ├── logo-mark.jpg    # ícone da marca (cabeçalho, rodapé, CTA)
+│   │   ├── vitrine.jpg      # foto da vitrine (1000×1000) + vitrine-640.jpg
 │   │   ├── og-cover.jpg
 │   │   └── products/      # 22 fotos WebP 700×700 (produtos)
 │   ├── js/
