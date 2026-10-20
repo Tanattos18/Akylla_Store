@@ -1426,6 +1426,13 @@ h3 {
   font-size: 0.86rem;
 }
 
+.catalog-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
 .catalog-footer {
   display: flex;
   align-items: center;
@@ -1690,6 +1697,35 @@ h3 {
   color: var(--muted);
   font-size: 0.79rem;
   line-height: 1.65;
+}
+
+.policy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.8rem;
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 0.2s ease;
+}
+
+.policy-link svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.2s ease;
+}
+
+.policy-link:hover {
+  color: #000;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.policy-link:hover svg {
+  transform: translateX(3px);
 }
 
 .transparency-note {
@@ -1960,7 +1996,7 @@ h3 {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr;
   gap: 2rem;
 }
 
@@ -2059,6 +2095,106 @@ h3 {
 
 .footer-top-link:hover {
   color: var(--lime);
+}
+
+/* Páginas legais (privacidade e termos) */
+.legal {
+  padding: clamp(3.5rem, 7vw, 5.5rem) 0;
+  background: var(--paper);
+}
+
+.legal-shell {
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+.legal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1.6rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.legal-back svg {
+  width: 15px;
+  height: 15px;
+}
+
+.legal-back:hover {
+  color: var(--text);
+}
+
+.legal-shell h1 {
+  margin: 0.6rem 0 0.5rem;
+  font-size: clamp(1.9rem, 4vw, 2.7rem);
+  line-height: 1.08;
+  letter-spacing: -0.05em;
+}
+
+.legal-updated {
+  margin: 0 0 2rem;
+  color: var(--muted-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.legal-body h2 {
+  margin: 2.1rem 0 0.6rem;
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+}
+
+.legal-body p,
+.legal-body li {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.75;
+}
+
+.legal-body p {
+  margin: 0 0 0.9rem;
+}
+
+.legal-body ul {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+}
+
+.legal-body li {
+  margin-bottom: 0.4rem;
+}
+
+.legal-body a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.legal-body code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 6px;
+  background: rgba(6, 9, 19, 0.05);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.legal-note {
+  margin-top: 2.2rem;
+  padding: 1.05rem 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.65;
 }
 
 /* Diálogos */

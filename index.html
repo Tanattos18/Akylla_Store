@@ -263,7 +263,7 @@
             <span class="float-card-icon"><svg viewBox="0 0 64 64"><use href="#icon-watch"></use></svg></span>
             <span class="float-card-copy">
               <strong>W31 Pro Max</strong>
-              <span>R$ 131,90 no PIX</span>
+              <span>R$ 95,90 no PIX</span>
             </span>
           </div>
 
@@ -271,7 +271,7 @@
             <span class="float-card-icon float-card-icon--orange"><svg viewBox="0 0 64 64"><use href="#icon-drone"></use></svg></span>
             <span class="float-card-copy">
               <strong>Drone com câmera</strong>
-              <span>R$ 92,90 no PIX</span>
+              <span>R$ 299,00 no PIX</span>
             </span>
           </div>
 
@@ -306,7 +306,7 @@
           <div class="section-head-copy">
             <p class="eyebrow">Catálogo</p>
             <h2 id="produtos-title">Tech que faz sentido.</h2>
-            <p class="section-lead">22 itens para elevar o dia a dia — do smartwatch ao drone. Preços à vista no PIX e atendimento para ajudar na escolha.</p>
+            <p class="section-lead"><span data-catalog-count>22</span> itens para elevar o dia a dia — do smartwatch ao drone. Preços à vista no PIX e atendimento para ajudar na escolha.</p>
           </div>
           <div class="catalog-tools">
             <label class="search-field" for="searchInput">
@@ -341,8 +341,11 @@
         <div class="catalog-empty" id="catalogEmpty" hidden>
           <span class="catalog-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-search"></use></svg></span>
           <h3>Nada encontrado por aqui.</h3>
-          <p>Tente outro termo ou fale com a gente no WhatsApp para procurar o item.</p>
-          <a class="btn btn-outline-dark" href="https://wa.me/5562991657619" data-whatsapp target="_blank" rel="noopener noreferrer">Pedir ajuda</a>
+          <p>Tente outro termo, limpe os filtros ou fale com a gente no WhatsApp para procurar o item.</p>
+          <div class="catalog-empty-actions">
+            <button class="btn btn-outline-dark" type="button" id="clearFilters">Limpar busca e filtros</button>
+            <a class="btn btn-dark" href="https://wa.me/5562991657619" data-whatsapp target="_blank" rel="noopener noreferrer">Pedir ajuda</a>
+          </div>
         </div>
 
         <div class="catalog-footer">
@@ -377,7 +380,7 @@
 
         <div class="about-stats" aria-label="Números da loja">
           <div class="stat-card">
-            <strong>22</strong>
+            <strong data-catalog-count>22</strong>
             <span>produtos no catálogo</span>
           </div>
           <div class="stat-card">
@@ -462,6 +465,7 @@
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-lock"></use></svg></span>
             <h3>Privacidade</h3>
             <p>Não coletamos dados de cartão nem processamos pagamentos neste site. Sua sacola fica salva apenas no seu navegador. O contato e o comprovante são tratados pelo WhatsApp.</p>
+            <a class="policy-link" href="privacidade.html">Ler a política de privacidade<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg></a>
           </article>
         </div>
 
@@ -591,6 +595,14 @@
           <li><span>Goiânia/GO</span></li>
         </ul>
       </div>
+
+      <div class="footer-col">
+        <h3>Institucional</h3>
+        <ul>
+          <li><a href="privacidade.html">Política de privacidade</a></li>
+          <li><a href="termos.html">Termos de uso</a></li>
+        </ul>
+      </div>
     </div>
 
     <div class="container footer-bottom">
@@ -615,7 +627,7 @@
       </button>
     </div>
     <nav class="mobile-nav" aria-label="Navegação mobile">
-      <a href="#produtos" data-close-mobile>Produtos <span>22 itens</span></a>
+      <a href="#produtos" data-close-mobile>Produtos <span><span data-catalog-count>22</span> itens</span></a>
       <a href="#produtos" data-filter-link="smartwatches" data-close-mobile>Smartwatches</a>
       <a href="#produtos" data-filter-link="drones" data-close-mobile>Drones</a>
       <a href="#produtos" data-filter-link="audio" data-close-mobile>Áudio</a>
@@ -659,7 +671,7 @@
         <span>Total</span>
         <strong id="cartTotal">R$ 0,00</strong>
       </div>
-      <p class="cart-note">Pagamento via PIX. Entrega combinada pelo WhatsApp após a confirmação.</p>
+      <p class="cart-note">Pagamento via PIX. Entrega combinada pelo WhatsApp após a confirmação. Consulte a disponibilidade do item antes de finalizar.</p>
       <button class="btn btn-primary btn-block" type="button" id="checkoutBtn">
         Finalizar com PIX
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
@@ -808,10 +820,10 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js"></script>
-  <script src="assets/js/config.js"></script>
-  <script src="assets/js/products.js"></script>
-  <script src="assets/js/pix.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/vendor/qrcode.js" defer></script>
+  <script src="assets/js/config.js" defer></script>
+  <script src="assets/js/products.js" defer></script>
+  <script src="assets/js/pix.js" defer></script>
+  <script src="assets/js/app.js" defer></script>
 </body>
 </html>

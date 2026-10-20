@@ -33,6 +33,7 @@
     header: document.querySelector('.site-header'),
     productGrid: document.getElementById('productGrid'),
     catalogEmpty: document.getElementById('catalogEmpty'),
+    clearFilters: document.getElementById('clearFilters'),
     resultCount: document.getElementById('resultCount'),
     loadMore: document.getElementById('loadMore'),
     filterRow: document.getElementById('filterRow'),
@@ -116,6 +117,18 @@
     var number = String(CONFIG.whatsapp || '').replace(/\D/g, '');
     var text = message || CONFIG.whatsappMessage || '';
     return 'https://wa.me/' + number + (text ? '?text=' + encodeURIComponent(text) : '');
+  }
+
+  var reducedMotionQuery = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null;
+
+  function scrollToSection(target) {
+    if (!target) return;
+    target.scrollIntoView({
+      behavior: reducedMotionQuery && reducedMotionQuery.matches ? 'auto' : 'smooth',
+      block: 'start'
+    });
   }
 
   function categoryLabel(categoryId) {
@@ -319,7 +332,7 @@
         '    <h3>' + escapeHTML(product.shortName) + '</h3>',
         '    <p class="cart-item-code">Cód. ' + escapeHTML(product.code) + ' • ' + escapeHTML(product.brand) + '</p>',
         '    <div class="cart-item-controls">',
-        '      <div class="qty-control" aria-label="Quantidade de ' + escapeHTML(product.shortName) + '">',
+        '      <div class="qty-control" role="group" aria-label="Quantidade de ' + escapeHTML(product.shortName) + '">',
         '        <button type="button" data-qty="-1" data-id="' + escapeHTML(product.id) + '" aria-label="Diminuir quantidade"' + (item.qty <= 1 ? ' disabled' : '') + '>',
         '          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-minus"></use></svg>',
         '        </button>',
@@ -543,13 +556,31 @@
     renderProducts();
 
     if (shouldScroll) {
-      var target = document.getElementById('produtos');
-      if (target) {
-        window.setTimeout(function () {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 30);
-      }
+      window.setTimeout(function () {
+        scrollToSection(document.getElementById('produtos'));
+      }, 30);
     }
+  }
+
+  function clearFilters() {
+    state.filter = 'todos';
+    state.query = '';
+    state.sort = 'featured';
+    state.visibleCount = PAGE_SIZE;
+
+    if (els.searchInput) els.searchInput.value = '';
+    if (els.sortSelect) els.sortSelect.value = 'featured';
+
+    if (els.filterRow) {
+      Array.prototype.forEach.call(els.filterRow.querySelectorAll('[data-filter]'), function (chip) {
+        var active = chip.dataset.filter === 'todos';
+        chip.classList.toggle('is-active', active);
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+
+    renderProducts();
+    toast('Busca e filtros limpos.');
   }
 
   /* ------------------------------- checkout ----------------------------- */
@@ -675,6 +706,12 @@
       }, 0)
     };
 
+    if (!state.order.total) {
+      state.order = null;
+      toast('Não foi possível montar o pedido. Tente novamente.');
+      return;
+    }
+
     renderCheckout();
 
     closeDialog(els.cartDrawer);
@@ -750,7 +787,17 @@
       return;
     }
 
-    var serialized = new XMLSerializer().serializeToString(svg);
+    // O SVG renderizado é escalável (sem width/height); rasterizadores precisam
+    // de dimensões intrínsecas, senão o PNG sai em branco em alguns navegadores.
+    var sizedSvg = svg.cloneNode(true);
+    var viewBox = svg.getAttribute('viewBox') || '';
+    var intrinsicSize = Number(viewBox.split(/\s+/)[2]) || 0;
+    if (intrinsicSize) {
+      sizedSvg.setAttribute('width', String(intrinsicSize));
+      sizedSvg.setAttribute('height', String(intrinsicSize));
+    }
+
+    var serialized = new XMLSerializer().serializeToString(sizedSvg);
     var svgBlob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
     var svgUrl = URL.createObjectURL(svgBlob);
     var filenameBase = 'akylla-pix-' + (state.order ? state.order.id : 'pedido');
@@ -805,6 +852,10 @@
           renderProducts();
         }, 140);
       });
+    }
+
+    if (els.clearFilters) {
+      els.clearFilters.addEventListener('click', clearFilters);
     }
 
     if (els.sortSelect) {
@@ -874,8 +925,7 @@
 
     if (els.searchShortcut) {
       els.searchShortcut.addEventListener('click', function () {
-        var target = document.getElementById('produtos');
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        scrollToSection(document.getElementById('produtos'));
         window.setTimeout(function () {
           if (els.searchInput) els.searchInput.focus({ preventScroll: true });
         }, 420);
@@ -913,12 +963,9 @@
     if (els.emptyBrowse) {
       els.emptyBrowse.addEventListener('click', function () {
         closeDialog(els.cartDrawer);
-        var target = document.getElementById('produtos');
-        if (target) {
-          window.setTimeout(function () {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 60);
-        }
+        window.setTimeout(function () {
+          scrollToSection(document.getElementById('produtos'));
+        }, 60);
       });
     }
   }
@@ -1025,6 +1072,10 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-whatsapp-display]'), function (element) {
       element.textContent = CONFIG.whatsappDisplay || '';
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-catalog-count]'), function (element) {
+      element.textContent = String(PRODUCTS.length);
     });
 
     if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
