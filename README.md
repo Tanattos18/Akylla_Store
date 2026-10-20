@@ -2,7 +2,15 @@
 
 Landing page responsiva de uma loja de eletrônicos e acessórios de informática, com catálogo de 22 produtos, sacola local e checkout PIX estático (QR Code + copia e cola).
 
-**Repositório de referência:** <https://github.com/Tanattos18/Akylla_Store>
+**Repositório:** <https://github.com/Tanattos18/Akylla_Store>
+
+**Branch principal:** `main`
+
+![Prévia da landing page da Akylla Store](assets/img/og-cover.jpg)
+
+**Stack:** HTML5 · CSS3 · JavaScript (ES5+) · sem build · sem backend
+
+**Status:** código publicado no GitHub; falta apenas ativar o GitHub Pages (instruções abaixo).
 
 ---
 
@@ -58,6 +66,7 @@ Akylla_Store/
 │   │   └── products.js  # catálogo (22 produtos, preços em centavos)
 │   └── vendor/
 │       └── qrcode.js    # qrcode-generator 2.0.4 (MIT)
+├── .gitattributes
 ├── .gitignore
 └── README.md
 ```
@@ -217,28 +226,32 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 
 ---
 
-## Deploy no GitHub Pages
+## Publicação
 
-O Git não está instalado no ambiente em que o projeto foi gerado. Para publicar:
-
-1. Instale o [Git para Windows](https://git-scm.com/download/win).
-2. No terminal, dentro da pasta:
+O código já está versionado e publicado no branch `main` do repositório. Para atualizar o site, basta commitar e enviar:
 
 ```bash
-git init
 git add .
-git commit -m "feat: landing page Akylla Store"
-git branch -M main
-git remote add origin https://github.com/Tanattos18/Akylla_Store.git
-git push -u origin main
+git commit -m "descreva a alteração"
+git push
 ```
 
-3. No GitHub, abra **Settings → Pages**.
-4. Em **Build and deployment**, selecione **Deploy from a branch**.
-5. Escolha a branch `main` e a pasta `/ (root)`.
-6. Salve e aguarde a publicação.
+### GitHub Pages
 
-Como todos os caminhos são relativos, o site funciona tanto em domínio próprio quanto em `https://usuario.github.io/Akylla_Store/`.
+1. No repositório, abra **Settings → Pages**.
+2. Em **Build and deployment**, selecione **Deploy from a branch**.
+3. Escolha a branch `main` e a pasta `/ (root)`.
+4. Salve e aguarde a publicação (normalmente 1–2 minutos).
+
+O endereço ficará:
+
+```text
+https://tanattos18.github.io/Akylla_Store/
+```
+
+Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages quanto em domínio próprio.
+
+> **Importante:** depois de ativar o Pages, troque `og:image` no `index.html` pela URL absoluta da capa — por exemplo `https://tanattos18.github.io/Akylla_Store/assets/img/og-cover.jpg`. Redes sociais não resolvem caminhos relativos.
 
 ### Outras opções
 
