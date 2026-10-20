@@ -194,6 +194,7 @@ As fotos ficam em `assets/img/products/` e foram padronizadas em **WebP 700×700
 - `summary`: texto curto do card.
 - `description`: texto completo do modal.
 - `specs`: lista de especificações exibida no modal.
+- `gallery`: fotos extras (outros ângulos) mostradas como miniaturas no modal de detalhes, depois da foto principal. Mesmo padrão: WebP 700×700, fundo branco. Em 20/10/2026 entraram 43 fotos extras em 12 produtos (fontes: sites da Basike/Basike Inova e anúncios encontrados na busca de imagens, aprovados pelo responsável).
 
 > Os cards flutuantes do hero (`index.html`) leem o preço do `products.js` pelo atributo `data-price-of="<id do produto>"`, então acompanham qualquer reprecificação automaticamente.
 

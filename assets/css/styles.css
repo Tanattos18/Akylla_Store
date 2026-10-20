@@ -2715,6 +2715,59 @@ dialog::backdrop {
   right: auto;
 }
 
+.product-dialog-media.has-thumbs {
+  padding-bottom: 6.2rem;
+}
+
+.product-dialog-thumbs {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.product-dialog-thumbs[hidden] {
+  display: none;
+}
+
+.product-dialog-thumb {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--line-strong);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.product-dialog-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-dialog-thumb:hover {
+  transform: translateY(-2px);
+}
+
+.product-dialog-thumb[aria-pressed="true"] {
+  border-color: var(--brand);
+}
+
+.product-dialog-thumb:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
 .product-dialog-body {
   display: flex;
   flex-direction: column;

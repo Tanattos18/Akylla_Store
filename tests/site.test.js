@@ -59,6 +59,9 @@ test('categoria, ícone e foto de cada produto existem', function () {
     assert.ok(categories.indexOf(p.category) >= 0, p.id + ': categoria inexistente ' + p.category);
     assert.ok(html.indexOf('id="icon-' + p.visual + '"') >= 0, p.id + ': ícone inexistente ' + p.visual);
     if (p.image) assert.ok(fs.existsSync(path.join(ROOT, p.image)), p.id + ': foto não encontrada ' + p.image);
+    (p.gallery || []).forEach(function (src) {
+      assert.ok(fs.existsSync(path.join(ROOT, src)), p.id + ': foto da galeria não encontrada ' + src);
+    });
   });
 });
 

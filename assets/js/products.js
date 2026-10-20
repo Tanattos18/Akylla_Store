@@ -39,9 +39,14 @@ window.AKYLLA_PRODUCTS = [
     stock: 1,
     summary: 'Tela de 1,75", chamadas Bluetooth e monitoramento cardíaco para acompanhar a rotina.',
     description: 'Smartwatch com tela HD de 1,75", chamadas via Bluetooth, monitoramento cardíaco e do sono, além de alertas de mensagens. Acompanha pulseira de silicone e é compatível com Android e iOS.',
-    image: 'assets/img/products/w34-plus.webp',
-    imageAlt: 'Relógio inteligente W34+ Bazik Prime com pulseira preta',
-    illustrative: true,
+    image: 'assets/img/products/w34-plus-1.webp',
+    imageAlt: 'Relógio Inteligente W34+ Bazik Prime',
+    gallery: [
+      'assets/img/products/w34-plus-2.webp',
+      'assets/img/products/w34-plus-3.webp',
+      'assets/img/products/w34-plus-4.webp',
+      'assets/img/products/w34-plus-5.webp'
+    ],
     specs: [
       { label: 'Tela', value: '1,75" HD IPS (320 x 385 px)' },
       { label: 'Conexão', value: 'Bluetooth 5.0' },
@@ -64,9 +69,14 @@ window.AKYLLA_PRODUCTS = [
     stock: 2,
     summary: 'Tela de 2,2", NFC, GPS via app e mais de 100 modos esportivos.',
     description: 'Smartwatch com tela ampla de 2,2", NFC para acesso rápido, GPS via aplicativo e mais de 100 modos esportivos. Monitora batimentos, sono e oferece controle remoto da câmera do celular.',
-    image: 'assets/img/products/w69-ultra.webp',
-    imageAlt: 'Relógio inteligente W69 Ultra com pulseira laranja',
-    illustrative: true,
+    image: 'assets/img/products/w69-ultra-1.webp',
+    imageAlt: 'Relógio W69 Ultra Bazik Microwear',
+    gallery: [
+      'assets/img/products/w69-ultra-2.webp',
+      'assets/img/products/w69-ultra-3.webp',
+      'assets/img/products/w69-ultra-4.webp',
+      'assets/img/products/w69-ultra-5.webp'
+    ],
     specs: [
       { label: 'Tela', value: '2,2" (425 x 518 px)' },
       { label: 'Conexão', value: 'Bluetooth e NFC' },
@@ -91,6 +101,13 @@ window.AKYLLA_PRODUCTS = [
     description: 'Smartwatch com tela HD de 1,75", Bluetooth 5.0, NFC e certificação IP68. Monitora frequência cardíaca, pressão arterial, oxigênio e sono, com comandos de voz e compatibilidade com Android e iOS.',
     image: 'assets/img/products/hw8-pro-max.webp',
     imageAlt: 'Relógios inteligentes HW8 Pro Max nas cores branco e preto',
+    gallery: [
+      'assets/img/products/hw8-pro-max-1.webp',
+      'assets/img/products/hw8-pro-max-2.webp',
+      'assets/img/products/hw8-pro-max-3.webp',
+      'assets/img/products/hw8-pro-max-4.webp',
+      'assets/img/products/hw8-pro-max-5.webp'
+    ],
     specs: [
       { label: 'Tela', value: '1,75" HD IPS (320 x 385 px)' },
       { label: 'Conexão', value: 'Bluetooth 5.0 e NFC' },
@@ -115,6 +132,9 @@ window.AKYLLA_PRODUCTS = [
     description: 'Smartwatch com tela HD de 1,83", Bluetooth 5.3 e bateria para até 7 dias. Acompanha pulseiras intercambiáveis, carregamento magnético e recursos de saúde, chamadas e notificações.',
     image: 'assets/img/products/w65-pro-max.webp',
     imageAlt: 'Relógios W65 Pro Max com pulseiras intercambiáveis',
+    gallery: [
+      'assets/img/products/w65-pro-max-1.webp'
+    ],
     specs: [
       { label: 'Tela', value: '1,83" HD touch (240 x 284 px)' },
       { label: 'Conexão', value: 'Bluetooth 5.3' },
@@ -139,6 +159,13 @@ window.AKYLLA_PRODUCTS = [
     description: 'Smartwatch com monitoramento cardíaco, pressão arterial e sono, modos esportivos e notificações. Acompanha pulseira e cabo de carregamento por indução; app RDFit para Android e iOS.',
     image: 'assets/img/products/w31-pro-max.webp',
     imageAlt: 'Embalagem do relógio inteligente W31 Pro Max Bazik',
+    gallery: [
+      'assets/img/products/w31-pro-max-1.webp',
+      'assets/img/products/w31-pro-max-2.webp',
+      'assets/img/products/w31-pro-max-3.webp',
+      'assets/img/products/w31-pro-max-4.webp',
+      'assets/img/products/w31-pro-max-5.webp'
+    ],
     specs: [
       { label: 'Tela', value: 'Colorida de alta definição' },
       { label: 'Conexão', value: 'Bluetooth' },
@@ -163,6 +190,10 @@ window.AKYLLA_PRODUCTS = [
     description: 'Smartwatch com tela de 2,01", resistência à água IP68 e bateria de 200 mAh. Recebe notificações e chamadas, monitora frequência cardíaca e sono e acompanha múltiplos esportes.',
     image: 'assets/img/products/w96-pro-max.webp',
     imageAlt: 'Relógio inteligente W96 Pro Max com pulseira laranja',
+    gallery: [
+      'assets/img/products/w96-pro-max-1.webp',
+      'assets/img/products/w96-pro-max-2.webp'
+    ],
     specs: [
       { label: 'Tela', value: '2,01"' },
       { label: 'Resistência', value: 'IP68' },
@@ -256,6 +287,13 @@ window.AKYLLA_PRODUCTS = [
     description: 'Microfone de lapela sem fio com receptores Lightning e USB-C, alcance de até 20 m e case de carregamento com display LED. Ideal para vídeos, lives e gravações, sem necessidade de aplicativo.',
     image: 'assets/img/products/microfone-lapela.webp',
     imageAlt: 'Microfone de lapela sem fio com case carregador e receptores',
+    gallery: [
+      'assets/img/products/microfone-lapela-1.webp',
+      'assets/img/products/microfone-lapela-2.webp',
+      'assets/img/products/microfone-lapela-3.webp',
+      'assets/img/products/microfone-lapela-4.webp',
+      'assets/img/products/microfone-lapela-5.webp'
+    ],
     specs: [
       { label: 'Alcance', value: 'Até 20 m' },
       { label: 'Receptores', value: 'Lightning e USB-C' },
@@ -280,6 +318,10 @@ window.AKYLLA_PRODUCTS = [
     description: 'Fone TWS com Bluetooth 5.3, microfone integrado e até 4 horas de reprodução. Acompanha estojo de carregamento de 300 mAh para recarregar em qualquer lugar.',
     image: 'assets/img/products/fone-bluetooth-fon6694.webp',
     imageAlt: 'Fone Bluetooth TWS FON-6694 branco com estojo de carregamento',
+    gallery: [
+      'assets/img/products/fone-bluetooth-fon6694-1.webp',
+      'assets/img/products/fone-bluetooth-fon6694-2.webp'
+    ],
     specs: [
       { label: 'Conexão', value: 'Bluetooth 5.3' },
       { label: 'Alcance', value: 'Até 10 m' },
@@ -304,6 +346,15 @@ window.AKYLLA_PRODUCTS = [
     description: 'Fone TWS com Bluetooth 5.3, até 5 horas de reprodução e microfone para chamadas. Acompanha estojo de carregamento compacto.',
     image: 'assets/img/products/fone-bluetooth-fon9856.webp',
     imageAlt: 'Fone Bluetooth TWS FON-9856 branco com estojo de recarga',
+    gallery: [
+      'assets/img/products/fone-bluetooth-fon9856-1.webp',
+      'assets/img/products/fone-bluetooth-fon9856-2.webp',
+      'assets/img/products/fone-bluetooth-fon9856-3.webp',
+      'assets/img/products/fone-bluetooth-fon9856-4.webp',
+      'assets/img/products/fone-bluetooth-fon9856-5.webp',
+      'assets/img/products/fone-bluetooth-fon9856-6.webp',
+      'assets/img/products/fone-bluetooth-fon9856-7.webp'
+    ],
     specs: [
       { label: 'Conexão', value: 'Bluetooth 5.3' },
       { label: 'Reprodução', value: '4 a 5 horas' },
@@ -325,9 +376,8 @@ window.AKYLLA_PRODUCTS = [
     stock: 2,
     summary: '3 portas USB, 5.1A e cabo Lightning de 1 m incluso.',
     description: 'Kit carregador Inova 5.1A com 3 portas USB e cabo Lightning de 1 m. Carrega vários dispositivos ao mesmo tempo com segurança.',
-    image: 'assets/img/products/carregador-iphone-car3248a.webp',
-    imageAlt: 'Carregador Inova 5.1A com 3 portas USB e cabo Lightning',
-    illustrative: true,
+    image: 'assets/img/products/carregador-iphone-car3248a-1.webp',
+    imageAlt: 'Carregador iPhone 5.1A com Cabo Lightning',
     specs: [
       { label: 'Saída', value: '5.1A' },
       { label: 'Portas', value: '3 portas USB' },
@@ -372,9 +422,8 @@ window.AKYLLA_PRODUCTS = [
     stock: 1,
     summary: '3 portas USB, 5.1A e cabo Lightning de 1 m incluso.',
     description: 'Carregador de tomada 5.1A com 3 portas USB e cabo Lightning de 1 m. Carrega vários dispositivos ao mesmo tempo.',
-    image: 'assets/img/products/carregador-inova-51a-iphone.webp',
-    imageAlt: 'Carregador Inova 5.1A preto com 3 portas USB',
-    illustrative: true,
+    image: 'assets/img/products/carregador-inova-51a-iphone-1.webp',
+    imageAlt: 'Carregador Inova 5.1A 3 USB com Cabo Lightning',
     specs: [
       { label: 'Saída', value: '5.1A' },
       { label: 'Portas', value: '3 portas USB' },
@@ -489,6 +538,10 @@ window.AKYLLA_PRODUCTS = [
     description: 'Headset Bluetooth 5.0 com som estéreo, microfone com cancelamento de ruído e até 8 horas de uso. Ideal para treinos, chamadas e uso diário.',
     image: 'assets/img/products/fone-kapbom-ka9068.webp',
     imageAlt: 'Headset Bluetooth Kapbom KA-9068',
+    gallery: [
+      'assets/img/products/fone-kapbom-ka9068-1.webp',
+      'assets/img/products/fone-kapbom-ka9068-2.webp'
+    ],
     specs: [
       { label: 'Conexão', value: 'Bluetooth 5.0' },
       { label: 'Alcance', value: 'Até 10 m' },
@@ -512,6 +565,11 @@ window.AKYLLA_PRODUCTS = [
     description: 'Drone articulado com câmera HD, sensor de obstáculos e controle remoto em 2.4 GHz. Dobrável e fácil de transportar, ideal para primeiros voos e registros aéreos.',
     image: 'assets/img/products/drone-wrj12618.webp',
     imageAlt: 'Drone articulado WRJ-12618 com câmera HD e controle remoto',
+    gallery: [
+      'assets/img/products/drone-wrj12618-1.webp',
+      'assets/img/products/drone-wrj12618-2.webp',
+      'assets/img/products/drone-wrj12618-3.webp'
+    ],
     specs: [
       { label: 'Câmera', value: 'HD' },
       { label: 'Sensores', value: 'Obstáculos' },
@@ -536,6 +594,11 @@ window.AKYLLA_PRODUCTS = [
     description: 'Drone dobrável com câmera, sensor de obstáculos e estabilização em 2.4 GHz. Compacto, fácil de pilotar e indicado para uso recreativo a partir de 14 anos.',
     image: 'assets/img/products/drone-wrj12619.webp',
     imageAlt: 'Drone dobrável WRJ-12619 com câmera e controle remoto',
+    gallery: [
+      'assets/img/products/drone-wrj12619-1.webp',
+      'assets/img/products/drone-wrj12619-2.webp',
+      'assets/img/products/drone-wrj12619-3.webp'
+    ],
     specs: [
       { label: 'Câmera', value: 'Integrada' },
       { label: 'Sensores', value: 'Obstáculos' },
