@@ -19,10 +19,10 @@ window.AKYLLA_CONFIG = {
   "paymentNote": "Pagamento via PIX. O pedido é confirmado após a conferência do comprovante.",
   "year": 2026,
   "promo": {
-    "active": false,
+    "active": true,
     "text": "Descontos de inauguração",
-    "percent": 28.5,
-    "until": ""
+    "percent": 10,
+    "until": "2026-10-31"
   },
   "marginPercent": 50
 };
