@@ -301,7 +301,7 @@ Observações para o responsável:
 
 - Alguns preços **caíram** em relação à versão anterior (cabos e carregadores), porque os preços antigos não seguiam a planilha; outros **subiram** (relógios e drones), pois estavam até abaixo do custo. Ver tabela no histórico do commit.
 - A margem global é de 30%; se algum grupo de produtos exigir margem diferente, ajuste por produto após a planilha.
-- **Códigos divergentes:** os códigos no `products.js` (sequenciais 7547–7568) não são os do cupom; a planilha traz os códigos reais (ex.: W31 = 9997, W69 = 10391). A troca **não foi feita** por depender de decisão do responsável — se confirmada, melhora a busca por código do cliente.
+- **Códigos divergentes:** ✅ corrigido em 20/10/2026 — os 22 `code` do `products.js` agora usam os códigos reais do cupom/planilha (ex.: W31 = 9997, W69 = 10391). O cabo BA-CBO414 ganhou o nome curto “Cabo USB-C/USB-C 1 m” para não repetir o “Cabo USB-C 60W”.
 
 ### Pendências que exigem decisão do responsável
 
