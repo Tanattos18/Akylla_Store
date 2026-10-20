@@ -170,8 +170,8 @@ Arquivo: `assets/js/config.js`
 ```js
 window.AKYLLA_CONFIG = {
   storeName: 'Akylla Store',
-  whatsapp: '5562991657619',
-  whatsappDisplay: '(62) 99165-7619',
+  whatsapp: '556281517002',
+  whatsappDisplay: '(62) 8151-7002',
   pixKey: '7dda9a3c-400d-45de-906b-f22b2615f1d5',
   pixHolder: 'Joás Santana Nascimento',
   pixMerchantName: 'JOAS SANTANA NASCIMENTO',
@@ -341,4 +341,4 @@ Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages qua
 
 ## Suporte
 
-Dúvidas sobre o código ou ajustes: fale com a Akylla Store pelo WhatsApp **(62) 99165-7619**.
+Dúvidas sobre o código ou ajustes: fale com a Akylla Store pelo WhatsApp **(62) 8151-7002**.
