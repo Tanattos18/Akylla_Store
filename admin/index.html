@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#060913">
   <title>Painel Akylla</title>
   <link rel="icon" href="../assets/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="admin.css?v=20261020-2">
+  <link rel="stylesheet" href="admin.css?v=20261020-3">
 </head>
 <body>
   <header class="topbar">
@@ -59,6 +59,7 @@
   <main class="app" id="appView" hidden>
     <nav class="tabs" role="tablist">
       <button class="tab is-active" type="button" role="tab" data-tab="estoque" aria-selected="true">Estoque</button>
+      <button class="tab" type="button" role="tab" data-tab="promocao" aria-selected="false">Promoção</button>
       <button class="tab" type="button" role="tab" data-tab="produtos" aria-selected="false">Produtos</button>
       <button class="tab" type="button" role="tab" data-tab="loja" aria-selected="false">Loja</button>
     </nav>
@@ -78,6 +79,28 @@
     </section>
 
     <!-- Produtos -->
+    <!-- Promoção -->
+    <section class="panel" data-panel="promocao" hidden>
+      <form class="card form-grid" id="promoForm" novalidate>
+        <h2 class="full">Promoção geral</h2>
+        <label class="check full"><input type="checkbox" name="active"> Promoção ligada no site</label>
+        <label class="full">Texto da faixa <input name="text" maxlength="80" placeholder="Descontos de inauguração"></label>
+        <label>Desconto padrão (%) <input name="percent" type="number" min="0" max="90" step="0.5" inputmode="decimal"></label>
+        <label>Válida até (último dia) <input name="until" type="date"></label>
+        <p class="muted full">O desconto sai do preço atual de cada produto (que aparece riscado). O cliente paga o valor com desconto, inclusive no PIX. Os preços cadastrados não mudam: no dia seguinte ao fim, o site volta sozinho ao preço normal.</p>
+        <p class="warn full" id="promoWarn" hidden></p>
+        <div class="full promo-bulk">
+          <button class="btn btn-ghost btn-sm" type="button" id="promoAllGeneral">Todos seguem a promoção geral</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="promoAllOut">Tirar todos da promoção</button>
+        </div>
+      </form>
+      <div class="panel-head">
+        <input class="search" type="search" id="promoSearch" placeholder="Buscar produto">
+        <span class="muted" id="promoSummary"></span>
+      </div>
+      <ul class="promo-list" id="promoList"></ul>
+    </section>
+
     <section class="panel" data-panel="produtos" hidden>
       <div class="panel-head">
         <input class="search" type="search" id="productSearch" placeholder="Buscar produto">
@@ -196,6 +219,7 @@
   <div class="busy" id="busy" hidden><div class="busy-box"><span class="spinner" aria-hidden="true"></span><span id="busyText">Carregando…</span></div></div>
 
   <script src="formato.js?v=20261020-1"></script>
-  <script src="admin.js?v=20261020-2"></script>
+  <script src="../assets/js/promo.js?v=20261020-4"></script>
+  <script src="admin.js?v=20261020-3"></script>
 </body>
 </html>

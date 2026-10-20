@@ -160,3 +160,41 @@ test('painel: arquivos existem, scripts compilam e a política de segurança est
 test('produtos ocultos não aparecem na loja', function () {
   assert.match(read('assets/js/app.js'), /!product\.hidden/);
 });
+
+/* -------------------------------- promoção -------------------------------- */
+
+test('promoção: desconto real sobre o preço atual, com data de fim e regras por produto', function () {
+  var Promo = require('../assets/js/promo.js');
+  var cfg = { promo: { active: true, text: 'Inauguração', percent: 10, until: '2026-10-31' } };
+  var during = new Date(2026, 9, 20), after = new Date(2026, 10, 1), lastDay = new Date(2026, 9, 31, 23, 59);
+  var p = { price: 7560 };
+
+  var info = Promo.priceFor(p, cfg, during);
+  assert.equal(info.original, 7560, 'o riscado é o preço atual cadastrado');
+  assert.equal(info.price, 6800, '10% de R$ 75,60 = R$ 68,04 → arredonda para baixo: R$ 68,00');
+  assert.equal(Promo.priceFor(p, cfg, lastDay).active, true, 'vale até o fim do último dia');
+  assert.equal(Promo.priceFor(p, cfg, after).price, 7560, 'depois da data volta ao preço normal');
+  assert.equal(Promo.priceFor({ price: 7560, promo: { percent: 0 } }, cfg, during).active, false, 'fora da promoção');
+  assert.equal(Promo.priceFor({ price: 10000, promo: { percent: 20, until: '2026-11-15' } }, cfg, after).price, 8000, 'promoção própria com outra data');
+  assert.equal(Promo.priceFor(p, { promo: { active: false, percent: 10 } }, during).active, false, 'promoção geral desligada');
+  assert.equal(Promo.priceFor({ price: 1000, promo: { percent: 500 } }, cfg, during).price, 100, 'desconto limitado a 90%');
+  assert.ok(info.price <= info.original);
+});
+
+test('promoção: o catálogo cadastrado não muda e o desconto sempre fica abaixo do preço', function () {
+  var Promo = require('../assets/js/promo.js');
+  PRODUCTS.forEach(function (p) {
+    var info = Promo.priceFor(p, CONFIG, new Date(2026, 9, 20));
+    assert.equal(info.original, p.price);
+    assert.ok(info.price > 0 && info.price <= p.price, p.id + ': preço promocional inválido');
+  });
+});
+
+test('promoção: QR do PIX usa o total com desconto', function () {
+  var Promo = require('../assets/js/promo.js');
+  var cfg = { promo: { active: true, percent: 10, until: '2099-12-31' } };
+  var total = Promo.priceFor({ price: 18850 }, cfg).price * 2;
+  var payload = Pix.buildPixPayload({ key: CONFIG.pixKey, merchantName: CONFIG.pixMerchantName, city: CONFIG.pixCity, amountCents: total, txid: 'AKTESTE' });
+  assert.equal(Pix.validatePixPayload(payload).fields['54'], (total / 100).toFixed(2));
+  assert.match(read('assets/js/app.js'), /item\.unit \* item\.qty/);
+});

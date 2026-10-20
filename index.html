@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-3">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-4">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -184,6 +184,15 @@
     </symbol>
   </svg>
 
+  <aside class="promo-strip" data-promo-banner hidden aria-label="Promoção">
+    <div class="container promo-strip-inner">
+      <span class="promo-strip-tag" aria-hidden="true">%</span>
+      <strong data-promo-title>Promoção</strong>
+      <span data-promo-detail></span>
+      <a href="#produtos">Ver produtos</a>
+    </div>
+  </aside>
+
   <aside class="announcement" aria-label="Informações da loja">
     <div class="container announcement-inner">
       <span class="announcement-item"><span class="pulse-dot" aria-hidden="true"></span> PIX à vista</span>
@@ -310,6 +319,7 @@
             <p class="eyebrow">Catálogo</p>
             <h2 id="produtos-title">Tech que faz sentido.</h2>
             <p class="section-lead"><span data-catalog-count>22</span> itens para elevar o dia a dia — do smartwatch ao drone. Preços à vista no PIX e atendimento para ajudar na escolha.</p>
+            <p class="catalog-promo" data-promo-banner hidden><span class="discount-badge" aria-hidden="true">%</span> <strong data-promo-title>Promoção</strong> <span data-promo-detail></span></p>
           </div>
           <div class="catalog-tools">
             <label class="search-field" for="searchInput">
@@ -709,7 +719,9 @@
         <div class="product-dialog-buy">
           <span class="price-wrap">
             <span class="price-label">à vista no PIX</span>
+            <span class="price-old" id="productDialogOld" hidden><span class="sr-only">De </span><s></s> <span class="discount-badge"></span></span>
             <span class="price" id="productDialogPrice">R$ 0,00</span>
+            <span class="price-until" id="productDialogUntil" hidden></span>
             <span class="stock-badge" id="productDialogStock" hidden></span>
           </span>
           <button class="btn btn-primary" type="button" id="productDialogAdd">
@@ -826,10 +838,11 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261020-3" defer></script>
-  <script src="assets/js/config.js?v=20261020-3" defer></script>
-  <script src="assets/js/products.js?v=20261020-3" defer></script>
-  <script src="assets/js/pix.js?v=20261020-3" defer></script>
-  <script src="assets/js/app.js?v=20261020-3" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261020-4" defer></script>
+  <script src="assets/js/config.js?v=20261020-4" defer></script>
+  <script src="assets/js/products.js?v=20261020-4" defer></script>
+  <script src="assets/js/pix.js?v=20261020-4" defer></script>
+  <script src="assets/js/promo.js?v=20261020-4" defer></script>
+  <script src="assets/js/app.js?v=20261020-4" defer></script>
 </body>
 </html>

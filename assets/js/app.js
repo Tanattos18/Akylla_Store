@@ -66,6 +66,8 @@
     productDialogPrice: document.getElementById('productDialogPrice'),
     productDialogAdd: document.getElementById('productDialogAdd'),
     productDialogStock: document.getElementById('productDialogStock'),
+    productDialogOld: document.getElementById('productDialogOld'),
+    productDialogUntil: document.getElementById('productDialogUntil'),
     productDialogThumbs: document.getElementById('productDialogThumbs'),
     productDialogWa: document.getElementById('productDialogWa'),
     productDialogNote: document.getElementById('productDialogNote'),
@@ -91,6 +93,39 @@
   var activeProductId = null;
 
   /* ----------------------------- utilidades ----------------------------- */
+
+  /* Preço de venda agora (com promoção ativa, se houver) — ver assets/js/promo.js. */
+  function priceInfo(product) {
+    if (window.AkyllaPromo) return window.AkyllaPromo.priceFor(product, CONFIG);
+    return { price: product.price, original: product.price, percent: 0, until: '', active: false };
+  }
+
+  function salePrice(product) {
+    return priceInfo(product).price;
+  }
+
+  function percentText(percent) {
+    return String(percent).replace('.', ',') + '%';
+  }
+
+  function promoUntilText(info) {
+    var day = info.until && window.AkyllaPromo ? window.AkyllaPromo.formatDay(info.until) : '';
+    return day ? 'até ' + day : '';
+  }
+
+  /* Bloco de preço (card): preço normal riscado + preço com desconto + selo. */
+  function priceHTML(product) {
+    var info = priceInfo(product);
+    if (!info.active) {
+      return '        <span class="price">' + formatBRL(info.price) + '</span>';
+    }
+    return [
+      '        <span class="price-old"><span class="sr-only">De </span><s>' + formatBRL(info.original) + '</s>',
+      '          <span class="discount-badge">-' + percentText(info.percent) + '</span></span>',
+      '        <span class="price"><span class="sr-only">Por </span>' + formatBRL(info.price) + '</span>',
+      promoUntilText(info) ? '        <span class="price-until">Promoção ' + escapeHTML(promoUntilText(info)) + '</span>' : ''
+    ].join('\n');
+  }
 
   function formatBRL(cents) {
     return new Intl.NumberFormat('pt-BR', {
@@ -271,7 +306,7 @@
 
   function cartTotal() {
     return getCartItems().reduce(function (total, item) {
-      return total + item.product.price * item.qty;
+      return total + salePrice(item.product) * item.qty;
     }, 0);
   }
 
@@ -358,7 +393,7 @@
 
     els.cartItems.innerHTML = items.map(function (item, index) {
       var product = item.product;
-      var lineTotal = product.price * item.qty;
+      var lineTotal = salePrice(product) * item.qty;
       return [
         '<article class="cart-item" data-id="' + escapeHTML(product.id) + '">',
         '  <div class="cart-thumb visual--' + escapeHTML(product.visual) + (product.image ? '' : ' is-fallback') + '" aria-hidden="true" data-media>',
@@ -409,7 +444,20 @@
       els.productDialogCode.textContent = 'Cód. ' + product.code + ' • Modelo ' + product.model;
     }
     if (els.productDialogDesc) els.productDialogDesc.textContent = product.description;
-    if (els.productDialogPrice) els.productDialogPrice.textContent = formatBRL(product.price);
+    var dialogInfo = priceInfo(product);
+    if (els.productDialogPrice) els.productDialogPrice.textContent = formatBRL(dialogInfo.price);
+    if (els.productDialogOld) {
+      els.productDialogOld.hidden = !dialogInfo.active;
+      if (dialogInfo.active) {
+        els.productDialogOld.querySelector('s').textContent = formatBRL(dialogInfo.original);
+        els.productDialogOld.querySelector('.discount-badge').textContent = '-' + percentText(dialogInfo.percent);
+      }
+    }
+    if (els.productDialogUntil) {
+      var untilText = dialogInfo.active ? promoUntilText(dialogInfo) : '';
+      els.productDialogUntil.hidden = !untilText;
+      els.productDialogUntil.textContent = untilText ? 'Promoção ' + untilText : '';
+    }
     if (els.productDialogStock) {
       var info = stockInfo(product);
       els.productDialogStock.hidden = !info;
@@ -604,9 +652,9 @@
     });
 
     if (state.sort === 'price-asc') {
-      list.sort(function (a, b) { return a.price - b.price; });
+      list.sort(function (a, b) { return salePrice(a) - salePrice(b); });
     } else if (state.sort === 'price-desc') {
-      list.sort(function (a, b) { return b.price - a.price; });
+      list.sort(function (a, b) { return salePrice(b) - salePrice(a); });
     } else if (state.sort === 'name-asc') {
       list.sort(function (a, b) {
         return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
@@ -641,7 +689,7 @@
       '    <div class="product-bottom">',
       '      <span class="price-wrap">',
       '        <span class="price-label">à vista no PIX</span>',
-      '        <span class="price">' + formatBRL(product.price) + '</span>',
+      priceHTML(product),
       '      </span>',
       '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="' + (maxQty(product) < 1 ? productName + ' esgotado' : 'Adicionar ' + productName + ' à sacola') + '"' + (maxQty(product) < 1 ? ' disabled' : '') + '>',
       '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
@@ -741,7 +789,7 @@
 
   function buildProofMessage(order) {
     var lines = order.items.map(function (item) {
-      return '• ' + item.qty + 'x ' + item.product.shortName + ' — ' + formatBRL(item.product.price * item.qty);
+      return '• ' + item.qty + 'x ' + item.product.shortName + ' (cód. ' + item.product.code + ') — ' + formatBRL(item.unit * item.qty);
     });
 
     return [
@@ -752,6 +800,7 @@
       lines.join('\n'),
       '',
       'Total: ' + formatBRL(order.total),
+      order.savings > 0 ? 'Desconto da promoção: ' + formatBRL(order.savings) : '',
       '',
       'Vou enviar o comprovante do PIX agora.'
     ].join('\n');
@@ -796,9 +845,9 @@
           '<li class="summary-item">',
           '  <div>',
           '    <p class="summary-item-name">' + escapeHTML(item.product.shortName) + '</p>',
-          '    <p class="summary-item-meta">' + item.qty + 'x • ' + formatBRL(item.product.price) + ' cada</p>',
+          '    <p class="summary-item-meta">' + item.qty + 'x • ' + formatBRL(item.unit) + ' cada' + (item.original > item.unit ? ' <s>' + formatBRL(item.original) + '</s>' : '') + '</p>',
           '  </div>',
-          '  <span class="summary-item-price">' + formatBRL(item.product.price * item.qty) + '</span>',
+          '  <span class="summary-item-price">' + formatBRL(item.unit * item.qty) + '</span>',
           '</li>'
         ].join('\n');
       }).join('');
@@ -840,12 +889,20 @@
       return;
     }
 
+    items = items.map(function (item) {
+      var info = priceInfo(item.product);
+      return { product: item.product, qty: item.qty, unit: info.price, original: info.original };
+    });
+
     state.order = {
       id: createOrderId(),
       txid: createTxid(),
       items: items,
       total: items.reduce(function (total, item) {
-        return total + item.product.price * item.qty;
+        return total + item.unit * item.qty;
+      }, 0),
+      savings: items.reduce(function (total, item) {
+        return total + (item.original - item.unit) * item.qty;
       }, 0)
     };
 
@@ -1224,11 +1281,29 @@
     /* Preços citados fora do catálogo (ex.: cards do hero) vêm do products.js. */
     Array.prototype.forEach.call(document.querySelectorAll('[data-price-of]'), function (element) {
       var product = productById(element.getAttribute('data-price-of'));
-      if (product) element.textContent = formatBRL(product.price);
+      if (product) element.textContent = formatBRL(salePrice(product));
     });
 
     if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
     if (els.pixHolder) els.pixHolder.textContent = CONFIG.pixHolder || '';
+    renderPromoBanners();
+  }
+
+  /* Faixas da promoção no topo e no catálogo (somem se não houver promoção ativa). */
+  function renderPromoBanners() {
+    var info = window.AkyllaPromo ? window.AkyllaPromo.summary(PRODUCTS, CONFIG) : { active: false };
+    var day = info.active && info.until ? window.AkyllaPromo.formatDay(info.until) : '';
+    var pct = info.active ? percentText(info.maxPercent) + ' OFF' : '';
+    var scope = info.count === info.total ? 'em todos os produtos' : 'em ' + info.count + ' produtos';
+    var detail = info.active ? (info.uniform ? pct : 'até ' + pct) + ' ' + scope + (day ? ' · válido até ' + day : '') : '';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-promo-banner]'), function (banner) {
+      banner.hidden = !info.active;
+      if (!info.active) return;
+      var title = banner.querySelector('[data-promo-title]');
+      var text = banner.querySelector('[data-promo-detail]');
+      if (title) title.textContent = info.text || 'Promoção';
+      if (text) text.textContent = detail;
+    });
   }
 
   /* --------------------------------- init ------------------------------- */

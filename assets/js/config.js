@@ -17,5 +17,11 @@ window.AKYLLA_CONFIG = {
   "warrantyNote": "Garantia legal de 90 dias para produtos duráveis, conforme o Código de Defesa do Consumidor.",
   "returnNote": "Compras online podem ser desistidas em até 7 dias corridos após o recebimento, conforme o CDC.",
   "paymentNote": "Pagamento via PIX. O pedido é confirmado após a conferência do comprovante.",
-  "year": 2026
+  "year": 2026,
+  "promo": {
+    "active": true,
+    "text": "Descontos de inauguração",
+    "percent": 10,
+    "until": "2026-10-31"
+  }
 };

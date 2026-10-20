@@ -253,11 +253,15 @@
       if (old.stock !== p.stock) list.push(p.shortName + ': estoque ' + old.stock + ' → ' + p.stock);
       if (old.price !== p.price) list.push(p.shortName + ': preço ' + brl(old.price) + ' → ' + brl(p.price));
       if (!!old.hidden !== !!p.hidden) list.push(p.shortName + (p.hidden ? ': ocultado' : ': voltou ao site'));
-      var rest = function (x) { var c = clone(x); delete c.stock; delete c.price; delete c.hidden; return JSON.stringify(c); };
+      if (JSON.stringify(old.promo || null) !== JSON.stringify(p.promo || null)) list.push(p.shortName + ': promoção ' + promoLabel(p));
+      var rest = function (x) { var c = clone(x); delete c.stock; delete c.price; delete c.hidden; delete c.promo; return JSON.stringify(c); };
       if (rest(old) !== rest(p)) list.push(p.shortName + ': dados/fotos editados');
     });
     state.original.products.forEach(function (p) { if (!now[p.id]) list.push('excluído: ' + p.shortName); });
-    if (configText() !== state.original.configText) list.push('configurações da loja');
+    var cfgOld = clone(state.original.config), cfgNow = clone(state.config);
+    if (JSON.stringify(cfgOld.promo || null) !== JSON.stringify(cfgNow.promo || null)) list.push('promoção geral');
+    delete cfgOld.promo; delete cfgNow.promo;
+    if (JSON.stringify(cfgOld) !== JSON.stringify(cfgNow)) list.push('configurações da loja');
     if (state.uploads[VITRINE.big]) list.push('nova foto da vitrine');
     return list;
   }
@@ -381,7 +385,7 @@
         el('img', { class: 'thumb', src: photoUrl(p.image), alt: '', loading: 'lazy', width: '56', height: '56' }),
         el('div', { class: 'item-main' }, [
           el('strong', { text: p.shortName }),
-          el('small', { text: 'Cód. ' + p.code }),
+          el('small', { text: 'Cód. ' + p.code + saleHint(p) }),
           el('div', { class: 'badges' }, [stockBadge(p)])
         ]),
         el('div', { class: 'stock-controls' }, [
@@ -395,6 +399,12 @@
       ]));
     });
     $('#stockSummary').textContent = state.products.length + ' produtos · ' + units + ' unidades · ' + out + ' esgotado(s)';
+  }
+
+  /* " · na promo R$ 68,00" quando o produto está com desconto hoje. */
+  function saleHint(p) {
+    var info = window.AkyllaPromo ? window.AkyllaPromo.priceFor(p, state.config) : null;
+    return info && info.active ? ' · na promo ' + brl(info.price) : '';
   }
 
   function setStock(index, value) {
@@ -413,7 +423,7 @@
         el('img', { class: 'thumb', src: photoUrl(p.image), alt: '', loading: 'lazy', width: '56', height: '56' }),
         el('div', { class: 'item-main' }, [
           el('strong', { text: p.shortName }),
-          el('small', { text: brl(p.price) + ' · Cód. ' + p.code + ' · ' + (1 + (p.gallery || []).length) + ' foto(s)' }),
+          el('small', { text: brl(p.price) + saleHint(p) + ' · Cód. ' + p.code + ' · ' + (1 + (p.gallery || []).length) + ' foto(s)' }),
           el('div', { class: 'badges' }, [stockBadge(p), p.illustrative ? el('span', { class: 'badge', text: 'Foto ilustrativa' }) : null])
         ]),
         el('div', { class: 'item-actions' }, [
@@ -433,8 +443,133 @@
     $('#vitrinePreview').src = photoUrl(VITRINE.big);
   }
 
+  /* ------------------------------ promoção ------------------------------ */
+
+  var Promo = window.AkyllaPromo;
+
+  function generalPromo() {
+    if (!state.config.promo) state.config.promo = { active: false, text: 'Descontos de inauguração', percent: 10, until: '' };
+    return state.config.promo;
+  }
+
+  function promoMode(p) {
+    if (!p.promo) return 'geral';
+    return Number(p.promo.percent) === 0 ? 'fora' : 'propria';
+  }
+
+  function promoLabel(p) {
+    var mode = promoMode(p);
+    if (mode === 'fora') return 'fora';
+    if (mode === 'geral') return 'segue a geral';
+    return p.promo.percent + '%' + (p.promo.until ? ' até ' + Promo.formatDay(p.promo.until) : '');
+  }
+
+  /* Status do produto hoje: "Ativa: R$ 68,00 (-10% até 31/10)", "Vencida", "Fora"… */
+  function promoStatus(p) {
+    var info = Promo.priceFor(p, state.config);
+    if (info.active) {
+      return { tone: 'ok', text: brl(info.price) + ' (-' + info.percent + '%' + (info.until ? ' até ' + Promo.formatDay(info.until) : '') + ')' };
+    }
+    if (!generalPromo().active) return { tone: '', text: 'Promoção geral desligada' };
+    if (promoMode(p) === 'fora') return { tone: '', text: 'Fora da promoção' };
+    return { tone: 'out', text: 'Vencida ou sem desconto' };
+  }
+
+  function renderPromoForm() {
+    var promo = generalPromo();
+    var form = $('#promoForm');
+    form.elements.active.checked = !!promo.active;
+    form.elements.text.value = promo.text || '';
+    form.elements.percent.value = promo.percent == null ? '' : promo.percent;
+    form.elements.until.value = promo.until || '';
+    updatePromoWarn();
+  }
+
+  function updatePromoWarn() {
+    var promo = generalPromo();
+    var max = Number(promo.percent) || 0;
+    state.products.forEach(function (p) { if (promoMode(p) === 'propria') max = Math.max(max, Number(p.promo.percent) || 0); });
+    var warn = '';
+    if (max > 25) warn = 'Atenção: com a margem de 30% da planilha, descontos acima de ~25% deixam pouco lucro e acima de 30% vendem abaixo do custo (maior desconto agora: ' + max + '%).';
+    if (promo.active && promo.until && promo.until < Promo.toDay()) warn = (warn ? warn + ' ' : '') + 'A data da promoção geral já passou: os produtos que seguem a geral estão sem desconto.';
+    $('#promoWarn').textContent = warn;
+    $('#promoWarn').hidden = !warn;
+  }
+
+  function renderPromoList() {
+    var list = $('#promoList');
+    var query = normQuery($('#promoSearch'));
+    var active = 0;
+    list.innerHTML = '';
+    state.products.forEach(function (p, index) {
+      if (Promo.priceFor(p, state.config).active) active += 1;
+      if (!matches(p, query)) return;
+      var mode = promoMode(p);
+      var status = promoStatus(p);
+
+      var select = el('select', { 'aria-label': 'Promoção de ' + p.shortName }, [
+        el('option', { value: 'geral', text: 'Segue a promoção geral', selected: mode === 'geral' }),
+        el('option', { value: 'propria', text: 'Promoção própria', selected: mode === 'propria' }),
+        el('option', { value: 'fora', text: 'Fora da promoção', selected: mode === 'fora' })
+      ]);
+      select.addEventListener('change', function () {
+        var product = state.products[index];
+        if (select.value === 'geral') delete product.promo;
+        else if (select.value === 'fora') product.promo = { percent: 0 };
+        else product.promo = { percent: Number(generalPromo().percent) || 10, until: generalPromo().until || '' };
+        afterPromoChange();
+      });
+
+      var own = null;
+      if (mode === 'propria') {
+        var pct = el('input', { type: 'number', min: '1', max: String(Promo.MAX_PERCENT), step: '0.5', inputmode: 'decimal', value: String(p.promo.percent), 'aria-label': 'Desconto (%) de ' + p.shortName });
+        var until = el('input', { type: 'date', value: p.promo.until || '', 'aria-label': 'Promoção de ' + p.shortName + ' válida até' });
+        pct.addEventListener('change', function () {
+          var v = Math.max(1, Math.min(Promo.MAX_PERCENT, Number(String(pct.value).replace(',', '.')) || 0));
+          state.products[index].promo.percent = v;
+          afterPromoChange();
+        });
+        until.addEventListener('change', function () {
+          if (until.value) state.products[index].promo.until = until.value; else delete state.products[index].promo.until;
+          afterPromoChange();
+        });
+        own = el('div', { class: 'promo-own' }, [
+          el('label', {}, ['Desconto (%)', pct]),
+          el('label', {}, ['Até', until])
+        ]);
+      }
+
+      list.appendChild(el('li', { class: 'promo-item' + (isChanged(p) ? ' is-changed' : '') }, [
+        el('img', { class: 'thumb', src: photoUrl(p.image), alt: '', loading: 'lazy', width: '48', height: '48' }),
+        el('div', { class: 'item-main' }, [
+          el('strong', { text: p.shortName }),
+          el('small', { text: 'Preço normal ' + brl(p.price) }),
+          el('div', { class: 'badges' }, [el('span', { class: 'badge ' + status.tone, text: status.text })])
+        ]),
+        el('div', { class: 'promo-controls' }, [select, own])
+      ]));
+    });
+    $('#promoSummary').textContent = active + ' de ' + state.products.length + ' produtos com desconto hoje';
+  }
+
+  function afterPromoChange() {
+    updatePromoWarn();
+    renderPromoList(); renderStock(); renderProducts(); refreshPending();
+  }
+
+  function handlePromoForm(event) {
+    var input = event.target;
+    var promo = generalPromo();
+    if (input.name === 'active') promo.active = input.checked;
+    else if (input.name === 'text') promo.text = input.value;
+    else if (input.name === 'percent') promo.percent = Math.max(0, Math.min(Promo.MAX_PERCENT, Number(String(input.value).replace(',', '.')) || 0));
+    else if (input.name === 'until') promo.until = input.value;
+    else return;
+    afterPromoChange();
+  }
+
   function renderAll() {
-    renderStock(); renderProducts(); renderConfig(); refreshPending();
+    renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); refreshPending();
     var select = $('#categorySelect');
     select.innerHTML = '';
     state.original.categories.filter(function (c) { return c.id !== 'todos'; }).forEach(function (c) {
@@ -795,6 +930,20 @@
       if (cents) $('#editorForm').elements.price.value = moneyInput(cents);
     });
     $('#configForm').addEventListener('input', handleConfigInput);
+    $('#promoForm').addEventListener('change', handlePromoForm);
+    $('#promoForm').addEventListener('input', function (event) { if (event.target.name === 'text') handlePromoForm(event); });
+    $('#promoForm').addEventListener('submit', function (event) { event.preventDefault(); });
+    $('#promoSearch').addEventListener('input', renderPromoList);
+    $('#promoAllGeneral').addEventListener('click', function () {
+      state.products.forEach(function (p) { delete p.promo; });
+      afterPromoChange();
+      toast('Todos os produtos seguem a promoção geral.');
+    });
+    $('#promoAllOut').addEventListener('click', function () {
+      if (!confirm('Tirar TODOS os produtos da promoção?')) return;
+      state.products.forEach(function (p) { p.promo = { percent: 0 }; });
+      afterPromoChange();
+    });
     $('#configForm').addEventListener('submit', function (event) { event.preventDefault(); });
     $('#vitrineInput').addEventListener('change', handleVitrineInput);
 
