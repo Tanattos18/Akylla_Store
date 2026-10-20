@@ -63,6 +63,7 @@ Akylla_Store/
 ├── assets/
 │   ├── css/
 │   │   └── styles.css
+│   ├── fonts/           # DM Sans e Sora (woff2 locais, licença OFL)
 │   ├── img/
 │   │   ├── favicon.svg
 │   │   ├── hero-loja.jpg
@@ -75,6 +76,11 @@ Akylla_Store/
 │   │   └── products.js  # catálogo (22 produtos, preços em centavos)
 │   └── vendor/
 │       └── qrcode.js    # qrcode-generator 2.0.4 (MIT)
+├── scripts/
+│   └── atualizar-precos.js   # aplica os preços da planilha no products.js
+├── tests/
+│   └── site.test.js          # testes automáticos (node --test)
+├── .github/workflows/testes.yml   # roda os testes a cada push
 ├── docs/
 │   └── PLANO_MELHORIAS_AKYLLA_STORE.md   # auditoria, testes e pendências
 ├── CHECKLIST_MELHORIAS_AKYLLA_STORE.md
@@ -136,7 +142,14 @@ Cada produto segue este formato:
 ```
 
 - `price` está em **centavos** para evitar erros de arredondamento.
-- **Fonte dos preços:** a planilha local `Planilha_Precificacao_Produtos.xlsx` (não versionada — contém custos). A margem padrão é 30% sobre o preço de venda: `preço = custo do cupom ÷ 0,7`, arredondado para cima no múltiplo de R$ 0,10. Os 22 preços do catálogo foram aplicados por essa fórmula em 20/10/2026. Para reprecificar, ajuste a margem na célula B4 da planilha e atualize os `price` aqui (mantenha os cards flutuantes do hero em dia, como abaixo).
+- **Fonte dos preços:** a planilha local `Planilha_Precificacao_Produtos.xlsx` (não versionada — contém custos). A margem padrão é 30% sobre o preço de venda: `preço = custo do cupom ÷ 0,7`, arredondado para cima no múltiplo de R$ 0,10. Os 22 preços do catálogo foram aplicados por essa fórmula em 20/10/2026. Para reprecificar, ajuste a planilha (margem em B4, custos na coluna D) e rode:
+
+  ```bash
+  node scripts/atualizar-precos.js --check   # mostra o que mudaria
+  node scripts/atualizar-precos.js           # aplica no products.js
+  ```
+
+  O script casa os produtos pelo `code` (coluna A da planilha) e não precisa de nenhuma instalação além do Node.
 - `visual` deve ser um dos ícones disponíveis: `watch`, `headphones`, `earbuds`, `drone`, `cable`, `charger`, `powerbank`, `mic`.
 - `category` deve existir em `window.AKYLLA_CATEGORIES`.
 - Para adicionar um produto, copie um bloco e use um `id` único.
@@ -178,7 +191,7 @@ As fotos ficam em `assets/img/products/` e foram padronizadas em **WebP 700×700
 - `description`: texto completo do modal.
 - `specs`: lista de especificações exibida no modal.
 
-> Os cards flutuantes do hero (`index.html`) citam preços fixos de produtos em destaque. Se alterar `price` no `products.js`, atualize também esses valores para manter a consistência.
+> Os cards flutuantes do hero (`index.html`) leem o preço do `products.js` pelo atributo `data-price-of="<id do produto>"`, então acompanham qualquer reprecificação automaticamente.
 
 Para substituir uma foto, gere um WebP quadrado (recomendado: 700×700) e mantenha o mesmo nome de arquivo, ou atualize o campo `image` do produto. Se a foto for exata, remova `illustrative: true`. Se for representativa, mantenha o aviso.
 
@@ -244,7 +257,8 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 - [ ] Revisar os 22 preços e a disponibilidade dos produtos. — Preços aplicados em 20/10/2026 pela fórmula da planilha (custo ÷ 0,7, arredondado p/ cima em R$ 0,10); revisar a margem de 30% com o responsável.
 - [ ] Revisar as fotos marcadas como **ilustrativas** e, se possível, substituir pelas fotos reais do estoque.
 - [ ] Revisar garantia, entrega, trocas e condições de pagamento.
-- [ ] Adicionar **CNPJ/CPF e endereço da Akylla Store** no rodapé. O CNPJ e o endereço que aparecem no topo do cupom são do **emitente/fornecedor**, não da Akylla; por isso não foram publicados.
+- [x] Identificar o vendedor (nome e CPF) no rodapé e nas páginas legais. — Feito em 20/10/2026.
+- [ ] Incluir o **endereço físico** da loja (exigido pelo Decreto 7.962/2013) e, se houver, um e-mail de contato.
 - [ ] Adicionar links de redes sociais, se existirem (não foram inventados).
 - [ ] Configurar domínio próprio e atualizar `og:image` para uma URL absoluta.
 - [ ] Testar o QR PIX em um app bancário (sem concluir o pagamento).
@@ -255,6 +269,12 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 ### Qualidade e testes
 
 - A auditoria completa, os testes executados (47 asserções em DOM real + validação PIX no Node) e as pendências estão em [`docs/PLANO_MELHORIAS_AKYLLA_STORE.md`](docs/PLANO_MELHORIAS_AKYLLA_STORE.md).
+- Testes automáticos (catálogo, PIX, páginas e — se a planilha estiver na pasta — preços × planilha). Rodam no GitHub Actions a cada push:
+
+```bash
+node --test "tests/*.test.js"
+```
+
 - Validação rápida do gerador PIX no Node:
 
 ```bash
@@ -302,7 +322,7 @@ Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages qua
 - **Fotos dos produtos:** imagens de referência de fabricantes, distribuidores e lojas parceiras (Basike, Inova, Inovar, Mercado Livre e outros). Direitos reservados aos respectivos titulares; itens sem foto exata estão sinalizados como **“Imagem ilustrativa”**.
 - **Ícones e fallback de produto:** SVGs originais criados para este projeto.
 - **QR Code:** [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) de Kazuhiko Arase, licença MIT (cabeçalho original preservado em `assets/vendor/qrcode.js`).
-- **Fontes:** Sora e DM Sans, via Google Fonts (carregadas por CDN; há fallback para fontes do sistema).
+- **Fontes:** Sora e DM Sans (SIL Open Font License), servidas localmente em `assets/fonts/` — o site não faz chamadas ao Google Fonts.
 - **Ícones da interface:** SVGs originais no sprite inline do `index.html`.
 
 ---

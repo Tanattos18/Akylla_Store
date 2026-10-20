@@ -586,7 +586,8 @@
   /* ------------------------------- checkout ----------------------------- */
 
   function createOrderId() {
-    return 'AK-' + Date.now().toString(36).slice(-6).toUpperCase();
+    var random = Math.random().toString(36).slice(2, 5).padEnd(3, '0');
+    return ('AK-' + Date.now().toString(36).slice(-6) + random).toUpperCase();
   }
 
   function createTxid() {
@@ -1076,6 +1077,12 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-catalog-count]'), function (element) {
       element.textContent = String(PRODUCTS.length);
+    });
+
+    /* Preços citados fora do catálogo (ex.: cards do hero) vêm do products.js. */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-price-of]'), function (element) {
+      var product = productById(element.getAttribute('data-price-of'));
+      if (product) element.textContent = formatBRL(product.price);
     });
 
     if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';

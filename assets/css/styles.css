@@ -3,6 +3,23 @@
    CSS moderno, mobile-first, sem framework
    ========================================================= */
 
+/* Fontes locais (OFL) — sem chamadas ao Google Fonts */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/dm-sans-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url("../fonts/sora-latin.woff2") format("woff2");
+}
+
 :root {
   --ink: #060913;
   --ink-soft: #0b1120;
@@ -2077,6 +2094,15 @@ h3 {
   margin: 0;
   color: rgba(255, 255, 255, 0.55);
   font-size: 0.66rem;
+}
+
+.footer-bottom .footer-seller {
+  order: 1;
+  flex-basis: 100%;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .footer-top-link {
