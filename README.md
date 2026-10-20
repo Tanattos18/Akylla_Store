@@ -20,7 +20,7 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 
 ### O que está implementado
 
-- Hero section com foto real da vitrine, cards flutuantes e CTAs.
+- Hero section com banner da vitrine, cards flutuantes e CTAs.
 - Catálogo com 22 produtos extraídos do cupom fiscal de 19/10/2026.
 - Fotos dos produtos, ficha técnica e modal de detalhes com resumo, especificações e adição à sacola.
 - Busca por nome, modelo, marca, código ou especificação.
