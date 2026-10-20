@@ -310,6 +310,8 @@ https://tanattos18.github.io/Akylla_Store/
 
 O deploy é feito a partir da branch `main`, pasta `/ (root)`. Cada `git push` na `main` atualiza o site em 1–2 minutos.
 
+> **Cache dos navegadores:** os arquivos CSS/JS são chamados com `?v=AAAAMMDD-N` nas três páginas. Ao alterar `styles.css` ou algum `.js`, troque esse número (em `index.html`, `privacidade.html` e `termos.html`) para que celulares baixem a versão nova na hora.
+
 Configuração usada: **Settings → Pages → Deploy from a branch → main / (root)**.
 
 Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages quanto em domínio próprio. O `og:image` já aponta para a URL absoluta da capa em `index.html`.

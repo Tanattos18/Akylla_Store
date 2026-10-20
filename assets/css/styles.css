@@ -3406,7 +3406,9 @@ dialog::backdrop {
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    /* "none" (e não translate 0): um transform que sobra no fim da animação
+       vira o "containing block" de filhos position: fixed e os faz rolar junto. */
+    transform: none;
   }
 }
 
@@ -3773,31 +3775,51 @@ dialog::backdrop {
     align-items: flex-start;
   }
 
+  /* No celular o modal ocupa a tela e quem rola é o conteúdo (.product-dialog-shell):
+     assim o botão de fechar e a barra de compra ficam sempre presos à tela. */
   .product-dialog {
     width: 100%;
     max-width: none;
     height: 100dvh;
     max-height: 100dvh;
     margin: 0;
+    overflow: hidden;
     border-radius: 0;
   }
 
   .product-dialog-shell {
-    min-height: 100%;
+    display: block; /* coluna única: evita a grade "espremer" a área da foto */
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .product-dialog-close {
+    position: fixed;
+    top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    right: 0.75rem;
   }
 
   .product-dialog-media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     min-height: 250px;
     padding: 1.4rem;
     border-radius: 0;
   }
 
   .product-dialog-photo {
-    max-height: 300px;
+    width: min(100%, 300px);
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1 / 1;
   }
 
   .product-dialog-body {
-    padding: 1.3rem 1.2rem 7.4rem;
+    padding: 1.3rem 1.2rem calc(8.6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .product-dialog-body h2 {
@@ -3814,9 +3836,8 @@ dialog::backdrop {
     margin-top: 0;
     padding: 0.8rem 1.2rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--line);
-    background: rgba(244, 245, 239, 0.96);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--paper);
+    box-shadow: 0 -12px 30px rgba(6, 9, 19, 0.08);
     flex-direction: row;
   }
 

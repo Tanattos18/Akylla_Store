@@ -496,6 +496,29 @@
     if (!product) return;
     renderProductDialog(product);
     openDialog(els.productDialog);
+
+    /* Sempre abre no topo (no celular quem rola é o .product-dialog-shell). */
+    var shell = els.productDialog && els.productDialog.querySelector('.product-dialog-shell');
+    if (shell) shell.scrollTop = 0;
+    if (els.productDialog) els.productDialog.scrollTop = 0;
+  }
+
+  function currentPhotoIndex() {
+    if (!els.productDialogThumbs) return 0;
+    var active = els.productDialogThumbs.querySelector('[aria-pressed="true"]');
+    return active ? Number(active.getAttribute('data-photo-index')) : 0;
+  }
+
+  /* Avança/volta na galeria (com volta ao início). */
+  function stepDialogPhoto(delta) {
+    var product = productById(activeProductId);
+    if (!product) return;
+    var total = productPhotos(product).length;
+    if (total < 2) return;
+    var next = (currentPhotoIndex() + delta + total) % total;
+    showDialogPhoto(product, next);
+    var thumb = els.productDialogThumbs && els.productDialogThumbs.children[next];
+    if (thumb && thumb.scrollIntoView) thumb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   function setupProductDialog() {
@@ -505,6 +528,35 @@
       els.productDialogImg.addEventListener('error', function () {
         els.productDialogImg.hidden = true;
         if (els.productDialogMedia) els.productDialogMedia.classList.add('is-fallback');
+      });
+    }
+
+    /* Arrastar a foto para o lado troca de imagem (celular). */
+    if (els.productDialogMedia) {
+      var touchX = null;
+      var touchY = null;
+      els.productDialogMedia.addEventListener('touchstart', function (event) {
+        if (event.touches.length !== 1) return;
+        touchX = event.touches[0].clientX;
+        touchY = event.touches[0].clientY;
+      }, { passive: true });
+      els.productDialogMedia.addEventListener('touchend', function (event) {
+        if (touchX == null) return;
+        var dx = event.changedTouches[0].clientX - touchX;
+        var dy = event.changedTouches[0].clientY - touchY;
+        touchX = null;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) stepDialogPhoto(dx < 0 ? 1 : -1);
+      });
+    }
+
+    /* Setas do teclado trocam a foto quando o foco está na galeria. */
+    if (els.productDialogThumbs) {
+      els.productDialogThumbs.addEventListener('keydown', function (event) {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        event.preventDefault();
+        stepDialogPhoto(event.key === 'ArrowRight' ? 1 : -1);
+        var active = els.productDialogThumbs.querySelector('[aria-pressed="true"]');
+        if (active) active.focus();
       });
     }
 
