@@ -1,17 +1,22 @@
 #!/usr/bin/env node
 /*
- * Atualiza os preços do catálogo (assets/js/products.js) a partir da
- * planilha local Planilha_Precificacao_Produtos.xlsx (não versionada).
+ * Atualiza os preços e o estoque do catálogo (assets/js/products.js) a partir
+ * da planilha local Planilha_Precificacao_Produtos.xlsx (não versionada).
  *
  * Uso:
- *   node scripts/atualizar-precos.js            # aplica os preços
+ *   node scripts/atualizar-precos.js            # aplica preços e estoque
  *   node scripts/atualizar-precos.js --check    # só compara (sai com erro se houver diferença)
  *   node scripts/atualizar-precos.js outra.xlsx # usa outra planilha
  *
  * Os produtos são casados pelo código (coluna A da aba "Precificação" com o
- * campo `code` do products.js). Se a planilha foi salva pelo Excel, usa o
- * "Preço final unit." calculado (coluna K); senão, aplica a mesma fórmula da
- * planilha: custo ÷ (1 − margem − taxas), arredondado para cima (B7).
+ * campo `code` do products.js). O estoque vem da coluna C (Quantidade).
+ *
+ * O preço é SEMPRE recalculado aqui com a fórmula da planilha —
+ * (custo + custo extra) ÷ (1 − margem − taxas), arredondado para cima (B7) —
+ * em vez de usar o valor salvo pelo Excel na coluna K. Assim, fórmulas
+ * quebradas (ex.: #REF! depois de ordenar a planilha) não zeram preços.
+ * Custo extra, margem e taxas por linha só valem se forem números digitados;
+ * se a célula tiver fórmula, usa os valores gerais de B5, B4 e B6.
  *
  * Sem dependências: lê o .xlsx (zip) com o zlib nativo do Node.
  */
@@ -107,6 +112,16 @@ function pricesFromSheet(file) {
   var tax = num(cells, 'B6') || 0;
   var step = num(cells, 'B7') || 0;
   var prices = {};
+  var stock = {};
+  var warnings = [];
+
+  /* Valor digitado na linha (sem fórmula) ou, na falta dele, o valor geral. */
+  function typedOr(ref, fallback) {
+    var cell = cells[ref];
+    if (!cell || cell.formula) return fallback;
+    var n = num(cells, ref);
+    return n == null ? fallback : n;
+  }
 
   for (var row = 11; row < 1000; row += 1) {
     var code = cells['A' + row] && cells['A' + row].value;
@@ -114,26 +129,34 @@ function pricesFromSheet(file) {
       if (cells['B' + row] && /TOTAIS/i.test(String(cells['B' + row].value))) break;
       continue;
     }
+    code = String(code).trim();
 
-    var cached = num(cells, 'K' + row);
-    var price;
-    if (cached != null) {
-      price = cached;
-    } else {
-      var cost = num(cells, 'D' + row);
-      if (cost == null) throw new Error('Linha ' + row + ' sem custo unitário (coluna D).');
-      var rowExtra = cells['E' + row] && !cells['E' + row].formula ? num(cells, 'E' + row) || 0 : extra;
-      var rowMargin = cells['H' + row] && !cells['H' + row].formula ? num(cells, 'H' + row) || 0 : margin;
-      var rowTax = cells['I' + row] && !cells['I' + row].formula ? num(cells, 'I' + row) || 0 : tax;
-      if (rowMargin + rowTax >= 1) throw new Error('Linha ' + row + ': margem + taxas ≥ 100%.');
-      price = clean((cost + rowExtra) / (1 - rowMargin - rowTax));
-      if (step > 0) price = Math.ceil(clean(price / step)) * step;
+    var cost = num(cells, 'D' + row);
+    if (cost == null || cost <= 0) {
+      throw new Error('Linha ' + row + ' (cód. ' + code + ') sem custo unitário válido na coluna D.');
+    }
+    var rowMargin = typedOr('H' + row, margin);
+    var rowTax = typedOr('I' + row, tax);
+    if (rowMargin + rowTax >= 1) throw new Error('Linha ' + row + ': margem + taxas ≥ 100%.');
+
+    var price = clean((cost + typedOr('E' + row, extra)) / (1 - rowMargin - rowTax));
+    if (step > 0) price = Math.ceil(clean(price / step)) * step;
+    var cents = Math.round(clean(price) * 100);
+    if (!(cents > 0)) throw new Error('Linha ' + row + ' (cód. ' + code + '): preço calculado inválido.');
+    prices[code] = cents;
+
+    /* Avisa quando o que o Excel mostra na coluna K não bate com a fórmula. */
+    var excel = cells['K' + row] && cells['K' + row].value;
+    if (excel != null && excel !== '' && Math.round(Number(excel) * 100) !== cents) {
+      var shown = Number.isFinite(Number(excel)) ? brl(Math.round(Number(excel) * 100)) : String(excel);
+      warnings.push(code + ': o Excel mostra ' + shown + ', a fórmula dá ' + brl(cents));
     }
 
-    prices[String(code).trim()] = Math.round(clean(price) * 100);
+    var qty = num(cells, 'C' + row);
+    if (qty != null) stock[code] = Math.max(0, Math.round(qty));
   }
 
-  return { prices: prices, margin: margin, tax: tax, step: step };
+  return { prices: prices, stock: stock, warnings: warnings, margin: margin, tax: tax, step: step };
 }
 
 /* ---------------------------------- main ---------------------------------- */
@@ -158,15 +181,28 @@ function main() {
   var seen = {};
   var changes = [];
 
-  /* Troca só o `price` que vem logo depois do `code` de cada produto. */
-  var updated = source.replace(/shortName: '([^']+)'([^{}]*?)code: '([^']+)'([^{}]*?)price: (\d+)/g,
-    function (match, name, beforeCode, code, beforePrice, current) {
-      seen[code] = true;
-      var target = result.prices[code];
-      if (target == null || Number(current) === target) return match;
-      changes.push({ code: code, name: name, from: Number(current), to: target });
-      return "shortName: '" + name + "'" + beforeCode + "code: '" + code + "'" + beforePrice + 'price: ' + target;
-    });
+  /* Troca o `price` e cria/atualiza o `stock` logo abaixo dele, casando pelo `code`. */
+  var pattern = /shortName: '([^']+)'([^{}]*?)code: '([^']+)'([^{}]*?)\n(\s*)price: (\d+),(?:\n\s*stock: (\d+),)?/g;
+  var updated = source.replace(pattern, function (match, name, beforeCode, code, beforePrice, indent, current, currentStock) {
+    seen[code] = true;
+
+    var price = Number(current);
+    var target = result.prices[code];
+    if (target != null && target !== price) {
+      changes.push({ code: code, name: name, what: 'preço', from: brl(price), to: brl(target) });
+      price = target;
+    }
+
+    var qty = currentStock != null ? Number(currentStock) : null;
+    var targetQty = result.stock[code];
+    if (targetQty != null && targetQty !== qty) {
+      changes.push({ code: code, name: name, what: 'estoque', from: qty == null ? '—' : qty + ' un.', to: targetQty + ' un.' });
+      qty = targetQty;
+    }
+
+    return "shortName: '" + name + "'" + beforeCode + "code: '" + code + "'" + beforePrice +
+      '\n' + indent + 'price: ' + price + ',' + (qty != null ? '\n' + indent + 'stock: ' + qty + ',' : '');
+  });
 
   var missingInSite = Object.keys(result.prices).filter(function (code) { return !seen[code]; });
   var missingInSheet = Object.keys(seen).filter(function (code) { return result.prices[code] == null; });
@@ -174,24 +210,29 @@ function main() {
   console.log('Planilha: ' + path.basename(sheet) + ' — margem ' + Math.round(result.margin * 100) +
     '%, taxas ' + Math.round(result.tax * 100) + '%, arredondamento ' + brl(Math.round(result.step * 100)));
 
+  if (result.warnings.length) {
+    console.log('Atenção: o Excel mostra preços diferentes da fórmula (confira a coluna E — use $B$5):');
+    result.warnings.forEach(function (w) { console.log('  ' + w); });
+  }
+
   changes.forEach(function (c) {
-    console.log('  ' + c.code.padEnd(6) + ' ' + c.name.padEnd(26) + ' ' + brl(c.from) + ' → ' + brl(c.to));
+    console.log('  ' + c.code.padEnd(6) + ' ' + c.name.padEnd(26) + ' ' + c.what.padEnd(8) + ' ' + c.from + ' → ' + c.to);
   });
   if (missingInSite.length) console.log('Na planilha, mas fora do site: ' + missingInSite.join(', '));
   if (missingInSheet.length) console.log('No site, mas fora da planilha: ' + missingInSheet.join(', '));
 
   if (!changes.length) {
-    console.log('Todos os preços já batem com a planilha.');
+    console.log('Preços e estoque já batem com a planilha.');
     return;
   }
 
   if (checkOnly) {
-    console.log(changes.length + ' preço(s) diferente(s). Rode sem --check para aplicar.');
+    console.log(changes.length + ' diferença(s). Rode sem --check para aplicar.');
     process.exit(1);
   }
 
   fs.writeFileSync(PRODUCTS_FILE, updated);
-  console.log(changes.length + ' preço(s) atualizado(s) em assets/js/products.js.');
+  console.log(changes.length + ' alteração(ões) aplicada(s) em assets/js/products.js.');
 }
 
 if (require.main === module) {

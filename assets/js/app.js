@@ -62,6 +62,7 @@
     productDialogSpecs: document.getElementById('productDialogSpecs'),
     productDialogPrice: document.getElementById('productDialogPrice'),
     productDialogAdd: document.getElementById('productDialogAdd'),
+    productDialogStock: document.getElementById('productDialogStock'),
     productDialogWa: document.getElementById('productDialogWa'),
     productDialogNote: document.getElementById('productDialogNote'),
     checkoutDialog: document.getElementById('checkoutDialog'),
@@ -210,7 +211,9 @@
       return raw.reduce(function (cart, entry) {
         var id = String(entry && entry.id ? entry.id : '');
         if (!id || seen.has(id) || !productById(id)) return cart;
-        var quantity = Math.max(1, Math.min(99, parseInt(entry.qty, 10) || 1));
+        var limit = maxQty(productById(id));
+        if (limit < 1) return cart;
+        var quantity = Math.max(1, Math.min(limit, parseInt(entry.qty, 10) || 1));
         seen.add(id);
         cart.push({ id: id, qty: quantity });
         return cart;
@@ -242,6 +245,26 @@
     }, 0);
   }
 
+  /* Estoque vem da planilha (campo `stock`). Sem o campo, não limita. */
+  function maxQty(product) {
+    return product && typeof product.stock === 'number' ? Math.max(0, Math.min(99, product.stock)) : 99;
+  }
+
+  function stockInfo(product) {
+    var stock = maxQty(product);
+    if (typeof product.stock !== 'number') return null;
+    if (stock <= 0) return { text: 'Esgotado', tone: 'out' };
+    if (stock === 1) return { text: 'Última unidade', tone: 'low' };
+    if (stock <= 3) return { text: 'Restam ' + stock + ' unidades', tone: 'low' };
+    return { text: 'Em estoque', tone: 'ok' };
+  }
+
+  function stockBadge(product, extraClass) {
+    var info = stockInfo(product);
+    if (!info) return '';
+    return '<span class="stock-badge stock-badge--' + info.tone + (extraClass ? ' ' + extraClass : '') + '">' + escapeHTML(info.text) + '</span>';
+  }
+
   function cartTotal() {
     return getCartItems().reduce(function (total, item) {
       return total + item.product.price * item.qty;
@@ -256,8 +279,18 @@
       return item.id === id;
     });
 
+    var limit = maxQty(product);
+    if (limit < 1) {
+      toast(product.shortName + ' está esgotado no momento.');
+      return;
+    }
+    if (entry && entry.qty >= limit) {
+      toast('Temos só ' + limit + (limit === 1 ? ' unidade' : ' unidades') + ' de ' + product.shortName + '.');
+      return;
+    }
+
     if (entry) {
-      entry.qty = Math.min(99, entry.qty + 1);
+      entry.qty += 1;
     } else {
       state.cart.push({ id: id, qty: 1 });
     }
@@ -279,7 +312,7 @@
         return item.id !== id;
       });
     } else {
-      entry.qty = Math.min(99, entry.qty);
+      entry.qty = Math.min(maxQty(productById(id)), entry.qty);
     }
 
     saveCart();
@@ -337,7 +370,7 @@
         '          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-minus"></use></svg>',
         '        </button>',
         '        <span class="qty-value">' + item.qty + '</span>',
-        '        <button type="button" data-qty="1" data-id="' + escapeHTML(product.id) + '" aria-label="Aumentar quantidade"' + (item.qty >= 99 ? ' disabled' : '') + '>',
+        '        <button type="button" data-qty="1" data-id="' + escapeHTML(product.id) + '" aria-label="Aumentar quantidade"' + (item.qty >= maxQty(product) ? ' disabled' : '') + '>',
         '          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
         '        </button>',
         '      </div>',
@@ -373,6 +406,17 @@
     }
     if (els.productDialogDesc) els.productDialogDesc.textContent = product.description;
     if (els.productDialogPrice) els.productDialogPrice.textContent = formatBRL(product.price);
+    if (els.productDialogStock) {
+      var info = stockInfo(product);
+      els.productDialogStock.hidden = !info;
+      els.productDialogStock.className = 'stock-badge' + (info ? ' stock-badge--' + info.tone : '');
+      els.productDialogStock.textContent = info ? info.text : '';
+    }
+    if (els.productDialogAdd) {
+      var soldOut = maxQty(product) < 1;
+      els.productDialogAdd.disabled = soldOut;
+      els.productDialogAdd.lastChild.textContent = soldOut ? ' Esgotado' : ' Adicionar à sacola';
+    }
 
     if (els.productDialogSpecs) {
       els.productDialogSpecs.innerHTML = (product.specs || []).map(function (spec) {
@@ -490,6 +534,7 @@
       '  </button>',
       '  <div class="product-body">',
       '    <p class="product-kicker">' + escapeHTML(category) + ' • Cód. ' + escapeHTML(product.code) + '</p>',
+      stockBadge(product),
       '    <h3><button class="product-name" type="button" data-view="' + escapeHTML(product.id) + '">' + productName + '</button></h3>',
       '    <p class="product-desc">' + escapeHTML(product.summary || product.description) + '</p>',
       '    <button class="details-link" type="button" data-view="' + escapeHTML(product.id) + '">',
@@ -501,7 +546,7 @@
       '        <span class="price-label">à vista no PIX</span>',
       '        <span class="price">' + formatBRL(product.price) + '</span>',
       '      </span>',
-      '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="Adicionar ' + productName + ' à sacola">',
+      '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="' + (maxQty(product) < 1 ? productName + ' esgotado' : 'Adicionar ' + productName + ' à sacola') + '"' + (maxQty(product) < 1 ? ' disabled' : '') + '>',
       '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
       '      </button>',
       '    </div>',

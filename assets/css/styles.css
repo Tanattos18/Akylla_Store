@@ -1360,6 +1360,55 @@ h3 {
   line-height: 1.1;
 }
 
+/* Estoque (vem da planilha) */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  margin: 0 0 0.5rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.stock-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.stock-badge--ok {
+  background: #e7f6ec;
+  color: #17723a;
+}
+
+.stock-badge--low {
+  background: #fff1e0;
+  color: #a34a00;
+}
+
+.stock-badge--out {
+  background: #f1f1f1;
+  color: #5f6878;
+}
+
+.price-wrap .stock-badge {
+  margin: 0.35rem 0 0;
+}
+
+.add-btn:disabled,
+.add-btn:disabled:hover {
+  background: #d9dbd3;
+  color: #8a8f99;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .add-btn {
   display: grid;
   place-items: center;
@@ -3878,4 +3927,11 @@ dialog::backdrop {
     opacity: 1;
     transform: none;
   }
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }

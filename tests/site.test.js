@@ -72,15 +72,23 @@ test('preços citados na página apontam para produtos existentes', function () 
   });
 });
 
-test('preços batem com a planilha (quando ela está na pasta)', function (t) {
+test('estoque é inteiro e não negativo', function () {
+  PRODUCTS.forEach(function (p) {
+    if (p.stock == null) return;
+    assert.ok(Number.isInteger(p.stock) && p.stock >= 0, p.id + ': estoque inválido (' + p.stock + ')');
+  });
+});
+
+test('preços e estoque batem com a planilha (quando ela está na pasta)', function (t) {
   var sheet = path.join(ROOT, 'Planilha_Precificacao_Produtos.xlsx');
   if (!fs.existsSync(sheet)) {
     t.skip('planilha não versionada — teste só roda localmente');
     return;
   }
-  var prices = require('../scripts/atualizar-precos.js').pricesFromSheet(sheet).prices;
+  var sheetData = require('../scripts/atualizar-precos.js').pricesFromSheet(sheet);
   PRODUCTS.forEach(function (p) {
-    assert.equal(p.price, prices[p.code], p.code + ' ' + p.shortName + ': preço diferente da planilha');
+    assert.equal(p.price, sheetData.prices[p.code], p.code + ' ' + p.shortName + ': preço diferente da planilha');
+    assert.equal(p.stock, sheetData.stock[p.code], p.code + ' ' + p.shortName + ': estoque diferente da planilha');
   });
 });
 

@@ -151,6 +151,9 @@ Cada produto segue este formato:
   ```
 
   O script casa os produtos pelo `code` (coluna A da planilha) e não precisa de nenhuma instalação além do Node.
+
+- **Estoque:** o mesmo script copia a coluna C (Quantidade) da planilha para o campo `stock` de cada produto. O site mostra “Em estoque”, “Restam N unidades”, “Última unidade” ou “Esgotado”, limita a quantidade na sacola e bloqueia a compra de itens esgotados. Ao vender ou repor, atualize a quantidade na planilha e rode o script.
+- O script **sempre recalcula** o preço pela fórmula (não usa o valor salvo pelo Excel) e avisa se o Excel estiver mostrando outro valor — sinal de fórmula quebrada.
 - `visual` deve ser um dos ícones disponíveis: `watch`, `headphones`, `earbuds`, `drone`, `cable`, `charger`, `powerbank`, `mic`.
 - `category` deve existir em `window.AKYLLA_CATEGORIES`.
 - Para adicionar um produto, copie um bloco e use um `id` único.

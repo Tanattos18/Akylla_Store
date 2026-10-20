@@ -23,10 +23,16 @@ build/
 # Documentos de referência com dados pessoais
 # Não versionar o cupom, a chave PIX em TXT nem a imagem original.
 Cupon_Fiscal_Itens.pdf
+Comprovante_Cupom*.pdf
+*.pdf
 Chave*PIX.txt
 WhatsApp Image*.jpeg
-Planilha_Precificacao_Produtos.xlsx
+Planilha_Precificacao_Produtos*.xlsx
+*.xlsx
 
 # Artes-fonte (derivados vitrine*.jpg, og-cover.jpg, logo-mark.jpg e favicon.png ja versionados)
 Banner vitrine da loja.png
 Logo_Vitrine.png
+
+# Fotos candidatas para validação (não publicar sem aprovação)
+fotos-candidatas/
