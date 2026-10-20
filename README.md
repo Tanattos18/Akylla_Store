@@ -136,6 +136,7 @@ Cada produto segue este formato:
 ```
 
 - `price` está em **centavos** para evitar erros de arredondamento.
+- **Fonte dos preços:** a planilha local `Planilha_Precificacao_Produtos.xlsx` (não versionada — contém custos). A margem padrão é 30% sobre o preço de venda: `preço = custo do cupom ÷ 0,7`, arredondado para cima no múltiplo de R$ 0,10. Os 22 preços do catálogo foram aplicados por essa fórmula em 20/10/2026. Para reprecificar, ajuste a margem na célula B4 da planilha e atualize os `price` aqui (mantenha os cards flutuantes do hero em dia, como abaixo).
 - `visual` deve ser um dos ícones disponíveis: `watch`, `headphones`, `earbuds`, `drone`, `cable`, `charger`, `powerbank`, `mic`.
 - `category` deve existir em `window.AKYLLA_CATEGORIES`.
 - Para adicionar um produto, copie um bloco e use um `id` único.
@@ -240,7 +241,7 @@ node -e "global.window=global; require('./assets/js/pix.js'); console.log(window
 
 - [ ] Confirmar o telefone/WhatsApp da loja em `config.js` (o número usado veio do cupom).
 - [ ] Confirmar a chave PIX, o nome do recebedor e a cidade.
-- [ ] Revisar os 22 preços e a disponibilidade dos produtos.
+- [ ] Revisar os 22 preços e a disponibilidade dos produtos. — Preços aplicados em 20/10/2026 pela fórmula da planilha (custo ÷ 0,7, arredondado p/ cima em R$ 0,10); revisar a margem de 30% com o responsável.
 - [ ] Revisar as fotos marcadas como **ilustrativas** e, se possível, substituir pelas fotos reais do estoque.
 - [ ] Revisar garantia, entrega, trocas e condições de pagamento.
 - [ ] Adicionar **CNPJ/CPF e endereço da Akylla Store** no rodapé. O CNPJ e o endereço que aparecem no topo do cupom são do **emitente/fornecedor**, não da Akylla; por isso não foram publicados.
