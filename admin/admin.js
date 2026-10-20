@@ -498,18 +498,6 @@
     else if (max > 0 && left < 0.1) warns.push('Com a margem de ' + Math.round(margin * 100) + '%, o desconto de ' + max + '% deixa só ~' + Math.round(left * 100) + '% de lucro.');
     else if (max > 0) warns.push('Lucro estimado com o maior desconto (' + max + '%): ~' + Math.round(left * 100) + '% do preço de venda.');
 
-    /* O preço riscado precisa ter sido praticado: recomendamos 30 dias desde a última mudança de preço. */
-    var since = state.config.pricesSince;
-    if (since && promo.active) {
-      var ready = new Date(since + 'T12:00:00');
-      ready.setDate(ready.getDate() + 30);
-      var readyDay = Promo.toDay(ready);
-      if (Promo.toDay() < readyDay) {
-        warns.push('ATENÇÃO: os preços atuais valem desde ' + since.split('-').reverse().join('/') +
-          '. Para o preço riscado ser verdadeiro (e evitar problema com o Procon), ligue a promoção só a partir de ' +
-          readyDay.split('-').reverse().join('/') + '.');
-      }
-    }
     if (promo.active && promo.until && promo.until < Promo.toDay()) warns.push('A data da promoção geral já passou: os produtos que seguem a geral estão sem desconto.');
     var warn = warns.join(' ');
     $('#promoWarn').textContent = warn;
@@ -824,13 +812,6 @@
     if (!config.pixKey) { toast('A chave PIX não pode ficar vazia.', 5000); return; }
     if (config.pixKey !== state.original.config.pixKey &&
       !confirm('Você mudou a CHAVE PIX. Todos os QR Codes passarão a usar:\n\n' + config.pixKey + '\n\nConfirma?')) return;
-
-    /* Guarda a data da última mudança de preço (base da regra dos 30 dias da promoção). */
-    var priceChanged = state.products.some(function (p) {
-      var old = state.original.products.find(function (o) { return o.id === p.id; });
-      return old && old.price !== p.price;
-    });
-    if (priceChanged) state.config.pricesSince = Promo.toDay();
 
     var deletes = photosToDelete();
     var used = referencedPhotos(state.products);

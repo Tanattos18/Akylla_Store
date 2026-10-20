@@ -24,6 +24,5 @@ window.AKYLLA_CONFIG = {
     "percent": 28.5,
     "until": ""
   },
-  "marginPercent": 50,
-  "pricesSince": "2026-10-20"
+  "marginPercent": 50
 };
