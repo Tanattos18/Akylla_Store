@@ -10,7 +10,7 @@ Landing page responsiva de uma loja de eletrônicos e acessórios de informátic
 
 **Stack:** HTML5 · CSS3 · JavaScript (ES5+) · sem build · sem backend
 
-**Status:** código publicado no GitHub; falta apenas ativar o GitHub Pages (instruções abaixo).
+**Site publicado:** <https://tanattos18.github.io/Akylla_Store/>
 
 ---
 
@@ -255,20 +255,17 @@ git push
 
 ### GitHub Pages
 
-1. No repositório, abra **Settings → Pages**.
-2. Em **Build and deployment**, selecione **Deploy from a branch**.
-3. Escolha a branch `main` e a pasta `/ (root)`.
-4. Salve e aguarde a publicação (normalmente 1–2 minutos).
-
-O endereço ficará:
+O site já está publicado em:
 
 ```text
 https://tanattos18.github.io/Akylla_Store/
 ```
 
-Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages quanto em domínio próprio.
+O deploy é feito a partir da branch `main`, pasta `/ (root)`. Cada `git push` na `main` atualiza o site em 1–2 minutos.
 
-> **Importante:** depois de ativar o Pages, troque `og:image` no `index.html` pela URL absoluta da capa — por exemplo `https://tanattos18.github.io/Akylla_Store/assets/img/og-cover.jpg`. Redes sociais não resolvem caminhos relativos.
+Configuração usada: **Settings → Pages → Deploy from a branch → main / (root)**.
+
+Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages quanto em domínio próprio. O `og:image` já aponta para a URL absoluta da capa em `index.html`.
 
 ### Outras opções
 
