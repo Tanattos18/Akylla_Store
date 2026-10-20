@@ -416,7 +416,7 @@
           el('small', { text: brl(p.price) + ' · Cód. ' + p.code + ' · ' + (1 + (p.gallery || []).length) + ' foto(s)' }),
           el('div', { class: 'badges' }, [stockBadge(p), p.illustrative ? el('span', { class: 'badge', text: 'Foto ilustrativa' }) : null])
         ]),
-        el('div', { class: 'stepper' }, [
+        el('div', { class: 'item-actions' }, [
           el('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Duplicar', onclick: function () { duplicateProduct(index); } }),
           el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Editar', onclick: function () { openEditor(index); } })
         ])
