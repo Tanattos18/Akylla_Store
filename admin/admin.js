@@ -2027,7 +2027,47 @@
 
   /* ------------------------------ publicar ------------------------------ */
 
-  function publish() {
+  /*
+   * Junta as suas alterações com o que mudou no GitHub enquanto o painel estava aberto
+   * (ex.: o servidor baixou o estoque numa venda). Campo que você mexeu → vale o seu;
+   * estoque que você mexeu → aplica a diferença (+1 repus) sobre o estoque atual; o resto → o do GitHub.
+   */
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+  function mergeRemote(files) {
+    var remote = F.parseProducts(files[0].text);
+    var remoteConfig = F.parseConfig(files[1].text);
+    var base = {}, theirs = {};
+    state.original.products.forEach(function (p) { base[p.id] = p; });
+    remote.products.forEach(function (p) { theirs[p.id] = p; });
+    var merged = [];
+    state.products.forEach(function (mine) {
+      var b = base[mine.id], t = theirs[mine.id];
+      if (!b || !t) { if (!b) merged.push(clone(mine)); return; } // novo no painel entra; apagado no GitHub sai
+      var out = clone(t);
+      Object.keys(Object.assign({}, b, mine)).forEach(function (k) {
+        if (same(mine[k], b[k])) return;
+        if (k === 'stock' && typeof t.stock === 'number') out.stock = t.stock + (Number(mine.stock) - Number(b.stock));
+        else if (mine[k] === undefined) delete out[k];
+        else out[k] = clone(mine[k]);
+      });
+      merged.push(out);
+    });
+    remote.products.forEach(function (t) { if (!base[t.id] && !merged.some(function (p) { return p.id === t.id; })) merged.push(clone(t)); });
+    var config = clone(remoteConfig);
+    Object.keys(Object.assign({}, state.original.config, state.config)).forEach(function (k) {
+      if (same(state.config[k], state.original.config[k])) return;
+      if (state.config[k] === undefined) delete config[k]; else config[k] = clone(state.config[k]);
+    });
+    state.original = {
+      categories: remote.categories, products: remote.products, config: remoteConfig,
+      productsText: files[0].text, configText: files[1].text, productsSha: files[0].sha, configSha: files[1].sha
+    };
+    state.products = merged;
+    state.config = config;
+  }
+
+  function publish(retry) {
+    var again = false;
     var changes = changeList();
     if (!changes.length) return;
     var config = state.config;
@@ -2049,9 +2089,11 @@
       /* Alguém mudou os dados por outro lugar desde que o painel carregou? */
       return Promise.all([readFile(PRODUCTS_PATH, headSha), readFile(CONFIG_PATH, headSha)]);
     }).then(function (files) {
-      if ((hasProductChanges() && files[0].sha !== state.original.productsSha) ||
-        (hasConfigChanges() && files[1].sha !== state.original.configSha)) {
-        var error = new Error('conflito'); error.status = 409; throw error;
+      if (files[0].sha !== state.original.productsSha || files[1].sha !== state.original.configSha) {
+        mergeRemote(files);
+        changes = changeList();
+        renderAll();
+        if (!changes.length) { var none = new Error('nada'); none.status = 'none'; throw none; }
       }
       return gh(repoPath('/git/commits/' + headSha));
     }).then(function (commit) {
@@ -2085,8 +2127,11 @@
       renderAll();
       toast('Publicado! O site atualiza em cerca de 1 minuto.', 5000);
     }).catch(function (error) {
+      if (error.status === 'none') { toast('Suas alterações já estavam no site.', 5000); return; }
+      /* o servidor gravou uma venda bem no meio da publicação: tenta de novo uma vez, juntando de novo */
+      if ((error.status === 422 || error.status === 409) && retry !== true) { again = true; return; }
       toast(friendlyError(error), 7000);
-    }).finally(function () { busy(''); });
+    }).finally(function () { busy(''); if (again) publish(true); });
   }
 
   function discard() {
