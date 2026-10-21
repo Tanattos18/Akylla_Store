@@ -116,6 +116,7 @@
     $('trackPending').hidden = !o.canCancel;
     if (o.canCancel) {
       $('trackResume').hidden = !o.checkoutUrl;
+      $('trackPix').hidden = o.kind !== 'card';
       if (o.checkoutUrl) $('trackResume').href = o.checkoutUrl;
       $('trackPendingNote').textContent = 'Ainda não recebemos o pagamento. O produto fica reservado para você até ' +
         new Date(o.expiresAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '; depois disso o pedido é cancelado sozinho.';
@@ -177,6 +178,28 @@
       .finally(function () { $('trackCancel').disabled = false; });
   }
 
+  /* Desiste do cartão e paga no PIX: cancela este pedido (devolve a reserva), garante os itens na sacola e abre o checkout da loja. */
+  function switchToPix() {
+    if (!current) return;
+    if (!window.confirm('Trocar para PIX? Este pedido no cartão será cancelado e você finaliza de novo na loja, já com os produtos na sacola (no PIX sai mais barato).')) return;
+    $('trackPix').disabled = true;
+    var lines = current.lines || [];
+    fetch(api + '/api/track/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: current.id, phone: $('trackPhone').value.trim() })
+    })
+      .then(function (res) { return res.json().catch(function () { return {}; }).then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
+      .then(function (o) {
+        if (o.status === 'paid') { render(o); fail('Este pedido já foi pago no cartão — não precisa pagar de novo.'); return; }
+        try { localStorage.removeItem(CARD_PENDING_KEY); } catch (e) { /* ok */ }
+        var cart = read(CART_KEY, []);
+        if (!cart.length) write(CART_KEY, lines.filter(function (l) { return l.id; }).map(function (l) { return { id: l.id, qty: l.qty }; }));
+        location.href = 'index.html?pagar=pix';
+      })
+      .catch(function (err) { fail(err.message); $('trackPix').disabled = false; });
+  }
+
   function fail(message) {
     $('trackError').textContent = message;
     $('trackError').hidden = !message;
@@ -211,6 +234,15 @@
     $('trackForm').addEventListener('submit', function (e) { e.preventDefault(); search(); });
     $('trackRefresh').addEventListener('click', function () { search(); });
     $('trackCancel').addEventListener('click', cancelOrder);
+    $('trackPix').addEventListener('click', switchToPix);
+    /* vindo do checkout da loja: abre o Mercado Pago a partir daqui, para a seta "voltar" cair nesta página */
+    var go = '';
+    try { go = sessionStorage.getItem('akylla-go') || ''; sessionStorage.removeItem('akylla-go'); } catch (e) { /* ok */ }
+    if (go && /^https:\/\/([a-z0-9-]+\.)*mercadopago\.com(\.br)?\//.test(go)) {
+      setTimeout(function () { location.href = go; }, 50);
+    }
+    /* voltou do Mercado Pago pela seta do navegador: atualiza a situação */
+    window.addEventListener('pageshow', function (e) { if (e.persisted && $('trackId').value) search(true); });
     var id = new URLSearchParams(location.search).get('id');
     if (id) {
       $('trackId').value = id.toUpperCase();

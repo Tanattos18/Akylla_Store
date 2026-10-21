@@ -658,7 +658,7 @@ function trackPayload(order) {
     cancelReason: order.cancelReason || '',
     expiresAt: order.expiresAt || null,
     firstName: String((order.customer && order.customer.name) || '').split(' ')[0],
-    lines: (order.lines || []).map((l) => ({ qty: l.qty, name: l.name })),
+    lines: (order.lines || []).map((l) => ({ id: l.id, qty: l.qty, name: l.name })),
     total: order.total,
     installments: order.installments || null,
     /* pagamento no cartão ainda aberto: o cliente pode voltar para concluir ou cancelar */

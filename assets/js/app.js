@@ -128,6 +128,7 @@
     resumeText: document.getElementById('resumeText'),
     resumePay: document.getElementById('resumePay'),
     resumeCancel: document.getElementById('resumeCancel'),
+    resumePix: document.getElementById('resumePix'),
     ordersDot: document.getElementById('ordersDot'),
     cardPrice: document.getElementById('cardPrice'),
     cardNote: document.getElementById('cardNote'),
@@ -277,6 +278,12 @@
     }
   }
 
+  /* Botão "voltar" do celular/navegador fecha a janela aberta (produto, sacola, checkout, menu) em vez de sair do site. */
+  var dialogHistory = false;
+  function anyDialogOpen() {
+    return Array.prototype.some.call(document.querySelectorAll('dialog'), function (d) { return d.open; });
+  }
+
   function openDialog(dialog) {
     if (!dialog || dialog.open) return;
     if (typeof dialog.showModal === 'function') {
@@ -284,8 +291,25 @@
     } else {
       dialog.setAttribute('open', '');
     }
+    if (!dialogHistory && window.history && history.pushState) {
+      try { history.pushState({ akDialog: true }, ''); dialogHistory = true; } catch (e) { /* ok */ }
+    }
     syncBodyLock();
   }
+
+  /* fechou pelo X, Esc ou clique fora: tira a entrada extra do histórico (se ela ainda for a atual) */
+  function dialogClosed() {
+    syncBodyLock();
+    if (!dialogHistory || anyDialogOpen()) return;
+    dialogHistory = false;
+    if (history.state && history.state.akDialog) history.back();
+  }
+
+  window.addEventListener('popstate', function () {
+    if (!dialogHistory) return;
+    dialogHistory = false;
+    Array.prototype.filter.call(document.querySelectorAll('dialog'), function (d) { return d.open; }).forEach(function (d) { closeDialog(d); });
+  });
 
   function closeDialog(dialog) {
     if (!dialog) return;
@@ -1324,7 +1348,10 @@
       rememberCustomer(c);
       rememberOrder(order.id, c.phone, order.total);
       writeLocal(CARD_PENDING_KEY, order.id);
-      window.location.href = order.checkoutUrl;
+      /* passa pela página do pedido: assim a seta "voltar" do navegador, na página do Mercado Pago, cai no pedido (concluir, trocar para PIX ou cancelar) */
+      try { window.sessionStorage.setItem('akylla-go', order.checkoutUrl); } catch (e) { window.location.href = order.checkoutUrl; return; }
+      cardBusy = false;
+      window.location.href = 'pedido.html?id=' + encodeURIComponent(order.id);
     }).catch(function (error) {
       cardBusy = false;
       cardFail(error.status ? error.message : 'Não conseguimos abrir o pagamento no cartão agora. Tente de novo ou pague no PIX.');
@@ -1569,6 +1596,11 @@
       els.resumeCancel.addEventListener('click', function () {
         if (!window.confirm('Cancelar este pedido? Os produtos continuam na sua sacola para você pagar de outro jeito.')) return;
         cancelOpenCard().then(function () { toast('Pedido cancelado. Os produtos continuam na sua sacola.'); });
+      });
+    }
+    if (els.resumePix) {
+      els.resumePix.addEventListener('click', function () {
+        cancelOpenCard().then(function () { openCheckout(); toast('Pedido no cartão cancelado. Escolha a entrega e pague no PIX.'); });
       });
     }
     checkOpenCard();
@@ -2088,7 +2120,7 @@
       dialog.addEventListener('click', function (event) {
         if (event.target === dialog) closeDialog(dialog);
       });
-      dialog.addEventListener('close', syncBodyLock);
+      dialog.addEventListener('close', dialogClosed);
     });
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-close-dialog]'), function (button) {
@@ -2202,6 +2234,20 @@
   setupCard();
   setupDialogs();
   setupReveal();
+
+  /* veio da página do pedido ("Prefiro pagar no PIX"): abre o checkout com a sacola */
+  if (/[?&]pagar=pix/.test(window.location.search)) {
+    try { history.replaceState(null, '', window.location.pathname); } catch (e) { /* ok */ }
+    if (state.cart.length) openCheckout();
+  }
+
+  /* voltou para a loja pela seta do navegador (página guardada em cache): destrava o botão do cartão e confere o pedido aberto */
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    cardBusy = false;
+    if (state.order) renderCheckout();
+    checkOpenCard();
+  });
 
   if (els.header) {
     var updateHeader = function () {
