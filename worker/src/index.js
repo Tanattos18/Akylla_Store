@@ -16,6 +16,12 @@
  *   GET  /api/admin/orders        lista de pedidos (para o painel; exige a chave do GitHub)
  *   GET  /api/health              teste rápido
  *
+ * Rotas — avisos de pedido no painel (Web Push, celular e PC):
+ *   GET  /api/push/key                   chave pública VAPID (o servidor cria e guarda no KV)
+ *   POST /api/admin/push/subscribe       painel: cadastra este aparelho para receber avisos
+ *   POST /api/admin/push/unsubscribe     painel: descadastra este aparelho
+ *   POST /api/admin/push/test            painel: manda um aviso de teste para todos os aparelhos
+ *
  * Segredos (Cloudflare → Worker → Settings → Variables and Secrets):
  *   MP_ACCESS_TOKEN     Access Token de PRODUÇÃO do Mercado Pago
  *   MP_WEBHOOK_SECRET   assinatura secreta dos webhooks do Mercado Pago
@@ -29,6 +35,7 @@ import {
   OrderError, brazilNow, newOrderId, reservedByProduct, buildLines, serverShipping,
   applySale, applyReturn, stockShortfall, centsToReais, mpDate, Formato, cleanCustomer, saleMessage
 } from './logic.js';
+import { vapidKeys, sendPush, subscriptionId } from './push.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
 const CONFIG_PATH = 'assets/js/config.js';
@@ -304,6 +311,71 @@ async function notifyStore(env, order) {
   }
 }
 
+/* ------------------- aviso push no painel (celular e PC) ------------------- */
+
+const PUSH_SUBJECT = 'https://akyllashop.com';
+const PUSH_TTL = 60 * 60 * 24 * 365;
+
+function pushMessage(order) {
+  const items = (order.lines || []).reduce((n, l) => n + l.qty, 0);
+  const who = order.customer && order.customer.name ? order.customer.name + ' · ' : '';
+  const status = order.status === 'paid' ? 'pago' : order.status === 'review' ? 'pagamento para revisar' : 'aguardando confirmação do PIX';
+  return {
+    title: (order.status === 'paid' ? '✅ Venda paga ' : '🛒 Novo pedido ') + order.id,
+    body: who + items + (items === 1 ? ' item' : ' itens') + ' · R$ ' + (order.total / 100).toFixed(2).replace('.', ',') + ' — ' + status,
+    tag: order.id,
+    url: '/admin/#pedidos'
+  };
+}
+
+/* Manda o aviso para todos os aparelhos cadastrados; apaga os que não existem mais. */
+async function notifyAdmins(env, message) {
+  try {
+    const list = await env.ORDERS.list({ prefix: 'push:' });
+    if (!list.keys.length) return 0;
+    const keys = await vapidKeys(env.ORDERS);
+    let sent = 0;
+    await Promise.all(list.keys.map(async (k) => {
+      const sub = await env.ORDERS.get(k.name, 'json');
+      if (!sub) return;
+      try {
+        const status = await sendPush(sub, message, keys, PUSH_SUBJECT);
+        if (status === 404 || status === 410) await env.ORDERS.delete(k.name);
+        else if (status < 300) sent += 1;
+        else console.error('push recusado', status, new URL(sub.endpoint).host);
+      } catch (err) {
+        console.error('push falhou', err);
+      }
+    }));
+    return sent;
+  } catch (err) {
+    console.error('avisos push falharam', err);
+    return 0;
+  }
+}
+
+async function pushSubscribe(request, env, remove) {
+  await requireAdmin(request, env);
+  const body = await request.json().catch(() => null);
+  const sub = body && body.subscription;
+  if (!sub || !/^https:\/\//.test(String(sub.endpoint || ''))) throw new OrderError('Assinatura inválida.');
+  const id = await subscriptionId(sub.endpoint);
+  if (remove) {
+    await env.ORDERS.delete(id);
+    return json({ ok: true });
+  }
+  if (!sub.keys || !sub.keys.p256dh || !sub.keys.auth) throw new OrderError('Assinatura inválida.');
+  const label = String((body && body.label) || '').slice(0, 60);
+  await env.ORDERS.put(id, JSON.stringify({ endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth }, label, at: Date.now() }), { expirationTtl: PUSH_TTL });
+  return json({ ok: true });
+}
+
+async function pushTest(request, env) {
+  await requireAdmin(request, env);
+  const sent = await notifyAdmins(env, { title: '🔔 Teste do painel Akylla', body: 'Os avisos de pedido estão funcionando neste aparelho.', tag: 'teste', url: '/admin/#pedidos' });
+  return json({ ok: true, sent });
+}
+
 /* ---------------------------------- KV ---------------------------------- */
 
 const ORDER_TTL = 60 * 60 * 24 * 120; // pedidos ficam 120 dias
@@ -423,12 +495,14 @@ async function syncPayment(env, order, payment) {
       order.stockError = String(err.message || err);
     }
     order.notified = await notifyStore(env, order);
+    order.pushed = await notifyAdmins(env, pushMessage(order));
     await saveOrder(env, order);
     await release(env, order.id);
   } else if (pay.state === 'paid') {
     order.status = 'review';
     order.reviewReason = 'Pagamento aprovado com valor ou referência diferente (R$ ' + (pay.amountCents / 100).toFixed(2) + ').';
     order.notified = await notifyStore(env, order);
+    order.pushed = await notifyAdmins(env, pushMessage(order));
     await saveOrder(env, order);
     await release(env, order.id);
   } else if (pay.state === 'closed' || Date.now() > order.expiresAt + 5 * 60 * 1000) {
@@ -534,6 +608,7 @@ async function createManualOrder(request, env) {
   await commitStock(env, order, 'reserve');
   order.stockUpdated = true;
   order.notified = await notifyStore(env, order);
+  order.pushed = await notifyAdmins(env, pushMessage(order));
   await saveOrder(env, order);
   return json(publicOrder(order), 201);
 }
@@ -616,6 +691,10 @@ export default {
       else if (match && request.method === 'GET') response = await orderStatus(env, match[1]);
       else if (url.pathname === '/api/webhook' && request.method === 'POST') response = await webhook(request, env);
       else if (url.pathname === '/api/admin/orders' && request.method === 'GET') response = await adminOrders(request, env);
+      else if (url.pathname === '/api/push/key' && request.method === 'GET') response = json({ publicKey: (await vapidKeys(env.ORDERS)).publicKey });
+      else if (url.pathname === '/api/admin/push/subscribe' && request.method === 'POST') response = await pushSubscribe(request, env, false);
+      else if (url.pathname === '/api/admin/push/unsubscribe' && request.method === 'POST') response = await pushSubscribe(request, env, true);
+      else if (url.pathname === '/api/admin/push/test' && request.method === 'POST') response = await pushTest(request, env);
       else response = json({ error: 'Rota não encontrada.' }, 404);
       for (const [k, v] of Object.entries(cors)) response.headers.set(k, v);
       return response;
@@ -632,4 +711,4 @@ export default {
   }
 };
 
-export { autoCancel };
+export { autoCancel, notifyAdmins, pushMessage };

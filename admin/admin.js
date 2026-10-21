@@ -196,6 +196,7 @@
       $('#topActions').hidden = false;
       $('#whoami').textContent = 'Conectado como ' + state.login;
       renderAll();
+      startAlerts();
     }).finally(function () { busy(''); });
   }
 
@@ -796,6 +797,270 @@
       .catch(function (err) { $('#ordersSummary').textContent = 'Não foi possível carregar: ' + err.message; });
   }
 
+  /* --------------------------- avisos de pedido --------------------------- */
+  /*
+   * Dois caminhos:
+   * 1) painel aberto (PC ou celular): consulta o servidor a cada 20 s e toca som/vibra/notifica;
+   * 2) painel fechado: notificação push do servidor (service worker sw.js), como um app.
+   */
+  var SEEN_KEY = 'akylla-seen-orders';
+  var SOUND_KEY = 'akylla-alert-sound';
+  var alerts = { seen: null, timer: 0, ctx: null, unread: 0, title: document.title, pushOn: false };
+
+  function apiBase() { return String(state.config.paymentApiUrl || '').replace(/\/+$/, ''); }
+  function soundOn() { try { return localStorage.getItem(SOUND_KEY) !== '0'; } catch (e) { return true; } }
+
+  function loadSeen() {
+    try { var raw = localStorage.getItem(SEEN_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function saveSeen() {
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(alerts.seen.slice(-500))); } catch (e) { /* sem armazenamento: só não lembra entre visitas */ }
+  }
+
+  /* O navegador só libera som depois de um toque/clique na página. */
+  function unlockAudio() {
+    if (alerts.ctx) { if (alerts.ctx.state === 'suspended') alerts.ctx.resume(); return; }
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) alerts.ctx = new Ctx();
+  }
+
+  function chime() {
+    if (!soundOn()) return;
+    unlockAudio();
+    var ctx = alerts.ctx;
+    if (!ctx) return;
+    var start = ctx.currentTime + 0.05;
+    [0, 0.75].forEach(function (offset) {
+      [880, 1175, 1568].forEach(function (freq, i) {
+        var t = start + offset + i * 0.16;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.5);
+      });
+    });
+  }
+
+  function setUnread(n) {
+    alerts.unread = n;
+    document.title = n ? '(' + n + ') 🛒 Novo pedido — Painel Akylla' : alerts.title;
+    $('#bellCount').hidden = !n;
+    $('#bellCount').textContent = String(n);
+  }
+
+  function setWaiting(n) {
+    $('#ordersBadge').hidden = !n;
+    $('#ordersBadge').textContent = String(n);
+  }
+
+  /* Só avisa o que é novidade: pedido manual chegando, ou PIX automático pago/para revisar. */
+  function alertKey(o) {
+    if (o.manual) return o.status === 'awaiting' ? o.id : null;
+    return o.status === 'paid' || o.status === 'review' ? o.id + ':' + o.status : null;
+  }
+
+  function checkOrders() {
+    var api = apiBase();
+    if (!api || !state.token) return Promise.resolve();
+    return fetch(api + '/api/admin/orders', { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        if (!data) return;
+        var orders = data.orders || [];
+        setWaiting(orders.filter(function (o) { return o.status === 'awaiting'; }).length);
+        var fresh = [];
+        var first = !alerts.seen;
+        if (first) alerts.seen = [];
+        orders.forEach(function (o) {
+          var key = alertKey(o);
+          if (key && alerts.seen.indexOf(key) < 0) {
+            alerts.seen.push(key);
+            if (!first) fresh.push(o);
+          }
+        });
+        saveSeen();
+        if (fresh.length) announce(fresh);
+      })
+      .catch(function () { /* sem internet: tenta de novo no próximo ciclo */ });
+  }
+
+  function announce(list) {
+    setUnread(alerts.unread + list.length);
+    chime();
+    if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 500]);
+    var o = list[0];
+    var who = o.customer && o.customer.name ? ' de ' + o.customer.name : '';
+    var text = list.length > 1 ? list.length + ' pedidos novos chegaram.' : '🛒 Novo pedido ' + o.id + who + ' — ' + brl(o.total);
+    toast(text, 8000);
+    if (!$('[data-panel="pedidos"]').hidden) loadOrders();
+    if (dash.orders) loadDashboard();
+    /* sem push neste aparelho: notificação do próprio painel quando a aba está em segundo plano */
+    if (!alerts.pushOn && document.hidden && window.Notification && Notification.permission === 'granted' && navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        reg.showNotification(list.length > 1 ? list.length + ' pedidos novos' : 'Novo pedido ' + o.id, {
+          body: text, tag: o.id, renotify: true, icon: 'icon-192.png', data: { url: '/admin/#pedidos' }
+        });
+      }).catch(function () {});
+    }
+  }
+
+  function scheduleCheck() {
+    clearTimeout(alerts.timer);
+    alerts.timer = setTimeout(function () { checkOrders().then(scheduleCheck); }, document.hidden ? 45000 : 20000);
+  }
+
+  function openOrdersTab() {
+    var tab = document.querySelector('[data-tab="pedidos"]');
+    if (tab) tab.click();
+    setUnread(0);
+  }
+
+  /* ---------- notificação push (painel fechado) ---------- */
+
+  function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  function isStandalone() { return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
+  function deviceLabel() {
+    var ua = navigator.userAgent;
+    var kind = /android/i.test(ua) ? 'Android' : isIOS() ? 'iPhone/iPad' : /windows/i.test(ua) ? 'PC Windows' : /mac/i.test(ua) ? 'Mac' : 'Aparelho';
+    var browser = /edg\//i.test(ua) ? 'Edge' : /chrome|crios/i.test(ua) ? 'Chrome' : /firefox|fxios/i.test(ua) ? 'Firefox' : /safari/i.test(ua) ? 'Safari' : 'navegador';
+    return kind + ' · ' + browser;
+  }
+  function keyBytes(b64) {
+    var s = b64.replace(/-/g, '+').replace(/_/g, '/');
+    var bin = atob(s + '==='.slice((s.length + 3) % 4));
+    return Uint8Array.from(bin, function (c) { return c.charCodeAt(0); });
+  }
+
+  function adminPost(path, body) {
+    return fetch(apiBase() + path, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + state.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {})
+    }).then(function (res) { return res.json().catch(function () { return {}; }).then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); });
+  }
+
+  function currentSubscription() {
+    if (!pushSupported()) return Promise.resolve(null);
+    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).catch(function () { return null; });
+  }
+
+  function renderAlerts() {
+    var status = $('#alertsStatus');
+    var text = $('#alertsText');
+    var show = function (enable, test, disable) {
+      $('#alertsEnable').hidden = !enable; $('#alertsTest').hidden = !test; $('#alertsDisable').hidden = !disable;
+    };
+    $('#alertsSound').checked = soundOn();
+    if (!apiBase()) {
+      status.className = 'badge'; status.textContent = 'Sem servidor';
+      text.textContent = 'Preencha o endereço do servidor na aba Loja para receber avisos.';
+      show(false, false, false); return;
+    }
+    if (!pushSupported()) {
+      status.className = 'badge low'; status.textContent = 'Só com o painel aberto';
+      text.textContent = isIOS() && !isStandalone()
+        ? 'No iPhone, para receber aviso com o painel fechado: no Safari toque em Compartilhar → “Adicionar à Tela de Início”, abra o painel pelo ícone novo e ative aqui. Com o painel aberto, o som já funciona.'
+        : 'Este navegador não aceita notificações com o painel fechado. Com o painel aberto, o som e o aviso funcionam.';
+      show(false, false, false); return;
+    }
+    if (Notification.permission === 'denied') {
+      status.className = 'badge out'; status.textContent = 'Bloqueado';
+      text.textContent = 'As notificações estão bloqueadas para este site. Libere em: cadeado ao lado do endereço → Notificações → Permitir. Depois recarregue o painel.';
+      show(false, false, false); return;
+    }
+    currentSubscription().then(function (sub) {
+      alerts.pushOn = !!sub;
+      if (sub) {
+        status.className = 'badge ok'; status.textContent = 'Ativo neste aparelho';
+        text.textContent = 'Este aparelho (' + deviceLabel() + ') recebe aviso de pedido novo mesmo com o painel fechado. Com o painel aberto, também toca o som.';
+        show(false, true, true);
+      } else {
+        status.className = 'badge'; status.textContent = 'Desativado';
+        text.textContent = 'Ative para receber notificação de pedido novo neste aparelho mesmo com o painel fechado (faça isso no celular e no PC). Com o painel aberto, o som já funciona.';
+        show(true, false, false);
+      }
+    });
+  }
+
+  function enablePush() {
+    unlockAudio();
+    busy('Ativando os avisos…');
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error('Permissão de notificação negada.');
+      return Promise.all([navigator.serviceWorker.ready, fetch(apiBase() + '/api/push/key', { cache: 'no-store' }).then(function (r) { return r.json(); })]);
+    }).then(function (res) {
+      var reg = res[0];
+      var options = { userVisibleOnly: true, applicationServerKey: keyBytes(res[1].publicKey) };
+      return reg.pushManager.subscribe(options).catch(function () {
+        /* assinatura antiga com outra chave: refaz */
+        return reg.pushManager.getSubscription().then(function (old) { return old ? old.unsubscribe() : null; }).then(function () { return reg.pushManager.subscribe(options); });
+      });
+    }).then(function (sub) {
+      return adminPost('/api/admin/push/subscribe', { subscription: sub.toJSON(), label: deviceLabel() });
+    }).then(function () {
+      toast('Avisos ativados neste aparelho. Use “Enviar aviso de teste” para conferir.', 6000);
+    }).catch(function (err) {
+      toast('Não foi possível ativar: ' + err.message, 7000);
+    }).finally(function () { busy(''); renderAlerts(); });
+  }
+
+  function disablePush() {
+    currentSubscription().then(function (sub) {
+      if (!sub) return null;
+      var data = sub.toJSON();
+      return sub.unsubscribe().then(function () { return adminPost('/api/admin/push/unsubscribe', { subscription: data }); });
+    }).then(function () { toast('Avisos desativados neste aparelho.'); })
+      .catch(function (err) { toast('Erro: ' + err.message); })
+      .finally(renderAlerts);
+  }
+
+  function testPush() {
+    adminPost('/api/admin/push/test').then(function (d) {
+      toast(d.sent ? 'Aviso de teste enviado para ' + d.sent + ' aparelho(s). Deve aparecer em instantes.' : 'Nenhum aparelho recebeu. Desative e ative de novo neste aparelho.', 7000);
+    }).catch(function (err) { toast('Erro: ' + err.message); });
+  }
+
+  function startAlerts() {
+    alerts.seen = loadSeen();
+    renderAlerts();
+    /* renova o cadastro deste aparelho no servidor (a assinatura vale 1 ano) */
+    currentSubscription().then(function (sub) {
+      if (sub && apiBase()) adminPost('/api/admin/push/subscribe', { subscription: sub.toJSON(), label: deviceLabel() }).catch(function () {});
+    });
+    checkOrders().then(scheduleCheck);
+    if (location.hash === '#pedidos') openOrdersTab();
+  }
+
+  function setupAlerts() {
+    ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlockAudio, { passive: true }); });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+      navigator.serviceWorker.addEventListener('message', function (event) {
+        var data = event.data || {};
+        if (data.type === 'akylla-order') checkOrders();
+        if (data.type === 'akylla-open-orders') openOrdersTab();
+      });
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && state.token) { checkOrders(); scheduleCheck(); }
+    });
+    window.addEventListener('focus', function () { if (!$('[data-panel="pedidos"]').hidden) setUnread(0); });
+    $('#alertsEnable').addEventListener('click', enablePush);
+    $('#alertsDisable').addEventListener('click', disablePush);
+    $('#alertsTest').addEventListener('click', testPush);
+    $('#alertsSoundTest').addEventListener('click', function () { unlockAudio(); var was = soundOn(); try { localStorage.setItem(SOUND_KEY, '1'); } catch (e) {} chime(); if (!was) try { localStorage.setItem(SOUND_KEY, '0'); } catch (e) {} });
+    $('#alertsSound').addEventListener('change', function () { try { localStorage.setItem(SOUND_KEY, this.checked ? '1' : '0'); } catch (e) {} });
+    $('#bellBtn').addEventListener('click', openOrdersTab);
+    document.querySelector('[data-tab="pedidos"]').addEventListener('click', function () { setUnread(0); });
+  }
+
   /* ------------------------------- dashboard ------------------------------- */
 
   var dash = { orders: null, period: '30', loading: false };
@@ -1368,6 +1633,7 @@
 
   function init() {
     setupTabs();
+    setupAlerts();
 
     $('#loginForm').addEventListener('submit', function (event) {
       event.preventDefault();

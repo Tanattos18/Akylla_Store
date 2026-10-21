@@ -248,3 +248,87 @@ test('PIX manual: reserva baixa o estoque, painel confirma ou cancela (devolve),
     global.fetch = realFetch;
   }
 });
+
+/* ------------------------- avisos push do painel ------------------------- */
+
+/* Faz o papel do navegador: descriptografa a mensagem (RFC 8291) com a chave do aparelho. */
+async function browserDecrypt(body, uaPair, authSecret) {
+  var subtle = globalThis.crypto.subtle;
+  var salt = body.slice(0, 16);
+  var idlen = body[20];
+  var asPublic = body.slice(21, 21 + idlen);
+  var cipher = body.slice(21 + idlen);
+  var hm = async function (key, data) {
+    var k = await subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    return new Uint8Array(await subtle.sign('HMAC', k, data));
+  };
+  var cat = function () { return Uint8Array.from(Buffer.concat(Array.from(arguments).map(function (a) { return Buffer.from(a); }))); };
+  var te = new TextEncoder();
+  var uaPublic = new Uint8Array(await subtle.exportKey('raw', uaPair.publicKey));
+  var asKey = await subtle.importKey('raw', asPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  var shared = new Uint8Array(await subtle.deriveBits({ name: 'ECDH', public: asKey }, uaPair.privateKey, 256));
+  var ikm = await hm(await hm(authSecret, shared), cat(te.encode('WebPush: info\0'), uaPublic, asPublic, [1]));
+  var prk = await hm(salt, ikm);
+  var cek = (await hm(prk, cat(te.encode('Content-Encoding: aes128gcm\0'), [1]))).slice(0, 16);
+  var nonce = (await hm(prk, cat(te.encode('Content-Encoding: nonce\0'), [1]))).slice(0, 12);
+  var aes = await subtle.importKey('raw', cek, 'AES-GCM', false, ['decrypt']);
+  var plain = new Uint8Array(await subtle.decrypt({ name: 'AES-GCM', iv: nonce }, aes, cipher));
+  assert.equal(plain[plain.length - 1], 2, 'delimitador do último registro');
+  return JSON.parse(new TextDecoder().decode(plain.slice(0, -1)));
+}
+
+test('avisos push: aparelho cadastrado recebe o pedido novo, criptografado e assinado (VAPID)', async function () {
+  var s = scenario();
+  var push = await import('../worker/src/push.js');
+  var subtle = globalThis.crypto.subtle;
+  var uaPair = await subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  var authSecret = globalThis.crypto.getRandomValues(new Uint8Array(16));
+  var subscription = { endpoint: 'https://push.test/send/abc', keys: { p256dh: push.b64url(await subtle.exportKey('raw', uaPair.publicKey)), auth: push.b64url(authSecret) } };
+  var delivered = [];
+  var gone = false;
+  var realFetch = global.fetch;
+  global.fetch = function (url, opts) {
+    if (String(url).indexOf('https://push.test/') === 0) {
+      delivered.push({ url: url, opts: opts });
+      return Promise.resolve(new Response(null, { status: gone ? 410 : 201 }));
+    }
+    return s.fetch(url, opts);
+  };
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var key = await call(worker, s.env, 'GET', '/api/push/key');
+    assert.equal(push.fromB64url(key.data.publicKey).length, 65, 'chave pública P-256');
+
+    var denied = await call(worker, s.env, 'POST', '/api/admin/push/subscribe', { subscription: subscription }, { Authorization: 'Bearer outro' });
+    assert.equal(denied.status, 403, 'só o dono da loja cadastra aparelhos');
+    var ok = await call(worker, s.env, 'POST', '/api/admin/push/subscribe', { subscription: subscription, label: 'Celular' }, { Authorization: 'Bearer gh-admin' });
+    assert.equal(ok.status, 200, JSON.stringify(ok.data));
+
+    var created = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Ana Push', phone: '62999990000' } });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    assert.equal(delivered.length, 1, 'aviso enviado ao aparelho');
+
+    var h = delivered[0].opts.headers;
+    assert.equal(h['Content-Encoding'], 'aes128gcm');
+    var m = h.Authorization.match(/^vapid t=([^.]+)\.([^.]+)\.([^,]+), k=(.+)$/);
+    assert.ok(m, 'cabeçalho VAPID');
+    assert.equal(m[4], key.data.publicKey);
+    var claims = JSON.parse(Buffer.from(m[2], 'base64url').toString());
+    assert.equal(claims.aud, 'https://push.test');
+    var vapidPub = await subtle.importKey('raw', push.fromB64url(m[4]), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    assert.ok(await subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, vapidPub, push.fromB64url(m[3]), new TextEncoder().encode(m[1] + '.' + m[2])), 'assinatura VAPID válida');
+
+    var msg = await browserDecrypt(new Uint8Array(delivered[0].opts.body), uaPair, authSecret);
+    assert.match(msg.title, new RegExp('Novo pedido ' + created.data.id));
+    assert.match(msg.body, /Ana Push · 1 item · R\$ \d+,\d{2} — aguardando confirmação do PIX/);
+    assert.equal(msg.url, '/admin/#pedidos');
+
+    // aparelho desinstalado (410): o servidor apaga a assinatura
+    gone = true;
+    var t = await call(worker, s.env, 'POST', '/api/admin/push/test', {}, { Authorization: 'Bearer gh-admin' });
+    assert.equal(t.data.sent, 0);
+    assert.equal((await s.env.ORDERS.list({ prefix: 'push:' })).keys.length, 0, 'assinatura removida');
+  } finally {
+    global.fetch = realFetch;
+  }
+});

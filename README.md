@@ -75,6 +75,14 @@ O painel edita os arquivos do site e publica **num único commit** pela API do G
 - **Produtos:** criar, editar, duplicar, **ocultar** (rascunho, some do site sem apagar) e excluir. Campos: nome, nome curto, código, marca, modelo, categoria, ícone, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e **fotos** (enviar do celular/PC, escolher a principal, ordenar, remover). As fotos são convertidas no próprio navegador para **WebP 700×700 com fundo branco**; fotos removidas são apagadas do repositório ao publicar. **Calculadora de preço**: custo ÷ (1 − margem), arredondado para cima em R$ 0,10 — o **custo não é salvo** (o repositório é público).
 - **Loja:** nome, cidade, WhatsApp, mensagem inicial, **chave PIX**, recebedor, nome/cidade do QR, textos de entrega/garantia/trocas/pagamento e **foto da vitrine** (gera 1000 e 640 px). Trocar a chave PIX pede confirmação.
 
+### Avisos de pedido (som e notificação no celular e no PC)
+
+- **Painel aberto:** a cada 20 s o painel confere se chegou pedido novo. Quando chega, **toca um som**, vibra (celular), mostra o aviso na tela, o número no sino 🔔 e na aba **Pedidos**, e o título da aba vira “(1) 🛒 Novo pedido”.
+- **Painel fechado:** aba **Pedidos** → **Ativar avisos neste aparelho** → permitir notificações. O servidor manda uma **notificação push** (como a de um app) para cada aparelho ativado. Faça isso no celular **e** no PC. Use **Enviar aviso de teste** para conferir.
+- **iPhone:** só recebe com o painel fechado se o painel for instalado: Safari → Compartilhar → **Adicionar à Tela de Início**, abrir pelo ícone e ativar lá (iOS 16.4 ou mais novo).
+- **Android:** no Chrome, também dá para instalar o painel como app (menu ⋮ → Instalar app / Adicionar à tela inicial).
+- As chaves de assinatura das notificações (VAPID) são criadas pelo próprio servidor e ficam guardadas nele: não há nada para configurar.
+
 ### Acesso (chave do GitHub)
 
 1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token** (<https://github.com/settings/personal-access-tokens/new>).
@@ -390,6 +398,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 21/10/2026 | Avisos de pedido no painel: som, vibração, contador e notificação push no celular e no PC (painel instalável como app). |
 | 21/10/2026 | Layout: 2 produtos por linha no celular, barra fixa da sacola, 12 produtos por página, tabela de frete recolhível, selo “Mais vendido” (painel), faixa de categorias clicável, foto principal do W31. |
 | 21/10/2026 | Dashboard no painel: vendas confirmadas, total por categoria, produtos vendidos e situação da loja. |
 | 21/10/2026 | PIX manual com reserva de estoque: pedido registrado ao enviar o comprovante, alerta no WhatsApp da loja, confirmar/cancelar no painel, cancelamento automático em 48 h. |

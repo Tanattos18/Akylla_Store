@@ -9,7 +9,13 @@
   <meta name="theme-color" content="#060913">
   <title>Painel Akylla</title>
   <link rel="icon" href="../assets/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="admin.css?v=20261021-3">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Painel Akylla">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="stylesheet" href="admin.css?v=20261021-4">
 </head>
 <body>
   <header class="topbar">
@@ -21,6 +27,7 @@
       </div>
     </div>
     <div class="topbar-actions" id="topActions" hidden>
+      <button class="btn btn-ghost btn-sm bell" type="button" id="bellBtn" aria-label="Avisos de pedido">🔔<span class="bell-count" id="bellCount" hidden>0</span></button>
       <a class="btn btn-ghost btn-sm" href="../" target="_blank" rel="noopener">Ver site</a>
       <button class="btn btn-primary" type="button" id="publishBtn" disabled>
         Publicar <span class="count" id="pendingCount">0</span>
@@ -60,7 +67,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab is-active" type="button" role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
       <button class="tab" type="button" role="tab" data-tab="estoque" aria-selected="false">Estoque</button>
-      <button class="tab" type="button" role="tab" data-tab="pedidos" aria-selected="false">Pedidos</button>
+      <button class="tab" type="button" role="tab" data-tab="pedidos" aria-selected="false">Pedidos <span class="tab-count" id="ordersBadge" hidden>0</span></button>
       <button class="tab" type="button" role="tab" data-tab="promocao" aria-selected="false">Promoção</button>
       <button class="tab" type="button" role="tab" data-tab="produtos" aria-selected="false">Produtos</button>
       <button class="tab" type="button" role="tab" data-tab="frete" aria-selected="false">Frete</button>
@@ -133,6 +140,20 @@
     <!-- Produtos -->
     <!-- Pedidos -->
     <section class="panel" data-panel="pedidos" hidden>
+      <section class="card alerts-card" id="alertsCard">
+        <div class="alerts-head">
+          <h3>🔔 Avisos de pedido</h3>
+          <span class="badge" id="alertsStatus">…</span>
+        </div>
+        <p class="muted" id="alertsText"></p>
+        <div class="alerts-actions">
+          <button class="btn btn-primary btn-sm" type="button" id="alertsEnable" hidden>Ativar avisos neste aparelho</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="alertsTest" hidden>Enviar aviso de teste</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="alertsSoundTest">Ouvir o som</button>
+          <label class="check"><input type="checkbox" id="alertsSound" checked> Som com o painel aberto</label>
+          <button class="btn btn-ghost btn-sm" type="button" id="alertsDisable" hidden>Desativar neste aparelho</button>
+        </div>
+      </section>
       <div class="panel-head">
         <button class="btn btn-primary" type="button" id="ordersReload">Atualizar pedidos</button>
         <span class="muted" id="ordersSummary"></span>
@@ -354,6 +375,6 @@
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
   <script src="../assets/js/frete.js?v=20261020-13"></script>
-  <script src="admin.js?v=20261021-3"></script>
+  <script src="admin.js?v=20261021-4"></script>
 </body>
 </html>
