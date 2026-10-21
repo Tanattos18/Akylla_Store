@@ -152,5 +152,34 @@ module.exports = [
     specs: [['bluetooth', 'Bluetooth 5.0', 'conexão sem fio'], ['wifi', 'Até 10 m', 'de alcance'], ['clock', 'Até 8 horas', 'de bateria'], ['mic', 'Microfone', 'com cancelamento de ruído'], ['headphones', 'Áudio estéreo', 'som envolvente']],
     combo: { icon: 'mic', big: 'MICROFONE', t2: 'ANTIRRUÍDO', p: 'Cancelamento de ruído<br>para chamadas.' },
     feats: [['bluetooth', 'Bluetooth<br>5.0'], ['clock', 'Até<br>8 horas'], ['mic', 'Microfone'], ['headphones', 'Estéreo']],
-    checks: ['Música, aulas e chamadas', 'Ótimo custo-benefício'] }
+    checks: ['Música, aulas e chamadas', 'Ótimo custo-benefício'] },
+
+  { n: '23', id: 'power-bank-inova-b078c', slug: 'Power_Bank_Inova_10000_B-078C', hero: 0, card: true, title: ['POWER BANK', '10.000'], model: 'Inova B-078C',
+    sub: 'Cabos USB-C e Lightning embutidos<br>e carga rápida de 22,5W.', hand: 'Nunca mais esqueça o cabo!',
+    specs: [['battery', '10.000 mAh', 'carga extra para o dia'], ['cable', 'Cabos embutidos', 'USB-C e Lightning'], ['bolt', 'Até 22,5W', 'USB-C · PD 10W no Lightning'], ['sync', 'USB-C bidirecional', 'carrega e é recarregado'], ['display', 'Display LED', 'nível da bateria'], ['chip', 'Chip inteligente', 'pode ir na bagagem de mão']],
+    combo: { icon: 'cable', big: 'CABOS', t2: 'EMBUTIDOS', p: 'USB-C e Lightning sempre<br>junto com você.' },
+    feats: [['battery', '10.000<br>mAh'], ['bolt', '22,5W'], ['cable', 'Cabos<br>embutidos'], ['display', 'Display<br>LED']],
+    checks: ['Para iPhone e Android', 'Ótimo custo-benefício'] },
+
+  { n: '24', id: 'power-bank-kapbom-ka9923', slug: 'Power_Bank_Kapbom_10000_KA-9923', hero: 0, card: true, title: ['POWER BANK', 'MAGNÉTICO'], model: 'Kapbom KA-9923',
+    sub: 'Carrega sem fio ou pelo cabo<br>integrado, turbo de 22,5W.', hand: 'Encaixa e carrega, sem fio!',
+    specs: [['battery', '10.000 mAh', 'carga extra para o dia'], ['magnet', 'Base magnética', 'carregamento sem fio'], ['bolt', '22,5W Turbo', 'carga rápida'], ['cable', 'Cabo integrado', 'em formato de alça'], ['display', 'Display digital', 'porcentagem da bateria'], ['shield', 'Homologado Anatel', '08974-24-15167']],
+    combo: { img: 1, big: 'SEM FIO', t2: 'OU COM CABO', p: 'Escolha o jeito de<br>carregar o celular.' },
+    feats: [['battery', '10.000<br>mAh'], ['magnet', 'Magnético'], ['bolt', '22,5W<br>Turbo'], ['display', 'Display<br>digital']],
+    checks: ['Compacto, cabe no bolso', 'Ótimo custo-benefício'] },
+
+  { n: '25', id: 'power-bank-kapbom-ka959', slug: 'Power_Bank_Kapbom_20000_KA-959', hero: 0, card: true, title: ['POWER BANK', '20.000'], model: 'Kapbom KA-959',
+    sub: '20.000 mAh, 2 cabos embutidos<br>e display LED.', hand: 'Bateria de sobra para o dia todo!',
+    specs: [['battery', '20.000 mAh', 'várias recargas'], ['cable', '2 cabos embutidos', 'sempre à mão'], ['display', 'Display LED', 'porcentagem da bateria'], ['smartphone', 'Ampla compatibilidade', 'celulares e acessórios'], ['shield', 'Homologado Anatel', '08435-22-11767']],
+    combo: { img: 1, big: '2 CABOS', t2: 'EMBUTIDOS', p: 'Sem precisar levar<br>cabo na bolsa.' },
+    feats: [['battery', '20.000<br>mAh'], ['cable', '2 cabos<br>embutidos'], ['display', 'Display<br>LED'], ['shield', 'Anatel']],
+    checks: ['Ideal para viagens', 'Ótimo custo-benefício'] },
+
+  { n: '26', id: 'power-bank-inova-b079d', slug: 'Power_Bank_Inova_20000_B-079D', hero: 0, title: ['POWER BANK', '20.000'], model: 'Inova B-079D',
+    sub: 'Cabos USB-C e Lightning embutidos<br>e carga rápida de 22,5W.', hand: 'Bateria de sobra, cabo junto!',
+    specs: [['battery', '20.000 mAh', 'várias recargas'], ['cable', 'Cabos embutidos', 'USB-C e Lightning'], ['bolt', 'Até 22,5W', 'USB-C · PD 10W no Lightning'], ['sync', 'USB-C bidirecional', 'carrega e é recarregado'], ['display', 'Display LED', 'nível da bateria'], ['chip', 'Chip inteligente', 'pode ir na bagagem de mão']],
+    combo: { icon: 'cable', big: 'CABOS', t2: 'EMBUTIDOS', p: 'USB-C e Lightning sempre<br>junto com você.' },
+    feats: [['battery', '20.000<br>mAh'], ['bolt', '22,5W'], ['cable', 'Cabos<br>embutidos'], ['display', 'Display<br>LED']],
+    checks: ['Ideal para viagens', 'Para iPhone e Android'] }
+
 ];
