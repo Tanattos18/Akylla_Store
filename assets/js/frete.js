@@ -5,6 +5,8 @@
  *   - Goiânia: pela distância de IDA (rota de moto/carro) a partir da loja,
  *     nas faixas `bands` ({ upToKm, price } em centavos). Acima da última faixa,
  *     soma `extraStepPrice` a cada `extraStepKm` km adicionais (ou fração).
+ *   - Frete promocional: cada faixa pode ter `promoPrice`, que vale até `promoUntil` (AAAA-MM-DD,
+ *     dia de Brasília). No dia seguinte volta sozinho ao `price` normal.
  *   - Cidades em `cities`: valor fixo (`price`) ou "a combinar" (`price: null`).
  *   - Outras cidades (interior e outras regiões): envio por transportadora —
  *     frete cotado individualmente + taxa administrativa (`carrier.feePercent`, 30%).
@@ -34,6 +36,7 @@
     ],
     extraStepKm: 5,
     extraStepPrice: 300,
+    promoUntil: '',
     homeCity: 'Goiânia',
     carrier: { enabled: true, feePercent: 30 },
     cities: [
@@ -56,17 +59,35 @@
     return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 
+  /* Dia de hoje em Brasília (UTC−3), no formato AAAA-MM-DD — igual no site, no painel e no servidor. */
+  function todayBR(now) {
+    var ms = now instanceof Date ? now.getTime() : (now == null ? Date.now() : Number(now));
+    return new Date(ms - 3 * 3600 * 1000).toISOString().slice(0, 10);
+  }
+
+  /* Frete promocional vale até o fim do dia `promoUntil`. */
+  function promoActive(config, now) {
+    var until = settings(config).promoUntil;
+    return !!until && todayBR(now) <= until;
+  }
+
+  /* Preço da faixa hoje: promocional (se houver e estiver no prazo) ou normal. */
+  function bandPrice(band, config, now) {
+    var promo = band && band.promoPrice;
+    return promo != null && promo !== '' && Number(promo) >= 0 && promoActive(config, now) ? Number(promo) : band.price;
+  }
+
   /* Valor (centavos) para uma distância de ida em km. */
-  function feeForKm(km, config) {
+  function feeForKm(km, config, now) {
     var s = settings(config);
     var d = Math.max(0, Number(km) || 0);
     for (var i = 0; i < s.bands.length; i += 1) {
-      if (d <= s.bands[i].upToKm + 1e-9) return s.bands[i].price;
+      if (d <= s.bands[i].upToKm + 1e-9) return bandPrice(s.bands[i], config, now);
     }
     var last = s.bands[s.bands.length - 1];
     if (!last) return null;
     var steps = Math.ceil((d - last.upToKm) / (s.extraStepKm || 5) - 1e-9);
-    return last.price + steps * (s.extraStepPrice || 0);
+    return bandPrice(last, config, now) + steps * (s.extraStepPrice || 0);
   }
 
   function cityRule(city, config) {
@@ -217,6 +238,9 @@
     carrierTotal: carrierTotal,
     settings: settings,
     feeForKm: feeForKm,
+    bandPrice: bandPrice,
+    promoActive: promoActive,
+    todayBR: todayBR,
     cityRule: cityRule,
     quote: quote,
     lookupCep: lookupCep

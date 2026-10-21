@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-4">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-7">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -196,6 +196,8 @@
   <aside class="announcement" aria-label="Informações da loja">
     <div class="container announcement-inner">
       <span class="announcement-item"><span class="pulse-dot" aria-hidden="true"></span> PIX à vista</span>
+      <span class="announcement-sep" aria-hidden="true" data-card-only hidden></span>
+      <span class="announcement-item" data-card-only hidden data-card-label>Cartão em até 12x</span>
       <span class="announcement-sep" aria-hidden="true"></span>
       <span class="announcement-item">Garantia legal de 90 dias</span>
       <span class="announcement-sep hide-sm" aria-hidden="true"></span>
@@ -261,6 +263,7 @@
           </div>
           <ul class="hero-trust" aria-label="Diferenciais da loja">
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-check"></use></svg> PIX à vista</li>
+            <li data-card-only hidden><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-check"></use></svg> <span data-card-label>Cartão em até 12x</span></li>
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-check"></use></svg> Garantia legal</li>
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-check"></use></svg> Atendimento humano</li>
           </ul>
@@ -419,7 +422,7 @@
         <div class="section-head section-head--center">
           <div class="section-head-copy">
             <p class="eyebrow">Simples assim</p>
-            <h2 id="como-title">Do carrinho ao PIX em poucos passos.</h2>
+            <h2 id="como-title">Do carrinho ao pedido em poucos passos.</h2>
             <p class="section-lead">Sem cadastro, sem burocracia. Escolha, pague e confirme com a gente.</p>
           </div>
         </div>
@@ -434,14 +437,14 @@
           <article class="step-card">
             <span class="step-number" aria-hidden="true">02</span>
             <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-pix"></use></svg></span>
-            <h3>Pague com PIX</h3>
-            <p>Ao finalizar, geramos um QR Code e um código copia e cola com o valor exato do pedido. Pague pelo app do seu banco.</p>
+            <h3>Pague como preferir</h3>
+            <p>PIX com QR Code e código copia e cola, com o valor exato do pedido<span data-card-only hidden>, ou cartão de crédito em até <span data-card-max>12</span>x na página segura do Mercado Pago</span>.</p>
           </article>
           <article class="step-card">
             <span class="step-number" aria-hidden="true">03</span>
             <span class="step-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg></span>
-            <h3>Confirme no WhatsApp</h3>
-            <p>Envie o comprovante para a gente. Conferimos o pagamento e combinamos a entrega ou retirada do seu pedido.</p>
+            <h3>Acompanhe o pedido</h3>
+            <p>Com o pagamento confirmado, combinamos a entrega ou a retirada pelo WhatsApp. Você acompanha tudo em <a href="pedido.html">Acompanhar pedido</a>.</p>
           </article>
         </div>
       </div>
@@ -471,8 +474,8 @@
           </article>
           <article class="policy-card">
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-pix"></use></svg></span>
-            <h3>Pagamento via PIX</h3>
-            <p>O checkout gera um QR Code e um código copia e cola com o valor do pedido. A confirmação é feita manualmente após o envio do comprovante no WhatsApp.</p>
+            <h3>Pagamento</h3>
+            <p>PIX com QR Code e copia e cola, com confirmação automática pelo Mercado Pago.<span data-card-only hidden> Cartão de crédito em até <span data-card-max>12</span>x na página segura do Mercado Pago; o valor no cartão tem acréscimo, informado antes de pagar.</span></p>
           </article>
           <article class="policy-card">
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-lock"></use></svg></span>
@@ -492,7 +495,7 @@
 
         <div class="transparency-note">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-chat"></use></svg>
-          <p><strong>Compra assistida:</strong> este site é uma vitrine com checkout PIX. O pedido é confirmado após a conferência do comprovante. Em caso de dúvida, fale com a gente antes de pagar.</p>
+          <p><strong>Compra segura:</strong> os pagamentos são processados pelo Mercado Pago e este site não recebe dados de cartão. Depois da compra, acompanhe o pedido em <a href="pedido.html">Acompanhar pedido</a>. Em caso de dúvida, fale com a gente antes de pagar.</p>
         </div>
       </div>
     </section>
@@ -512,15 +515,15 @@
         <div class="faq-list">
           <details class="faq-item">
             <summary>Como funciona o pagamento?<span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-plus"></use></svg></span></summary>
-            <div class="faq-answer"><p>O pagamento é via PIX. Ao finalizar a sacola, o site gera um QR Code e um código copia e cola com o valor exato do pedido. Você paga pelo app do seu banco e envia o comprovante no WhatsApp.</p></div>
+            <div class="faq-answer"><p>Ao finalizar a compra, você escolhe a retirada ou a entrega e paga com <strong>PIX</strong>: o site gera um QR Code e um código copia e cola com o valor exato do pedido, para pagar no app do seu banco.<span data-card-only hidden> Também aceitamos <strong>cartão de crédito em até <span data-card-max>12</span>x</strong>, pago na página segura do Mercado Pago (no cartão o valor tem acréscimo e os juros das parcelas aparecem antes de você confirmar).</span></p></div>
           </details>
           <details class="faq-item">
             <summary>O pagamento é confirmado automaticamente?<span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-plus"></use></svg></span></summary>
-            <div class="faq-answer"><p>Não. Este site não processa pagamentos automaticamente. A confirmação é feita pela nossa equipe após a conferência do comprovante enviado no WhatsApp. Por isso, o pedido só é considerado confirmado depois desse contato.</p></div>
+            <div class="faq-answer"><p>Sim. O pagamento é processado pelo Mercado Pago e confirmado automaticamente em poucos segundos: o site mostra “Pagamento confirmado” e você pode acompanhar o pedido em <a href="pedido.html">Acompanhar pedido</a>. Se preferir, também fale com a gente pelo WhatsApp.</p></div>
           </details>
           <details class="faq-item">
             <summary>Como recebo meu pedido?<span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-plus"></use></svg></span></summary>
-            <div class="faq-answer"><p>No checkout você escolhe <strong>retirar na loja (grátis)</strong> ou <strong>receber em casa</strong>. Para entrega, digite seu CEP e número: em Goiânia o frete é calculado pela distância de ida a partir da loja (a partir de R$ 25,00 até 15 km); Senador Canedo tem valor fixo; Aparecida de Goiânia, Goianira e Trindade são combinadas pelo WhatsApp. O valor do frete já entra no PIX. Para o interior e outros estados enviamos por transportadora: cotamos o frete, somamos uma taxa administrativa de 30% e informamos o valor total pelo WhatsApp antes do envio.</p></div>
+            <div class="faq-answer"><p>No checkout você escolhe <strong>retirar na loja (grátis)</strong> ou <strong>receber em casa</strong>. Para entrega, digite seu CEP e número: em Goiânia o frete é calculado pela distância de ida a partir da loja (veja a <a href="#tabela-frete" data-open-shipping>tabela de frete</a>); Senador Canedo tem valor fixo; Aparecida de Goiânia, Goianira e Trindade são combinadas pelo WhatsApp. O valor do frete já entra no PIX. Para o interior e outros estados enviamos por transportadora: cotamos o frete, somamos uma taxa administrativa de 30% e informamos o valor total pelo WhatsApp antes do envio.</p></div>
           </details>
           <details class="faq-item">
             <summary>Os produtos têm garantia?<span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-plus"></use></svg></span></summary>
@@ -695,9 +698,9 @@
         <span>Total</span>
         <strong id="cartTotal">R$ 0,00</strong>
       </div>
-      <p class="cart-note">Pagamento via PIX. No próximo passo você escolhe retirada grátis ou entrega (frete calculado pelo CEP).</p>
+      <p class="cart-note">No próximo passo você escolhe retirada grátis ou entrega (frete pelo CEP) e paga no PIX<span data-card-only hidden> ou no cartão em até <span data-card-max>12</span>x</span>.</p>
       <button class="btn btn-primary btn-block" type="button" id="checkoutBtn">
-        Finalizar com PIX
+        Finalizar compra
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
       </button>
       <button class="btn btn-ghost-dark btn-block" type="button" data-close-dialog="cartDrawer">Continuar comprando</button>
@@ -753,14 +756,14 @@
     </div>
   </dialog>
 
-  <!-- Checkout PIX -->
+  <!-- Checkout -->
   <dialog class="checkout-dialog" id="checkoutDialog" aria-labelledby="checkoutTitle">
     <div class="checkout-shell">
       <div class="checkout-main">
         <div class="checkout-head">
           <div>
-            <p class="eyebrow">Checkout PIX</p>
-            <h2 id="checkoutTitle">Pague e confirme no WhatsApp.</h2>
+            <p class="eyebrow">Finalizar compra</p>
+            <h2 id="checkoutTitle">Falta pouco para o seu pedido.</h2>
           </div>
           <button class="icon-btn" type="button" data-close-dialog="checkoutDialog" aria-label="Fechar checkout">
             <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-close"></use></svg>
@@ -788,8 +791,8 @@
           <div class="delivery-result" id="deliveryResult" aria-live="polite" hidden></div>
         </section>
 
-        <h3 class="checkout-step-title"><span>2</span> Pague com PIX</h3>
-        <p class="pix-locked" id="pixLocked">Escolha a retirada ou calcule o frete acima para gerar o PIX com o valor certo.</p>
+        <h3 class="checkout-step-title"><span>2</span> Pagamento</h3>
+        <p class="pix-locked" id="pixLocked">Escolha a retirada ou calcule o frete acima para ver as formas de pagamento com o valor certo.</p>
 
         <div class="mp-box" id="mpBox" hidden>
           <div class="mp-start" id="mpStart">
@@ -944,7 +947,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-bag"></use></svg>
       <span><strong id="cartBarCount">0 itens</strong><span id="cartBarTotal">R$ 0,00</span></span>
     </button>
-    <button class="cart-bar-checkout" type="button" id="cartBarCheckout">Finalizar</button>
+    <button class="cart-bar-checkout" type="button" id="cartBarCheckout">Finalizar compra</button>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -955,12 +958,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261021-4" defer></script>
-  <script src="assets/js/config.js?v=20261021-4" defer></script>
-  <script src="assets/js/products.js?v=20261021-4" defer></script>
-  <script src="assets/js/pix.js?v=20261021-4" defer></script>
-  <script src="assets/js/promo.js?v=20261021-4" defer></script>
-  <script src="assets/js/frete.js?v=20261021-4" defer></script>
-  <script src="assets/js/app.js?v=20261021-4" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261021-7" defer></script>
+  <script src="assets/js/config.js?v=20261021-7" defer></script>
+  <script src="assets/js/products.js?v=20261021-7" defer></script>
+  <script src="assets/js/pix.js?v=20261021-7" defer></script>
+  <script src="assets/js/promo.js?v=20261021-7" defer></script>
+  <script src="assets/js/frete.js?v=20261021-7" defer></script>
+  <script src="assets/js/app.js?v=20261021-7" defer></script>
 </body>
 </html>

@@ -615,6 +615,8 @@
     form.elements.pickupNote.value = s.pickupNote || '';
     form.elements.extraStepKm.value = String(s.extraStepKm || 5);
     form.elements.extraStepPrice.value = moneyInput(s.extraStepPrice || 0);
+    form.elements.promoUntil.value = s.promoUntil || '';
+    renderShipPromoNote();
     form.elements.originLabel.value = s.originLabel || '';
     var carrier = s.carrier || { enabled: true, feePercent: 30 };
     form.elements.carrierEnabled.checked = carrier.enabled !== false;
@@ -632,7 +634,14 @@
     var prev = 0;
     s.bands.forEach(function (band, i) {
       var km = el('input', { type: 'number', min: '1', step: '0.5', inputmode: 'decimal', value: String(band.upToKm), 'aria-label': 'Até quantos km' });
-      var price = el('input', { inputmode: 'decimal', value: moneyInput(band.price), 'aria-label': 'Valor da faixa' });
+      var price = el('input', { inputmode: 'decimal', value: moneyInput(band.price), 'aria-label': 'Valor normal da faixa' });
+      var promo = el('input', { class: 'band-promo', inputmode: 'decimal', value: band.promoPrice == null ? '' : moneyInput(band.promoPrice), placeholder: 'promo', 'aria-label': 'Valor promocional da faixa (vazio = sem promoção)', title: 'Valor promocional (vazio = sem promoção)' });
+      promo.addEventListener('change', function () {
+        if (!promo.value.trim()) { delete band.promoPrice; refreshPending(); renderShipPromoNote(); return; }
+        var pc = parseMoney(promo.value);
+        if (!(pc >= 0)) { toast('Valor inválido.'); promo.value = band.promoPrice == null ? '' : moneyInput(band.promoPrice); return; }
+        band.promoPrice = pc; refreshPending(); renderShipPromoNote();
+      });
       km.addEventListener('change', function () {
         var v = Number(String(km.value).replace(',', '.'));
         if (!(v > 0)) { toast('Distância inválida.'); km.value = String(band.upToKm); return; }
@@ -647,7 +656,7 @@
       });
       list.appendChild(el('li', {}, [
         el('span', { class: 'band-from', text: prev ? 'acima de ' + prev + ' até' : 'até' }),
-        km, el('span', { class: 'band-unit', text: 'km → R$' }), price,
+        km, el('span', { class: 'band-unit', text: 'km → R$' }), price, promo,
         el('button', { type: 'button', 'aria-label': 'Remover faixa', text: '✕', onclick: function () {
           if (s.bands.length <= 1) { toast('Deixe pelo menos uma faixa.'); return; }
           s.bands.splice(i, 1); renderBands(); refreshPending();
@@ -678,6 +687,17 @@
     });
   }
 
+  function renderShipPromoNote() {
+    var s = ship();
+    var withPromo = (s.bands || []).filter(function (b) { return b.promoPrice != null; });
+    var box = $('#shipPromoNote');
+    if (!withPromo.length) { box.textContent = 'Sem frete promocional. Para criar, preencha o campo “promo” de uma faixa e a data acima.'; return; }
+    var day = s.promoUntil ? s.promoUntil.split('-').reverse().join('/') : '';
+    var active = Frete.promoActive(state.config);
+    box.textContent = (active ? '✅ Frete promocional valendo até ' + day + ': ' : (s.promoUntil ? '⏸ Frete promocional encerrado em ' + day + ' (vale o normal): ' : '⚠️ Falta a data final — sem data, o promocional não vale: ')) +
+      withPromo.map(function (b) { return 'até ' + b.upToKm + ' km ' + brl(b.promoPrice) + ' (normal ' + brl(b.price) + ')'; }).join(' · ');
+  }
+
   function handleShipForm(event) {
     var input = event.target;
     var s = ship();
@@ -687,6 +707,7 @@
     else if (input.name === 'originLabel') s.originLabel = input.value;
     else if (input.name === 'carrierEnabled') { s.carrier = s.carrier || { feePercent: 30 }; s.carrier.enabled = input.checked; }
     else if (input.name === 'carrierFee') { s.carrier = s.carrier || { enabled: true }; s.carrier.feePercent = Math.max(0, Math.min(200, Number(input.value) || 0)); }
+    else if (input.name === 'promoUntil') { s.promoUntil = input.value || ''; renderShipPromoNote(); }
     else if (input.name === 'extraStepKm') s.extraStepKm = Math.max(1, parseInt(input.value, 10) || 5);
     else if (input.name === 'extraStepPrice') { var c = parseMoney(input.value); if (c >= 0) s.extraStepPrice = c; }
     else if (input.name === 'originLat' || input.name === 'originLon') {

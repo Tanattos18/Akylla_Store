@@ -4869,3 +4869,6 @@ dialog::backdrop {
 .track-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .track .legal-back { display: inline-flex; margin-bottom: 1.2rem; }
 .track .eyebrow { display: block; }
+
+/* Menções ao cartão: só aparecem com o cartão ligado no painel */
+[data-card-only][hidden] { display: none !important; }

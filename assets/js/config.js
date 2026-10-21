@@ -37,7 +37,8 @@ window.AKYLLA_CONFIG = {
     "bands": [
       {
         "upToKm": 15,
-        "price": 1500
+        "price": 2500,
+        "promoPrice": 1500
       },
       {
         "upToKm": 20,
@@ -84,7 +85,8 @@ window.AKYLLA_CONFIG = {
         "name": "Trindade",
         "price": null
       }
-    ]
+    ],
+    "promoUntil": "2026-10-31"
   },
   "paymentProvider": "mercadopago",
   "paymentApiUrl": "https://akylla-shop-api.akyllashop.workers.dev",

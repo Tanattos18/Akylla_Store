@@ -567,3 +567,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 
 /* Nota explicativa (cartão) */
 .note-box { margin: 0; padding: 0.7rem 0.85rem; border-radius: 12px; background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--text); font-size: 0.85rem; line-height: 1.5; }
+
+/* Faixas de frete com valor promocional */
+.band-list li { grid-template-columns: auto 80px auto 1fr 1fr 40px; }
+.band-promo { border-style: dashed; }
+@media (max-width: 520px) { .band-list li { grid-template-columns: 70px auto 1fr 1fr 40px; } }

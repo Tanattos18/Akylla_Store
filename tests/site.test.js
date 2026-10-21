@@ -258,3 +258,19 @@ test('checkout: itens podem ser alterados/removidos e o PIX só sai com a entreg
   assert.match(app, /aria-disabled', ready \? 'false' : 'true'/);
   assert.match(html, /id="productDialogBuy"/, 'botão Comprar agora');
 });
+
+test('frete promocional: vale até a data (dia de Brasília) e depois volta ao normal sozinho', function () {
+  var Frete = require('../assets/js/frete.js');
+  var cfg = JSON.parse(JSON.stringify(CONFIG));
+  cfg.shipping.bands = [{ upToKm: 15, price: 2500, promoPrice: 1500 }, { upToKm: 20, price: 2800 }];
+  cfg.shipping.extraStepKm = 5;
+  cfg.shipping.extraStepPrice = 500;
+  cfg.shipping.promoUntil = '2026-10-31';
+  var at = function (iso) { return Date.parse(iso); };
+  assert.equal(Frete.feeForKm(10, cfg, at('2026-10-31T12:00:00Z')), 1500, 'promoção valendo');
+  assert.equal(Frete.feeForKm(10, cfg, at('2026-11-01T02:59:00Z')), 1500, '31/10 às 23:59 em Brasília');
+  assert.equal(Frete.feeForKm(10, cfg, at('2026-11-01T03:00:00Z')), 2500, '01/11 à 00:00 em Brasília: normal');
+  assert.equal(Frete.feeForKm(18, cfg, at('2026-10-20T12:00:00Z')), 2800, 'faixa sem promo não muda');
+  cfg.shipping.promoUntil = '';
+  assert.equal(Frete.feeForKm(10, cfg, at('2026-10-20T12:00:00Z')), 2500, 'sem data, sem promoção');
+});

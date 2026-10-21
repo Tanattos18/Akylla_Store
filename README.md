@@ -407,6 +407,7 @@ node scripts/atualizar-precos.js
   - o valor sai das **faixas de distância** configuradas na aba Frete. Acima da última faixa, cobra um valor extra a cada X km.
 - **Outras cidades:** valor fixo ou **a combinar**, conforme a lista da aba Frete. Com "a combinar", o PIX cobre só os produtos.
 - **Interior e outras regiões:** envio por **transportadora**. O PIX cobre os produtos. Você cota o frete e cobra **frete + taxa administrativa** (hoje 30%). Exemplo: R$ 40,00 + 30% = **R$ 52,00**.
+- **Frete promocional:** na aba Frete, cada faixa tem o campo **promo** e há a data **Frete promocional válido até**. Até essa data (dia de Brasília) vale o valor promo; no dia seguinte volta sozinho ao valor normal, no site, no painel e no servidor. Ex.: até 15 km R$ 15,00 até 31/10, depois R$ 25,00. A tabela do site mostra os dois valores.
 - O frete entra no **total e no QR do PIX**. O pedido mostra endereço, km e precisão ("aproximado pelo bairro" quando a rua não está no mapa). Confira no Google Maps se a distância estiver perto do limite de uma faixa.
 - A **tabela de frete** do site é gerada da configuração e aparece recolhida na seção *Transparência* ("Tabela de frete por distância e cidade").
 - O cálculo fica em `assets/js/frete.js` (usado pelo site, pelo painel e pelo servidor).

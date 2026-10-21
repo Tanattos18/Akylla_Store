@@ -696,7 +696,7 @@
       });
     }
 
-    /* "Comprar agora": garante o produto na sacola e vai direto para o checkout (entrega + PIX). */
+    /* "Comprar agora": garante o produto na sacola e vai direto para o checkout (entrega + pagamento). */
     if (els.productDialogBuy) {
       els.productDialogBuy.addEventListener('click', function () {
         if (!activeProductId) return;
@@ -1136,8 +1136,11 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-shipping-table] tbody'), function (body) {
       var rows = [];
       var prev = 0;
+      var until = s.promoUntil ? s.promoUntil.slice(8, 10) + '/' + s.promoUntil.slice(5, 7) : '';
       s.bands.forEach(function (b) {
-        rows.push([(prev ? 'Acima de ' + prev + ' até ' : 'Até ') + b.upToKm + ' km (Goiânia)', formatBRL(b.price)]);
+        var now = Frete.bandPrice(b, CONFIG);
+        var price = now !== b.price ? formatBRL(now) + ' até ' + until + ' (depois ' + formatBRL(b.price) + ')' : formatBRL(b.price);
+        rows.push([(prev ? 'Acima de ' + prev + ' até ' : 'Até ') + b.upToKm + ' km (Goiânia)', price]);
         prev = b.upToKm;
       });
       if (prev) rows.push(['Acima de ' + prev + ' km', '+ ' + formatBRL(s.extraStepPrice) + ' a cada ' + s.extraStepKm + ' km']);
@@ -1492,6 +1495,10 @@
   }
 
   function setupCard() {
+    var cfg = cardConfig();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-card-only]'), function (n) { n.hidden = !cfg.enabled; });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-card-max]'), function (n) { n.textContent = String(cfg.max); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-card-label]'), function (n) { n.textContent = 'Cartão em até ' + cfg.max + 'x'; });
     if (els.cardPay) els.cardPay.addEventListener('click', payWithCard);
     fillCustomer();
   }
@@ -1537,7 +1544,7 @@
       state.manualSent = '';
       if (els.pixLocked) {
         els.pixLocked.classList.remove('is-sent');
-        els.pixLocked.textContent = 'Escolha a retirada ou calcule o frete acima para gerar o PIX com o valor certo.';
+        els.pixLocked.textContent = 'Escolha a retirada ou calcule o frete acima para ver as formas de pagamento com o valor certo.';
       }
       if (els.checkoutDialog) els.checkoutDialog.classList.remove('is-paying');
     }
@@ -1958,7 +1965,7 @@
       els.sendProof.addEventListener('click', function (event) {
         if (els.sendProof.getAttribute('aria-disabled') === 'true') {
           event.preventDefault();
-          toast('Escolha a retirada ou calcule o frete para gerar o PIX primeiro.');
+          toast('Escolha a retirada ou calcule o frete primeiro.');
           return;
         }
         /* PIX manual: registra o pedido no servidor (o estoque fica reservado até a loja confirmar)
