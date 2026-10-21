@@ -93,6 +93,6 @@ window.AKYLLA_CONFIG = {
   "card": {
     "enabled": true,
     "maxInstallments": 12,
-    "feePercent": 0
+    "feePercent": 4.98
   }
 };
