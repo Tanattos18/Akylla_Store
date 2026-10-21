@@ -15,7 +15,8 @@
  *   MP_WEBHOOK_SECRET   assinatura secreta dos webhooks do Mercado Pago
  *   GITHUB_TOKEN        chave fine-grained do GitHub (Contents: Read and write no repositório)
  *   CALLMEBOT_APIKEY    chave do CallMeBot para avisar as vendas no WhatsApp da loja (opcional)
- * Variáveis (wrangler.toml): GITHUB_REPO, GITHUB_BRANCH, ALLOWED_ORIGINS, PAYMENT_MINUTES, STORE_WHATSAPP
+ * Variáveis (wrangler.toml): GITHUB_REPO, GITHUB_BRANCH, ALLOWED_ORIGINS, PAYMENT_MINUTES, STORE_WHATSAPP,
+ *   MP_API ("orders" = API de Orders do Mercado Pago, padrão; "payments" = API legada)
  * KV: ORDERS (pedidos e reservas)
  */
 import {
@@ -160,6 +161,95 @@ async function mp(env, path, options) {
   return data;
 }
 
+/*
+ * Adaptador do Mercado Pago. Padrão: API de Orders (MP_API = "orders").
+ * A API de Payments (legada, será descontinuada) fica disponível com MP_API = "payments".
+ * Todas as funções devolvem um formato único:
+ *   createPix → { paymentId, code, image, ticketUrl }
+ *   readPix   → { state: 'paid' | 'pending' | 'closed', amountCents, ref, raw }
+ */
+function useOrdersApi(env) {
+  return String(env.MP_API || 'orders').toLowerCase() !== 'payments';
+}
+
+function reais(cents) {
+  return (cents / 100).toFixed(2);
+}
+
+async function createPix(env, { id, total, email, expiresAt, workerUrl }) {
+  if (useOrdersApi(env)) {
+    const minutes = Math.max(30, Math.round((expiresAt - Date.now()) / 60000));
+    const order = await mp(env, '/v1/orders', {
+      method: 'POST',
+      idempotency: id,
+      body: {
+        type: 'online',
+        processing_mode: 'automatic',
+        total_amount: reais(total),
+        external_reference: id,
+        description: 'Akylla Shop - pedido ' + id,
+        transactions: {
+          payments: [{
+            amount: reais(total),
+            payment_method: { id: 'pix', type: 'bank_transfer' },
+            expiration_time: 'PT' + minutes + 'M'
+          }]
+        },
+        payer: { email }
+      }
+    });
+    const pay = (order.transactions && order.transactions.payments && order.transactions.payments[0]) || {};
+    const pm = pay.payment_method || {};
+    return { paymentId: String(order.id), code: pm.qr_code, image: pm.qr_code_base64, ticketUrl: pm.ticket_url };
+  }
+  const payment = await mp(env, '/v1/payments', {
+    method: 'POST',
+    idempotency: id,
+    body: {
+      transaction_amount: centsToReais(total),
+      description: 'Akylla Shop - pedido ' + id,
+      payment_method_id: 'pix',
+      external_reference: id,
+      notification_url: workerUrl + '/api/webhook',
+      date_of_expiration: mpDate(expiresAt),
+      payer: { email }
+    }
+  });
+  const tx = (payment.point_of_interaction && payment.point_of_interaction.transaction_data) || {};
+  return { paymentId: String(payment.id), code: tx.qr_code, image: tx.qr_code_base64, ticketUrl: tx.ticket_url };
+}
+
+function normalize(env, raw) {
+  if (useOrdersApi(env)) {
+    const paid = raw.status === 'processed' && (raw.status_detail === 'accredited' || !raw.status_detail);
+    const open = ['created', 'processing', 'action_required'].includes(raw.status);
+    return {
+      state: paid ? 'paid' : open ? 'pending' : 'closed',
+      amountCents: Math.round(Number(raw.total_amount) * 100),
+      ref: String(raw.external_reference || ''),
+      id: String(raw.id),
+      raw
+    };
+  }
+  return {
+    state: raw.status === 'approved' ? 'paid' : ['pending', 'in_process', 'authorized'].includes(raw.status) ? 'pending' : 'closed',
+    amountCents: Math.round(Number(raw.transaction_amount) * 100),
+    ref: String(raw.external_reference || ''),
+    id: String(raw.id),
+    raw
+  };
+}
+
+async function readPix(env, paymentId) {
+  const raw = await mp(env, (useOrdersApi(env) ? '/v1/orders/' : '/v1/payments/') + paymentId);
+  return normalize(env, raw);
+}
+
+async function cancelPix(env, paymentId) {
+  if (useOrdersApi(env)) return mp(env, '/v1/orders/' + paymentId + '/cancel', { method: 'POST', idempotency: 'cancel-' + paymentId });
+  return mp(env, '/v1/payments/' + paymentId, { method: 'PUT', body: { status: 'cancelled' } });
+}
+
 /* Assinatura dos webhooks (x-signature: ts=...,v1=...). */
 async function validSignature(request, env, dataId) {
   if (!env.MP_WEBHOOK_SECRET) return true; // sem segredo configurado, confia na consulta ao MP
@@ -261,21 +351,9 @@ async function createOrder(request, env) {
   const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email || '')) ? String(body.email).slice(0, 120) : 'pedido+' + id.toLowerCase() + '@akyllashop.com';
   const workerUrl = new URL(request.url).origin;
 
-  const payment = await mp(env, '/v1/payments', {
-    method: 'POST',
-    idempotency: id,
-    body: {
-      transaction_amount: centsToReais(total),
-      description: 'Akylla Shop - pedido ' + id,
-      payment_method_id: 'pix',
-      external_reference: id,
-      notification_url: workerUrl + '/api/webhook',
-      date_of_expiration: mpDate(expiresAt),
-      payer: { email }
-    }
-  });
+  const pix = await createPix(env, { id, total, email, expiresAt, workerUrl });
+  if (!pix.code) throw new Error('Mercado Pago não devolveu o código PIX.');
 
-  const tx = (payment.point_of_interaction && payment.point_of_interaction.transaction_data) || {};
   const order = {
     id,
     status: 'pending',
@@ -288,8 +366,8 @@ async function createOrder(request, env) {
     total,
     email: body.email ? email : '',
     customer,
-    paymentId: String(payment.id),
-    pix: { code: tx.qr_code, image: tx.qr_code_base64 ? 'data:image/png;base64,' + tx.qr_code_base64 : '', ticketUrl: tx.ticket_url }
+    paymentId: pix.paymentId,
+    pix: { code: pix.code, image: pix.image ? 'data:image/png;base64,' + pix.image : '', ticketUrl: pix.ticketUrl }
   };
   await saveOrder(env, order);
   await reserve(env, order);
@@ -299,11 +377,11 @@ async function createOrder(request, env) {
 /* Confere o pagamento no Mercado Pago e, se aprovado, conclui o pedido (idempotente). */
 async function syncPayment(env, order, payment) {
   if (!order || order.status !== 'pending') return order;
-  const pay = payment || await mp(env, '/v1/payments/' + order.paymentId);
-  const amountOk = Math.round(Number(pay.transaction_amount) * 100) === order.total;
-  const refOk = String(pay.external_reference) === order.id;
+  const pay = payment || await readPix(env, order.paymentId);
+  const amountOk = pay.amountCents === order.total;
+  const refOk = pay.ref === order.id;
 
-  if (pay.status === 'approved' && amountOk && refOk) {
+  if (pay.state === 'paid' && amountOk && refOk) {
     order.status = 'paid';
     order.paidAt = Date.now();
     await saveOrder(env, order); // marca antes de mexer no estoque: evita baixa em dobro
@@ -317,13 +395,13 @@ async function syncPayment(env, order, payment) {
     order.notified = await notifyStore(env, order);
     await saveOrder(env, order);
     await release(env, order.id);
-  } else if (pay.status === 'approved') {
+  } else if (pay.state === 'paid') {
     order.status = 'review';
-    order.reviewReason = 'Pagamento aprovado com valor ou referência diferente (R$ ' + pay.transaction_amount + ').';
+    order.reviewReason = 'Pagamento aprovado com valor ou referência diferente (R$ ' + (pay.amountCents / 100).toFixed(2) + ').';
     order.notified = await notifyStore(env, order);
     await saveOrder(env, order);
     await release(env, order.id);
-  } else if (['cancelled', 'rejected', 'expired', 'refunded', 'charged_back'].includes(pay.status) || Date.now() > order.expiresAt + 5 * 60 * 1000) {
+  } else if (pay.state === 'closed' || Date.now() > order.expiresAt + 5 * 60 * 1000) {
     order.status = 'expired';
     await saveOrder(env, order);
     await release(env, order.id);
@@ -344,7 +422,7 @@ async function cancelOrder(env, id) {
   if (order.status === 'pending') {
     const synced = await syncPayment(env, order);
     if (synced.status === 'pending') {
-      await mp(env, '/v1/payments/' + order.paymentId, { method: 'PUT', body: { status: 'cancelled' } }).catch(() => null);
+      await cancelPix(env, order.paymentId).catch(() => null);
       synced.status = 'expired';
       await saveOrder(env, synced);
       await release(env, id);
@@ -359,14 +437,15 @@ async function webhook(request, env) {
   const body = await request.json().catch(() => ({}));
   const type = body.type || url.searchParams.get('type') || url.searchParams.get('topic');
   const dataId = (body.data && body.data.id) || url.searchParams.get('data.id') || url.searchParams.get('id');
-  if (type !== 'payment' || !dataId) return json({ ok: true, ignored: true });
+  const expected = useOrdersApi(env) ? 'order' : 'payment';
+  if (type !== expected || !dataId) return json({ ok: true, ignored: true });
   if (!(await validSignature(request, env, url.searchParams.get('data.id') || dataId))) return json({ ok: false, error: 'assinatura inválida' }, 401);
 
-  const pay = await mp(env, '/v1/payments/' + dataId);
-  const id = pay.external_reference;
+  const pay = await readPix(env, dataId);
+  const id = pay.ref;
   const order = id ? await getOrder(env, id) : null;
   if (!order) return json({ ok: true, unknown: true });
-  if (String(order.paymentId) !== String(pay.id)) return json({ ok: true, mismatch: true });
+  if (String(order.paymentId) !== pay.id) return json({ ok: true, mismatch: true });
   const result = await syncPayment(env, order, pay);
   return json({ ok: true, status: result.status });
 }

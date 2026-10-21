@@ -169,8 +169,8 @@ npx wrangler deploy                         # publica e mostra o endereço: http
 
 | Nome | Onde conseguir |
 |---|---|
-| `MP_ACCESS_TOKEN` | Mercado Pago → *Seu negócio → Configurações → Credenciais* (ou developers.mercadopago.com → *Suas integrações* → sua aplicação → **Credenciais de produção** → *Access Token*, começa com `APP_USR-`). |
-| `MP_WEBHOOK_SECRET` | developers.mercadopago.com → sua aplicação → **Webhooks** → *Configurar notificações*: URL `https://akylla-shop-api.akyllashop.workers.dev/api/webhook`, evento **Pagamentos**, modo produção → copie a **assinatura secreta**. |
+| `MP_ACCESS_TOKEN` | Mercado Pago → *Seu negócio → Configurações → Credenciais* (ou developers.mercadopago.com → *Suas integrações* → **Criar aplicação** → *Checkout Transparente* → **API de Orders** → **Credenciais de produção** → *Access Token*, começa com `APP_USR-`). |
+| `MP_WEBHOOK_SECRET` | developers.mercadopago.com → sua aplicação → **Webhooks** → *Configurar notificações*: URL `https://akylla-shop-api.akyllashop.workers.dev/api/webhook`, evento **Order (Mercado Pago)** (aplicação criada como *Checkout Transparente → API de Orders*), modo produção → copie a **assinatura secreta**. |
 | `GITHUB_TOKEN` | github.com/settings/personal-access-tokens/new → *Fine-grained* → repositório **Akylla_Store** → **Contents: Read and write**. Use uma chave separada da do painel (nome: “Servidor Akylla”, validade 1 ano — anote para renovar). |
 | `CALLMEBOT_APIKEY` | Aviso de vendas no WhatsApp: siga as instruções do site oficial **callmebot.com** (salvar o número do robô e enviar a frase de autorização pelo WhatsApp da loja) e copie a *apikey* que ele responde. O número que recebe fica em `STORE_WHATSAPP` no `wrangler.toml`. |
 

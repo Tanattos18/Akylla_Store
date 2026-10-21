@@ -13,6 +13,8 @@ GITHUB_REPO = "Tanattos18/Akylla_Store"
 GITHUB_BRANCH = "main"
 ALLOWED_ORIGINS = "https://akyllashop.com,https://www.akyllashop.com,http://127.0.0.1:8765"
 PAYMENT_MINUTES = "30"
+# API do Mercado Pago: "orders" (Checkout Transparente via Orders) ou "payments" (legada).
+MP_API = "orders"
 # WhatsApp da loja que recebe o aviso de cada venda (DDI + DDD + número, só dígitos).
 STORE_WHATSAPP = "556281517002"
 

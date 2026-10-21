@@ -59,6 +59,15 @@ function scenario() {
     }
     if (u.host === 'api.callmebot.com') { notices.push(u.searchParams.get('text')); return res({ ok: true }); }
     if (u.host === 'api.mercadopago.com') {
+      if (u.pathname === '/v1/orders' && opts.method === 'POST') {
+        var ob = JSON.parse(opts.body);
+        var oid = 'ORD' + (nextPay++);
+        payments[oid] = { id: oid, status: 'action_required', status_detail: 'waiting_transfer', total_amount: ob.total_amount, external_reference: ob.external_reference, request: ob };
+        return res({ id: oid, status: 'action_required', transactions: { payments: [{ id: 'PAY' + oid, payment_method: { id: 'pix', type: 'bank_transfer', qr_code: '000201PIXMP' + oid, qr_code_base64: 'iVBOR', ticket_url: 'https://mp/t/' + oid } }] } }, 201);
+      }
+      var om = u.pathname.match(/^\/v1\/orders\/(ORD\d+)(\/cancel)?$/);
+      if (om && om[2]) { payments[om[1]].status = 'canceled'; payments[om[1]].status_detail = 'canceled'; return res(payments[om[1]]); }
+      if (om) return res(payments[om[1]]);
       if (u.pathname === '/v1/payments' && opts.method === 'POST') {
         var b = JSON.parse(opts.body);
         var id = nextPay++;
@@ -102,7 +111,9 @@ test('servidor: compra completa — PIX do Mercado Pago, aprovação e baixa aut
     var order = created.data;
     var expectedUnit = Math.floor(Math.round(w34.price * 90) / 100 / 10) * 10;
     assert.equal(order.total, expectedUnit * 2, 'preço do servidor com 10% de promoção');
-    assert.equal(s.payments[order.paymentId].transaction_amount, order.total / 100);
+    assert.equal(s.payments[order.paymentId].total_amount, (order.total / 100).toFixed(2), 'valor enviado como texto com 2 casas');
+    assert.equal(s.payments[order.paymentId].request.transactions.payments[0].payment_method.id, 'pix');
+    assert.match(s.payments[order.paymentId].request.transactions.payments[0].expiration_time, /^PT\d+M$/);
     assert.ok(order.pix.code && order.pix.image, 'QR do Mercado Pago');
     assert.equal(created.headers.get('access-control-allow-origin'), 'https://akyllashop.com');
 
@@ -116,8 +127,9 @@ test('servidor: compra completa — PIX do Mercado Pago, aprovação e baixa aut
     assert.equal(pending.data.status, 'pending');
 
     // Mercado Pago aprova e avisa o servidor
-    s.payments[order.paymentId].status = 'approved';
-    var hook = await call(worker, s.env, 'POST', '/api/webhook', { type: 'payment', data: { id: String(order.paymentId) } });
+    s.payments[order.paymentId].status = 'processed';
+    s.payments[order.paymentId].status_detail = 'accredited';
+    var hook = await call(worker, s.env, 'POST', '/api/webhook', { type: 'order', action: 'order.processed', data: { id: String(order.paymentId) } });
     assert.equal(hook.data.status, 'paid');
     assert.equal(s.notices.length, 1, 'aviso de venda enviado ao WhatsApp da loja');
     var notice = s.notices[0];
@@ -130,7 +142,7 @@ test('servidor: compra completa — PIX do Mercado Pago, aprovação e baixa aut
     assert.match(s.commits[0], /venda: pedido AK-/);
 
     // aviso repetido não baixa o estoque de novo
-    await call(worker, s.env, 'POST', '/api/webhook', { type: 'payment', data: { id: String(order.paymentId) } });
+    await call(worker, s.env, 'POST', '/api/webhook', { type: 'order', action: 'order.processed', data: { id: String(order.paymentId) } });
     assert.equal(s.commits.length, 1, 'idempotente');
 
     var paid = await call(worker, s.env, 'GET', '/api/orders/' + order.id);
@@ -154,16 +166,17 @@ test('servidor: pagamento com valor diferente vai para revisão e não baixa est
   try {
     var worker = (await import('../worker/src/index.js')).default;
     var a = (await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'hw8-pro-max', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } })).data;
-    s.payments[a.paymentId].status = 'approved';
-    s.payments[a.paymentId].transaction_amount = 1;
-    var hook = await call(worker, s.env, 'POST', '/api/webhook', { type: 'payment', data: { id: String(a.paymentId) } });
+    s.payments[a.paymentId].status = 'processed';
+    s.payments[a.paymentId].status_detail = 'accredited';
+    s.payments[a.paymentId].total_amount = '1.00';
+    var hook = await call(worker, s.env, 'POST', '/api/webhook', { type: 'order', data: { id: String(a.paymentId) } });
     assert.equal(hook.data.status, 'review');
     assert.equal(s.commits.length, 0);
 
     var b = (await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w69-ultra', qty: 2 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } })).data;
     var cancel = await call(worker, s.env, 'POST', '/api/orders/' + b.id + '/cancel');
     assert.equal(cancel.data.status, 'expired');
-    assert.equal(s.payments[b.paymentId].status, 'cancelled');
+    assert.equal(s.payments[b.paymentId].status, 'canceled');
     var again = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w69-ultra', qty: 2 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } });
     assert.equal(again.status, 201, 'reserva liberada após cancelamento');
 
