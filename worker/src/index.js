@@ -313,8 +313,9 @@ async function getOrder(env, id) {
 }
 
 async function saveOrder(env, order) {
+  /* Vendas confirmadas ficam para sempre (histórico do dashboard); o resto expira em 120 dias. */
   await env.ORDERS.put('order:' + order.id, JSON.stringify(order), {
-    expirationTtl: ORDER_TTL,
+    ...(order.status === 'paid' ? {} : { expirationTtl: ORDER_TTL }),
     metadata: { status: order.status, total: order.total, createdAt: order.createdAt, manual: !!order.manual }
   });
 }
@@ -579,10 +580,18 @@ async function autoCancel(env) {
 async function adminOrders(request, env) {
   await requireAdmin(request, env);
 
-  const list = await env.ORDERS.list({ prefix: 'order:' });
-  const keys = list.keys
+  /* ?all=1 → todos os pedidos (dashboard); padrão → os 60 mais recentes (aba Pedidos). */
+  const all = new URL(request.url).searchParams.get('all') === '1';
+  let keysAll = [];
+  let cursor;
+  do {
+    const page = await env.ORDERS.list({ prefix: 'order:', cursor });
+    keysAll = keysAll.concat(page.keys);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && keysAll.length < 5000);
+  const keys = keysAll
     .sort((a, b) => ((b.metadata && b.metadata.createdAt) || 0) - ((a.metadata && a.metadata.createdAt) || 0))
-    .slice(0, 60);
+    .slice(0, all ? 5000 : 60);
   const orders = await Promise.all(keys.map((k) => env.ORDERS.get(k.name, 'json')));
   return json({ orders: orders.filter(Boolean).map((o) => ({ ...publicOrder(o), pix: undefined, email: o.email, customer: o.customer, notified: o.notified, stockUpdated: o.stockUpdated, stockError: o.stockError, stockWarnings: o.stockWarnings, reviewReason: o.reviewReason })) });
 }

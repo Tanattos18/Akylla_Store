@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#060913">
   <title>Painel Akylla</title>
   <link rel="icon" href="../assets/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="admin.css?v=20261021-1">
+  <link rel="stylesheet" href="admin.css?v=20261021-2">
 </head>
 <body>
   <header class="topbar">
@@ -58,7 +58,8 @@
   <!-- App -->
   <main class="app" id="appView" hidden>
     <nav class="tabs" role="tablist">
-      <button class="tab is-active" type="button" role="tab" data-tab="estoque" aria-selected="true">Estoque</button>
+      <button class="tab is-active" type="button" role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+      <button class="tab" type="button" role="tab" data-tab="estoque" aria-selected="false">Estoque</button>
       <button class="tab" type="button" role="tab" data-tab="pedidos" aria-selected="false">Pedidos</button>
       <button class="tab" type="button" role="tab" data-tab="promocao" aria-selected="false">Promoção</button>
       <button class="tab" type="button" role="tab" data-tab="produtos" aria-selected="false">Produtos</button>
@@ -71,8 +72,54 @@
       <button class="btn btn-ghost btn-sm" type="button" id="discardBtn">Descartar</button>
     </div>
 
+    <!-- Dashboard -->
+    <section class="panel" data-panel="dashboard">
+      <div class="dash-filters" role="group" aria-label="Período">
+        <button type="button" class="chip" data-period="today">Hoje</button>
+        <button type="button" class="chip" data-period="7">7 dias</button>
+        <button type="button" class="chip is-active" data-period="30">30 dias</button>
+        <button type="button" class="chip" data-period="month">Este mês</button>
+        <button type="button" class="chip" data-period="all">Tudo</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dashReload">Atualizar</button>
+      </div>
+      <p class="muted" id="dashNote"></p>
+
+      <h2 class="dash-title">Vendas confirmadas <span class="muted" id="dashPeriodLabel"></span></h2>
+      <div class="kpis" id="kpiSales"></div>
+
+      <section class="card">
+        <h3>Faturamento por dia</h3>
+        <div class="daychart" id="dayChart" role="img" aria-label="Faturamento por dia"></div>
+        <div class="chart-tip" id="chartTip" hidden></div>
+      </section>
+
+      <div class="dash-grid">
+        <section class="card">
+          <h3>Total vendido por categoria</h3>
+          <div class="hbars" id="catBars"></div>
+          <table class="dash-table" id="catTable"></table>
+        </section>
+        <section class="card">
+          <h3>Entrega</h3>
+          <div class="kpis kpis-sm" id="kpiDelivery"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h3>Produtos vendidos</h3>
+        <div class="table-wrap"><table class="dash-table" id="prodTable"></table></div>
+      </section>
+
+      <h2 class="dash-title">Loja agora</h2>
+      <div class="kpis" id="kpiStore"></div>
+      <section class="card">
+        <h3>Atenção no estoque</h3>
+        <div class="table-wrap"><table class="dash-table" id="lowTable"></table></div>
+      </section>
+    </section>
+
     <!-- Estoque -->
-    <section class="panel" data-panel="estoque">
+    <section class="panel" data-panel="estoque" hidden>
       <div class="panel-head">
         <input class="search" type="search" id="stockSearch" placeholder="Buscar por nome ou código">
         <span class="muted" id="stockSummary"></span>
@@ -303,6 +350,6 @@
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
   <script src="../assets/js/frete.js?v=20261020-13"></script>
-  <script src="admin.js?v=20261021-1"></script>
+  <script src="admin.js?v=20261021-2"></script>
 </body>
 </html>

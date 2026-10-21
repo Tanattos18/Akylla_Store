@@ -69,6 +69,7 @@ O painel edita os arquivos do site e publica **num único commit** pela API do G
 
 ### Abas
 
+- **Dashboard (abre primeiro):** vendas **confirmadas** (pedidos com status *pago* na aba Pedidos) por período — Hoje, 7 dias, 30 dias, Este mês, Tudo: faturamento (produtos + frete), pedidos, ticket médio, itens vendidos, aguardando confirmação, cancelados; gráfico de faturamento por dia; **total vendido por categoria**; **produtos vendidos e quantidade** (com estoque atual); retirada × entrega; e a situação da loja agora (produtos ativos, unidades e valor em estoque, esgotados, última unidade, promoção, forma de pagamento). Pedidos confirmados ficam guardados para sempre no servidor; os demais somem após 120 dias.
 - **Estoque:** −1 (vendi) / +1 (repus), quantidade e preço de cada produto numa lista só. Mostra o preço da promoção quando houver.
 - **Promoção:** promoção geral (liga/desliga, texto da faixa, desconto %, data final e **margem usada na planilha**) e, para cada produto, **“segue a geral”**, **“promoção própria”** (% e data dele) ou **“fora”**. Mostra o lucro estimado e avisa se o desconto vender abaixo do custo. Ações em massa: todos na geral / tirar todos.
 - **Produtos:** criar, editar, duplicar, **ocultar** (rascunho, some do site sem apagar) e excluir. Campos: nome, nome curto, código, marca, modelo, categoria, ícone, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e **fotos** (enviar do celular/PC, escolher a principal, ordenar, remover). As fotos são convertidas no próprio navegador para **WebP 700×700 com fundo branco**; fotos removidas são apagadas do repositório ao publicar. **Calculadora de preço**: custo ÷ (1 − margem), arredondado para cima em R$ 0,10 — o **custo não é salvo** (o repositório é público).
@@ -389,6 +390,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 21/10/2026 | Dashboard no painel: vendas confirmadas, total por categoria, produtos vendidos e situação da loja. |
 | 21/10/2026 | PIX manual com reserva de estoque: pedido registrado ao enviar o comprovante, alerta no WhatsApp da loja, confirmar/cancelar no painel, cancelamento automático em 48 h. |
 | 20/10/2026 | Servidor de pagamentos (Mercado Pago): PIX automático, reserva e baixa de estoque, aviso de vendas no WhatsApp, aba Pedidos (aguardando publicação do servidor). |
 | 20/10/2026 | Frete no checkout (tabela por distância, cidades, retirada grátis) e aba Frete no painel. |

@@ -796,8 +796,249 @@
       .catch(function (err) { $('#ordersSummary').textContent = 'Não foi possível carregar: ' + err.message; });
   }
 
+  /* ------------------------------- dashboard ------------------------------- */
+
+  var dash = { orders: null, period: '30', loading: false };
+
+  function periodStart(period) {
+    var now = new Date();
+    if (period === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    if (period === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    if (period === 'all') return 0;
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    d.setDate(d.getDate() - (Number(period) - 1));
+    return d.getTime();
+  }
+
+  var PERIOD_LABEL = { today: 'hoje', '7': 'últimos 7 dias', '30': 'últimos 30 dias', month: 'este mês', all: 'desde o início' };
+
+  function catLabel(id) {
+    var c = state.original && state.original.categories.find(function (x) { return x.id === id; });
+    return c ? c.label : 'Outros';
+  }
+
+  function dayKey(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function kpi(label, value, sub, tone) {
+    return el('div', { class: 'kpi' + (tone ? ' kpi-' + tone : '') }, [
+      el('span', { class: 'kpi-label', text: label }),
+      el('strong', { class: 'kpi-value', text: value }),
+      sub ? el('span', { class: 'kpi-sub', text: sub }) : null
+    ]);
+  }
+
+  function fill(id, nodes) {
+    var box = $(id);
+    box.innerHTML = '';
+    nodes.forEach(function (n) { if (n) box.appendChild(n); });
+  }
+
+  function table(id, head, rows, empty) {
+    var t = $(id);
+    t.innerHTML = '';
+    var thead = el('thead', {}, [el('tr', {}, head.map(function (c, i) { return el('th', { class: i ? 'num' : '', text: c }); }))]);
+    var body = el('tbody', {}, rows.length ? rows.map(function (r) {
+      return el('tr', {}, r.map(function (c, i) { return el('td', { class: i ? 'num' : '', text: String(c) }); }));
+    }) : [el('tr', {}, [el('td', { colspan: String(head.length), class: 'muted', text: empty || 'Sem dados no período.' })])]);
+    t.appendChild(thead);
+    t.appendChild(body);
+  }
+
+  function loadDashboard() {
+    var api = String(state.config.paymentApiUrl || '').replace(/\/+$/, '');
+    if (!api) {
+      $('#dashNote').textContent = 'Preencha o endereço do servidor na aba Loja para ver as vendas.';
+      dash.orders = [];
+      renderDashboard();
+      return;
+    }
+    if (dash.loading) return;
+    dash.loading = true;
+    $('#dashNote').textContent = 'Carregando pedidos…';
+    fetch(api + '/api/admin/orders?all=1', { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' })
+      .then(function (res) { return res.json().then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
+      .then(function (data) {
+        dash.orders = data.orders || [];
+        $('#dashNote').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '. Só pedidos confirmados contam como venda.';
+        renderDashboard();
+      })
+      .catch(function (err) {
+        $('#dashNote').textContent = 'Não foi possível carregar os pedidos: ' + err.message;
+        dash.orders = dash.orders || [];
+        renderDashboard();
+      })
+      .finally(function () { dash.loading = false; });
+  }
+
+  function renderDashboard() {
+    if (!state.original) return;
+    var orders = dash.orders || [];
+    var start = periodStart(dash.period);
+    var when = function (o) { return o.paidAt || o.createdAt || 0; };
+    var inPeriod = function (o) { return when(o) >= start; };
+    var paid = orders.filter(function (o) { return o.status === 'paid' && inPeriod(o); });
+    var waiting = orders.filter(function (o) { return o.status === 'awaiting'; });
+    var canceled = orders.filter(function (o) { return o.status === 'canceled' && inPeriod(o); });
+    $('#dashPeriodLabel').textContent = '· ' + PERIOD_LABEL[dash.period];
+
+    var revenue = 0, products = 0, freight = 0, items = 0, savings = 0;
+    var byProduct = {}, byCat = {}, byDay = {}, pickup = 0, delivery = 0;
+    var catalogById = {};
+    state.products.forEach(function (p) { catalogById[p.id] = p; });
+
+    paid.forEach(function (o) {
+      revenue += o.total;
+      freight += o.shipping || 0;
+      savings += o.savings || 0;
+      if (o.delivery && o.delivery.mode === 'delivery') delivery += 1; else pickup += 1;
+      var dk = dayKey(when(o));
+      byDay[dk] = byDay[dk] || { total: 0, count: 0 };
+      byDay[dk].total += o.total;
+      byDay[dk].count += 1;
+      (o.lines || []).forEach(function (l) {
+        var value = l.unit * l.qty;
+        products += value;
+        items += l.qty;
+        var p = catalogById[l.id];
+        var cat = p ? p.category : 'outros';
+        byProduct[l.id] = byProduct[l.id] || { name: l.name, code: l.code, cat: cat, qty: 0, value: 0, stock: p ? p.stock : '—' };
+        byProduct[l.id].qty += l.qty;
+        byProduct[l.id].value += value;
+        byCat[cat] = byCat[cat] || { qty: 0, value: 0 };
+        byCat[cat].qty += l.qty;
+        byCat[cat].value += value;
+      });
+    });
+
+    /* KPIs de vendas */
+    var waitValue = waiting.reduce(function (t, o) { return t + o.total; }, 0);
+    fill('#kpiSales', [
+      kpi('Faturamento', brl(revenue), 'produtos ' + brl(products) + ' · frete ' + brl(freight)),
+      kpi('Pedidos confirmados', String(paid.length), items + ' ite' + (items === 1 ? 'm' : 'ns') + ' vendido' + (items === 1 ? '' : 's')),
+      kpi('Ticket médio', paid.length ? brl(Math.round(revenue / paid.length)) : '—', savings ? 'descontos de promoção ' + brl(savings) : ''),
+      kpi('Aguardando confirmação', String(waiting.length), waiting.length ? brl(waitValue) + ' reservado' : 'nenhum pendente', waiting.length ? 'warn' : ''),
+      kpi('Cancelados', String(canceled.length), 'no período')
+    ]);
+
+    /* Faturamento por dia (barras, uma cor = quantidade) */
+    renderDayChart(byDay, start);
+
+    /* Categorias */
+    var cats = Object.keys(byCat).map(function (k) { return { id: k, label: catLabel(k), qty: byCat[k].qty, value: byCat[k].value }; })
+      .sort(function (a, b) { return b.value - a.value; });
+    var maxCat = cats.reduce(function (m, c) { return Math.max(m, c.value); }, 0);
+    fill('#catBars', cats.map(function (c) {
+      var pct = maxCat ? Math.max(2, Math.round(c.value / maxCat * 100)) : 0;
+      return el('div', { class: 'hbar', title: c.label + ': ' + brl(c.value) + ' · ' + c.qty + ' un.' }, [
+        el('span', { class: 'hbar-label', text: c.label }),
+        el('span', { class: 'hbar-track' }, [el('span', { class: 'hbar-fill', style: 'width:' + pct + '%' })]),
+        el('span', { class: 'hbar-value', text: brl(c.value) })
+      ]);
+    }));
+    table('#catTable', ['Categoria', 'Itens', 'Total', '% das vendas'], cats.map(function (c) {
+      return [c.label, c.qty, brl(c.value), products ? Math.round(c.value / products * 100) + '%' : '—'];
+    }));
+
+    fill('#kpiDelivery', [
+      kpi('Retirada na loja', String(pickup), paid.length ? Math.round(pickup / paid.length * 100) + '% dos pedidos' : ''),
+      kpi('Entrega', String(delivery), 'frete recebido ' + brl(freight))
+    ]);
+
+    /* Produtos vendidos */
+    var prods = Object.keys(byProduct).map(function (k) { return byProduct[k]; })
+      .sort(function (a, b) { return b.qty - a.qty || b.value - a.value; });
+    table('#prodTable', ['Produto', 'Código', 'Categoria', 'Qtde vendida', 'Receita', 'Estoque atual'], prods.map(function (p) {
+      return [p.name, p.code, catLabel(p.cat), p.qty, brl(p.value), p.stock];
+    }), 'Nenhuma venda confirmada no período.');
+
+    /* Loja agora (catálogo do painel, inclui alterações ainda não publicadas) */
+    var active = state.products.filter(function (p) { return !p.hidden; });
+    var units = active.reduce(function (t, p) { return t + (p.stock > 0 ? p.stock : 0); }, 0);
+    var stockValue = active.reduce(function (t, p) { return t + (p.stock > 0 ? p.stock * p.price : 0); }, 0);
+    var out = active.filter(function (p) { return !(p.stock > 0); });
+    var low = active.filter(function (p) { return p.stock > 0 && p.stock <= 1; });
+    var promo = state.config.promo || {};
+    var promoOn = !!promo.active && (!promo.until || promo.until >= Promo.toDay());
+    fill('#kpiStore', [
+      kpi('Produtos ativos', String(active.length), (state.products.length - active.length) + ' oculto(s)'),
+      kpi('Unidades em estoque', String(units), 'valor a preço de venda ' + brl(stockValue)),
+      kpi('Esgotados', String(out.length), out.length ? 'repor estoque' : 'nenhum', out.length ? 'warn' : ''),
+      kpi('Estoque baixo', String(low.length), 'última unidade', low.length ? 'warn' : ''),
+      kpi('Promoção', promoOn ? (promo.percent + '% ligada') : 'desligada', promoOn && promo.until ? 'até ' + Promo.formatDay(promo.until) : ''),
+      kpi('Pagamento', state.config.paymentProvider === 'mercadopago' ? 'Mercado Pago' : 'PIX manual', state.config.paymentApiUrl ? 'servidor configurado' : 'sem servidor')
+    ]);
+    table('#lowTable', ['Produto', 'Código', 'Estoque', 'Situação'], out.concat(low).map(function (p) {
+      return [p.shortName, p.code, p.stock || 0, p.stock > 0 ? 'Última unidade' : 'Esgotado'];
+    }), 'Tudo com estoque. 👍');
+  }
+
+  function renderDayChart(byDay, start) {
+    var box = $('#dayChart');
+    box.innerHTML = '';
+    var keys = Object.keys(byDay).sort();
+    var first = start || (keys.length ? new Date(keys[0] + 'T12:00:00').getTime() : Date.now());
+    var days = [];
+    var d = new Date(first);
+    d.setHours(12, 0, 0, 0);
+    var today = new Date();
+    today.setHours(12, 0, 0, 0);
+    while (d <= today && days.length < 400) { days.push(dayKey(d.getTime())); d.setDate(d.getDate() + 1); }
+    /* períodos longos: agrupa por mês */
+    var monthly = days.length > 62;
+    var buckets = [];
+    days.forEach(function (k) {
+      var label = monthly ? k.slice(0, 7) : k;
+      var last = buckets[buckets.length - 1];
+      if (!last || last.key !== label) { last = { key: label, total: 0, count: 0 }; buckets.push(last); }
+      if (byDay[k]) { last.total += byDay[k].total; last.count += byDay[k].count; }
+    });
+    var max = buckets.reduce(function (m, b) { return Math.max(m, b.total); }, 0);
+    if (!max) { box.appendChild(el('p', { class: 'muted chart-empty', text: 'Nenhuma venda confirmada no período.' })); return; }
+    var bestIndex = buckets.findIndex(function (b) { return b.total === max; });
+    box.appendChild(el('span', { class: 'axis-max', text: brl(max) }));
+    var plot = el('div', { class: 'daychart-plot' });
+    buckets.forEach(function (b, i) {
+      var fmt = monthly ? b.key.split('-').reverse().join('/') : b.key.slice(8, 10) + '/' + b.key.slice(5, 7);
+      var col = el('div', { class: 'daybar', tabindex: '0', 'aria-label': fmt + ': ' + brl(b.total) + ', ' + b.count + ' pedido(s)' }, [
+        el('span', { class: 'daybar-fill' + (b.total ? '' : ' is-zero'), style: 'height:' + (b.total ? Math.max(3, b.total / max * 100) : 0) + '%' }),
+        i === bestIndex ? el('span', { class: 'daybar-label', text: brl(b.total) }) : null
+      ]);
+      col.addEventListener('pointerenter', function (e) { showTip(e.currentTarget, fmt, b); });
+      col.addEventListener('focus', function (e) { showTip(e.currentTarget, fmt, b); });
+      col.addEventListener('pointerleave', hideTip);
+      col.addEventListener('blur', hideTip);
+      plot.appendChild(col);
+    });
+    box.appendChild(plot);
+    var axis = el('div', { class: 'daychart-axis' }, [
+      el('span', { text: monthly ? buckets[0].key.split('-').reverse().join('/') : buckets[0].key.slice(8, 10) + '/' + buckets[0].key.slice(5, 7) }),
+      el('span', { text: monthly ? 'por mês' : 'hoje' })
+    ]);
+    box.appendChild(axis);
+  }
+
+  function showTip(target, label, b) {
+    var tip = $('#chartTip');
+    tip.textContent = '';
+    tip.appendChild(el('strong', { text: label }));
+    tip.appendChild(el('span', { text: brl(b.total) }));
+    tip.appendChild(el('span', { class: 'muted', text: b.count + ' pedido' + (b.count === 1 ? '' : 's') }));
+    tip.hidden = false;
+    var r = target.getBoundingClientRect();
+    var host = tip.parentElement.getBoundingClientRect();
+    var left = r.left - host.left + r.width / 2 - tip.offsetWidth / 2;
+    tip.style.left = Math.max(4, Math.min(host.width - tip.offsetWidth - 4, left)) + 'px';
+    tip.style.top = (r.top - host.top - tip.offsetHeight - 6) + 'px';
+  }
+
+  function hideTip() { $('#chartTip').hidden = true; }
+
   function renderAll() {
     renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); renderShipForm(); refreshPending();
+    if (!dash.orders) loadDashboard(); else renderDashboard();
     var select = $('#categorySelect');
     select.innerHTML = '';
     state.original.categories.filter(function (c) { return c.id !== 'todos'; }).forEach(function (c) {
@@ -1164,6 +1405,15 @@
     $('#promoForm').addEventListener('submit', function (event) { event.preventDefault(); });
     $('#promoSearch').addEventListener('input', renderPromoList);
     $('#ordersReload').addEventListener('click', loadOrders);
+    $('#dashReload').addEventListener('click', loadDashboard);
+    document.querySelector('[data-tab="dashboard"]').addEventListener('click', loadDashboard);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-period]'), function (chip) {
+      chip.addEventListener('click', function () {
+        dash.period = chip.getAttribute('data-period');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-period]'), function (c) { c.classList.toggle('is-active', c === chip); });
+        renderDashboard();
+      });
+    });
     document.querySelector('[data-tab="pedidos"]').addEventListener('click', loadOrders);
     $('#shipForm').addEventListener('change', handleShipForm);
     $('#shipForm').addEventListener('submit', function (event) { event.preventDefault(); });
