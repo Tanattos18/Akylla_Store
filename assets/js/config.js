@@ -63,6 +63,10 @@ window.AKYLLA_CONFIG = {
     "extraStepKm": 5,
     "extraStepPrice": 300,
     "homeCity": "Goiânia",
+    "carrier": {
+      "enabled": true,
+      "feePercent": 30
+    },
     "cities": [
       {
         "name": "Senador Canedo",

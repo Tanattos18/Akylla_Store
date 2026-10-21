@@ -236,7 +236,8 @@ test('frete: cotação completa (CEP → mapa → rota) com serviços simulados'
     assert.equal(q.fee, 2800);
     assert.equal(q.precision, 'endereço');
     assert.equal((await Frete.quote({ cep: '75250-000', number: '1' }, CONFIG)).fee, 2500);
-    assert.equal((await Frete.quote({ cep: '75000-000', number: '1' }, CONFIG)).kind, 'outside');
+    assert.equal((await Frete.quote({ cep: '75000-000', number: '1' }, CONFIG)).kind, 'carrier', 'interior: transportadora');
+    assert.deepEqual(JSON.parse(JSON.stringify(Frete.carrierTotal(4000, CONFIG))), { freight: 4000, fee: 1200, total: 5200, percent: 30 }, 'R$ 40 + 30% = R$ 52');
     await assert.rejects(Frete.quote({ cep: '123', number: '1' }, CONFIG), /8 números/);
   } finally {
     global.fetch = realFetch;

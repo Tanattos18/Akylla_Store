@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#060913">
   <title>Painel Akylla</title>
   <link rel="icon" href="../assets/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="admin.css?v=20261020-5">
+  <link rel="stylesheet" href="admin.css?v=20261020-6">
 </head>
 <body>
   <header class="topbar">
@@ -135,12 +135,30 @@
           <button class="btn btn-ghost btn-sm" type="button" id="addCityBtn">+ Cidade</button>
         </div>
 
+        <h2 class="full">Interior e outras regiões (transportadora)</h2>
+        <label class="check full"><input type="checkbox" name="carrierEnabled"> Aceitar pedidos para cidades fora da lista (envio por transportadora)</label>
+        <label>Taxa administrativa (%) <input name="carrierFee" type="number" min="0" max="200" step="1" inputmode="numeric"></label>
+
         <h2 class="full">Ponto de partida</h2>
         <label class="full">Endereço (para referência) <input name="originLabel"></label>
         <label>Latitude <input name="originLat" inputmode="decimal"></label>
         <label>Longitude <input name="originLon" inputmode="decimal"></label>
         <p class="muted full">A Rua Capauam ainda não existe no mapa aberto (OpenStreetMap); o ponto atual é o centro do Conj. Res. Aruanã III. Para mais precisão, copie a latitude e a longitude da loja no Google Maps (toque e segure no local).</p>
       </form>
+
+      <section class="card">
+        <h2>Calcular frete de transportadora</h2>
+        <p class="muted">Digite o valor cotado na transportadora: o painel soma a taxa administrativa e monta a mensagem para o cliente.</p>
+        <form class="sim-row" id="carrierForm" novalidate>
+          <label>Frete da transportadora (R$) <input id="carrierFreight" inputmode="decimal" placeholder="40,00"></label>
+          <button class="btn btn-primary" type="submit">Calcular</button>
+        </form>
+        <div class="carrier-result" id="carrierResult" hidden>
+          <table class="carrier-table"><tbody id="carrierRows"></tbody></table>
+          <label>Mensagem para o cliente <textarea id="carrierMessage" rows="4" readonly></textarea></label>
+          <button class="btn btn-ghost btn-sm" type="button" id="carrierCopy">Copiar mensagem</button>
+        </div>
+      </section>
 
       <section class="card">
         <h2>Simular frete</h2>
@@ -264,7 +282,7 @@
 
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
-  <script src="../assets/js/frete.js?v=20261020-8"></script>
-  <script src="admin.js?v=20261020-7"></script>
+  <script src="../assets/js/frete.js?v=20261020-13"></script>
+  <script src="admin.js?v=20261020-8"></script>
 </body>
 </html>

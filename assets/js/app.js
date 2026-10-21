@@ -969,7 +969,7 @@
     var d = state.delivery;
     if (d.mode === 'pickup') return true;
     if (d.mode !== 'delivery' || !d.quote) return false;
-    return d.quote.kind === 'distance' || d.quote.kind === 'fixed' || d.quote.kind === 'negotiable';
+    return d.quote.kind === 'distance' || d.quote.kind === 'fixed' || d.quote.kind === 'negotiable' || d.quote.kind === 'carrier';
   }
 
   function shippingSummaryText() {
@@ -977,6 +977,7 @@
     if (d.mode === 'pickup') return 'Retirada grátis';
     if (d.mode === 'delivery' && d.quote) {
       if (d.quote.kind === 'negotiable') return 'A combinar';
+      if (d.quote.kind === 'carrier') return 'Transportadora (a cotar)';
       if (d.quote.fee != null) return formatBRL(d.quote.fee);
     }
     return '—';
@@ -997,6 +998,7 @@
     if (q.kind === 'distance') lines.push('Frete: ' + formatBRL(q.fee) + ' (' + String(q.km).replace('.', ',') + ' km de ida' + (q.precision !== 'endereço' ? ', aproximado pela ' + q.precision : '') + ')');
     else if (q.kind === 'fixed') lines.push('Frete: ' + formatBRL(q.fee) + ' (' + q.address.city + ')');
     else if (q.kind === 'negotiable') lines.push('Frete: a combinar (' + q.address.city + ') — paguei só os produtos');
+    else if (q.kind === 'carrier') lines.push('Frete: transportadora — aguardo a cotação (frete + ' + ((shippingSettings().carrier || {}).feePercent || 0) + '% de taxa administrativa); paguei só os produtos');
     return lines;
   }
 
@@ -1027,11 +1029,12 @@
     var title = q.kind === 'distance' ? 'Frete: ' + formatBRL(q.fee) + ' · ' + String(q.km).replace('.', ',') + ' km'
       : q.kind === 'fixed' ? 'Frete: ' + formatBRL(q.fee)
       : q.kind === 'negotiable' ? 'Frete a combinar'
+      : q.kind === 'carrier' ? 'Envio por transportadora'
       : 'Fora da área de entrega';
     if (q.kind === 'outside') result.classList.add('is-error');
-    if (q.kind === 'negotiable') result.classList.add('is-warn');
+    if (q.kind === 'negotiable' || q.kind === 'carrier') result.classList.add('is-warn');
     result.innerHTML = '<strong>' + escapeHTML(title) + '</strong><span>' + escapeHTML(addressText(q.address, d.complement)) + '</span>' +
-      (q.kind === 'negotiable' ? '<span>O PIX abaixo é só dos produtos. Combinamos o frete pelo WhatsApp.</span>' : '') +
+      (q.kind === 'negotiable' || q.kind === 'carrier' ? '<span>O PIX abaixo é só dos produtos. O frete é informado e pago à parte pelo WhatsApp, antes do envio.</span>' : '') +
       (q.message ? '<span>' + escapeHTML(q.message) + '</span>' : '');
   }
 
@@ -1081,6 +1084,7 @@
       s.cities.forEach(function (c) {
         rows.push([c.name, c.price == null ? 'A combinar' : formatBRL(c.price)]);
       });
+      if (s.carrier && s.carrier.enabled) rows.push(['Interior e outras regiões (transportadora)', 'Cotação + ' + s.carrier.feePercent + '% de taxa']);
       if (s.pickup) rows.push(['Retirada na loja', 'Grátis']);
       body.innerHTML = rows.map(function (r) {
         return '<tr><td>' + escapeHTML(r[0]) + '</td><td>' + escapeHTML(r[1]) + '</td></tr>';

@@ -278,3 +278,10 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
   .sim-row { grid-template-columns: 1fr 1fr; }
   .sim-row .btn { grid-column: 1 / -1; }
 }
+
+/* Transportadora */
+.carrier-result { margin-top: 0.9rem; display: grid; gap: 0.6rem; }
+.carrier-table { width: 100%; border-collapse: collapse; }
+.carrier-table td { padding: 0.45rem 0.2rem; border-bottom: 1px solid var(--line); }
+.carrier-table td:last-child { text-align: right; font-weight: 700; }
+.carrier-table tr.total td { color: var(--ink); font-size: 1.05rem; border-bottom: 0; }

@@ -601,6 +601,9 @@
     form.elements.extraStepKm.value = String(s.extraStepKm || 5);
     form.elements.extraStepPrice.value = moneyInput(s.extraStepPrice || 0);
     form.elements.originLabel.value = s.originLabel || '';
+    var carrier = s.carrier || { enabled: true, feePercent: 30 };
+    form.elements.carrierEnabled.checked = carrier.enabled !== false;
+    form.elements.carrierFee.value = String(carrier.feePercent == null ? 30 : carrier.feePercent);
     form.elements.originLat.value = s.origin ? String(s.origin.lat) : '';
     form.elements.originLon.value = s.origin ? String(s.origin.lon) : '';
     renderBands();
@@ -667,6 +670,8 @@
     else if (input.name === 'pickup') s.pickup = input.checked;
     else if (input.name === 'pickupNote') s.pickupNote = input.value;
     else if (input.name === 'originLabel') s.originLabel = input.value;
+    else if (input.name === 'carrierEnabled') { s.carrier = s.carrier || { feePercent: 30 }; s.carrier.enabled = input.checked; }
+    else if (input.name === 'carrierFee') { s.carrier = s.carrier || { enabled: true }; s.carrier.feePercent = Math.max(0, Math.min(200, Number(input.value) || 0)); }
     else if (input.name === 'extraStepKm') s.extraStepKm = Math.max(1, parseInt(input.value, 10) || 5);
     else if (input.name === 'extraStepPrice') { var c = parseMoney(input.value); if (c >= 0) s.extraStepPrice = c; }
     else if (input.name === 'originLat' || input.name === 'originLon') {
@@ -676,6 +681,22 @@
       s.origin[input.name === 'originLat' ? 'lat' : 'lon'] = v;
     } else return;
     refreshPending();
+  }
+
+  function carrierCalc(event) {
+    event.preventDefault();
+    var cents = parseMoney($('#carrierFreight').value);
+    if (!(cents > 0)) { toast('Digite o valor do frete da transportadora.'); return; }
+    var r = Frete.carrierTotal(cents, state.config);
+    var rows = [['Frete da transportadora', brl(r.freight)], ['Taxa administrativa (' + r.percent + '%)', brl(r.fee)], ['Total a cobrar do cliente', brl(r.total)]];
+    var body = $('#carrierRows');
+    body.innerHTML = '';
+    rows.forEach(function (row, i) {
+      body.appendChild(el('tr', { class: i === 2 ? 'total' : '' }, [el('td', { text: row[0] }), el('td', { text: row[1] })]));
+    });
+    $('#carrierMessage').value = 'Olá! O valor do frete para envio da sua encomenda por transportadora é de ' + brl(r.freight) +
+      ', acrescido de uma taxa administrativa de ' + r.percent + '% (' + brl(r.fee) + '). O valor total do envio fica em ' + brl(r.total) + '.';
+    $('#carrierResult').hidden = false;
   }
 
   function simulate(event) {
@@ -688,6 +709,7 @@
       if (q.kind === 'distance') out.textContent = brl(q.fee) + ' — ' + String(q.km).replace('.', ',') + ' km de ida (' + q.precision + ') · ' + where;
       else if (q.kind === 'fixed') out.textContent = brl(q.fee) + ' — valor fixo de ' + a.city;
       else if (q.kind === 'negotiable') out.textContent = 'A combinar — ' + a.city;
+      else if (q.kind === 'carrier') out.textContent = 'Transportadora (cotação + taxa) — ' + a.city + '/' + a.uf;
       else out.textContent = 'Fora da área — ' + a.city + '/' + a.uf;
     }).catch(function (error) { out.textContent = 'Não foi possível: ' + error.message; });
   }
@@ -1072,6 +1094,13 @@
       renderCities(); refreshPending();
     });
     $('#simForm').addEventListener('submit', simulate);
+    $('#carrierForm').addEventListener('submit', carrierCalc);
+    $('#carrierCopy').addEventListener('click', function () {
+      var text = $('#carrierMessage').value;
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+        toast('Mensagem copiada.');
+      }, function () { $('#carrierMessage').select(); document.execCommand('copy'); toast('Mensagem copiada.'); });
+    });
     $('#simCep').addEventListener('input', function () {
       var d = $('#simCep').value.replace(/\D/g, '').slice(0, 8);
       $('#simCep').value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;

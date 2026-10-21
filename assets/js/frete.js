@@ -6,7 +6,9 @@
  *     nas faixas `bands` ({ upToKm, price } em centavos). Acima da última faixa,
  *     soma `extraStepPrice` a cada `extraStepKm` km adicionais (ou fração).
  *   - Cidades em `cities`: valor fixo (`price`) ou "a combinar" (`price: null`).
- *   - Outras cidades: fora da área de entrega (consultar no WhatsApp).
+ *   - Outras cidades (interior e outras regiões): envio por transportadora —
+ *     frete cotado individualmente + taxa administrativa (`carrier.feePercent`, 30%).
+ *     Valor final = frete da transportadora × 1,30, informado ao cliente antes do envio.
  *
  * Serviços gratuitos usados no navegador (sem chave):
  *   ViaCEP (endereço pelo CEP) · Nominatim/OpenStreetMap (coordenadas) ·
@@ -33,6 +35,7 @@
     extraStepKm: 5,
     extraStepPrice: 300,
     homeCity: 'Goiânia',
+    carrier: { enabled: true, feePercent: 30 },
     cities: [
       { name: 'Senador Canedo', price: 2500 },
       { name: 'Aparecida de Goiânia', price: null },
@@ -171,6 +174,12 @@
       }
 
       if (norm(address.city) !== norm(s.homeCity)) {
+        if (s.carrier && s.carrier.enabled) {
+          return Object.assign(base, {
+            kind: 'carrier',
+            message: 'Cotamos o frete com a transportadora e somamos ' + (s.carrier.feePercent || 0) + '% de taxa administrativa.'
+          });
+        }
         return Object.assign(base, { kind: 'outside', message: 'Ainda não entregamos em ' + address.city + '/' + address.uf + '. Fale com a gente no WhatsApp ou escolha a retirada.' });
       }
 
@@ -191,8 +200,18 @@
     });
   }
 
+  /* Transportadora: frete cotado + taxa administrativa (arredondada ao centavo). */
+  function carrierTotal(freightCents, config) {
+    var s = settings(config);
+    var pct = (s.carrier && Number(s.carrier.feePercent)) || 0;
+    var freight = Math.max(0, Math.round(Number(freightCents) || 0));
+    var fee = Math.round(freight * pct / 100);
+    return { freight: freight, fee: fee, total: freight + fee, percent: pct };
+  }
+
   var api = {
     DEFAULTS: DEFAULTS,
+    carrierTotal: carrierTotal,
     settings: settings,
     feeForKm: feeForKm,
     cityRule: cityRule,
