@@ -20,4 +20,4 @@ STORE_WHATSAPP = "556281517002"
 # e cole o "id" retornado abaixo.
 [[kv_namespaces]]
 binding = "ORDERS"
-id = "COLE_AQUI_O_ID_DO_KV"
+id = "55cbe78e467a40b2b084a1d3b1e3280c"
