@@ -4327,3 +4327,66 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 }
+
+/* Detalhes do produto: "Comprar agora" + "Adicionar à sacola" */
+.product-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.product-dialog-actions .btn {
+  white-space: nowrap;
+}
+
+/* O conteúdo rola dentro do modal: o botão de fechar fica sempre visível. */
+.product-dialog {
+  overflow: hidden;
+}
+
+.product-dialog-shell {
+  position: static;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 700px) {
+  .product-dialog-shell {
+    max-height: none;
+  }
+
+  .product-dialog-actions {
+    flex-direction: row;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .product-dialog-actions #productDialogBuy {
+    flex: 1;
+  }
+
+  .product-dialog-actions .add-label {
+    display: none;
+  }
+
+  .product-dialog-actions #productDialogAdd {
+    flex: none;
+    width: 48px;
+    padding-inline: 0;
+  }
+}
+
+/* Miniaturas: centralizadas quando cabem, roláveis desde a primeira quando não cabem */
+.product-dialog-thumbs {
+  justify-content: flex-start;
+}
+
+.product-dialog-thumbs > :first-child {
+  margin-left: auto;
+}
+
+.product-dialog-thumbs > :last-child {
+  margin-right: auto;
+}

@@ -67,6 +67,7 @@
     productDialogSpecs: document.getElementById('productDialogSpecs'),
     productDialogPrice: document.getElementById('productDialogPrice'),
     productDialogAdd: document.getElementById('productDialogAdd'),
+    productDialogBuy: document.getElementById('productDialogBuy'),
     productDialogStock: document.getElementById('productDialogStock'),
     productDialogOld: document.getElementById('productDialogOld'),
     productDialogUntil: document.getElementById('productDialogUntil'),
@@ -482,7 +483,10 @@
     if (els.productDialogAdd) {
       var soldOut = maxQty(product) < 1;
       els.productDialogAdd.disabled = soldOut;
-      els.productDialogAdd.lastChild.textContent = soldOut ? ' Esgotado' : ' Adicionar à sacola';
+      if (els.productDialogBuy) {
+        els.productDialogBuy.disabled = soldOut;
+        els.productDialogBuy.textContent = soldOut ? 'Esgotado' : 'Comprar agora';
+      }
     }
 
     if (els.productDialogSpecs) {
@@ -639,6 +643,26 @@
         if (!activeProductId) return;
         addToCart(activeProductId);
         closeDialog(els.productDialog);
+      });
+    }
+
+    /* "Comprar agora": garante o produto na sacola e vai direto para o checkout (entrega + PIX). */
+    if (els.productDialogBuy) {
+      els.productDialogBuy.addEventListener('click', function () {
+        if (!activeProductId) return;
+        var product = productById(activeProductId);
+        if (!product || maxQty(product) < 1) {
+          toast((product ? product.shortName : 'Produto') + ' está esgotado no momento.');
+          return;
+        }
+        var inCart = state.cart.some(function (item) { return item.id === activeProductId; });
+        if (!inCart) {
+          state.cart.push({ id: activeProductId, qty: 1 });
+          saveCart();
+          renderCart();
+        }
+        closeDialog(els.productDialog);
+        openCheckout();
       });
     }
   }
