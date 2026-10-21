@@ -803,7 +803,7 @@ window.AKYLLA_PRODUCTS = [
     "category": "cabos",
     "visual": "cable",
     "price": 920,
-    "stock": 3,
+    "stock": 2,
     "summary": "USB-A para Lightning, 1 m, para carga e sincronização.",
     "description": "Cabo USB-A para Lightning de 1 m, ideal para carregar e sincronizar iPhones e iPads. Compacto e resistente para o dia a dia.",
     "image": "assets/img/products/cabo-lightning-1m.webp",
