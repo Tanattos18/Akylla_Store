@@ -479,6 +479,17 @@ async function createOrder(request, env) {
   return json(publicOrder(order), 201);
 }
 
+/* Conferência do Access Token sem criar cobrança (GET /users/me). Não expõe dados da conta. */
+async function mpCheck(env) {
+  if (!env.MP_ACCESS_TOKEN) return { mpToken: 'ausente' };
+  try {
+    const me = await mp(env, '/users/me');
+    return { mpToken: 'válido', mpProduction: !String(env.MP_ACCESS_TOKEN).startsWith('TEST-'), mpTestUser: /^TEST/i.test(String(me.nickname || '')) || (me.tags || []).includes('test_user') };
+  } catch (err) {
+    return { mpToken: 'inválido', mpError: err.status || 'falha' };
+  }
+}
+
 /* Confere o pagamento no Mercado Pago e, se aprovado, conclui o pedido (idempotente). */
 async function syncPayment(env, order, payment) {
   if (!order || order.status !== 'pending') return order;
@@ -694,7 +705,7 @@ export default {
       let response;
       const match = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]{6,40})(\/cancel)?$/);
       const admin = url.pathname.match(/^\/api\/admin\/orders\/([A-Z0-9-]{6,40})\/(confirm|cancel)$/);
-      if (url.pathname === '/api/health') response = json({ ok: true, repo: env.GITHUB_REPO, configured: !!env.GITHUB_TOKEN, manual: !!env.GITHUB_TOKEN, mercadopago: !!(env.MP_ACCESS_TOKEN && env.GITHUB_TOKEN), whatsappAlerts: !!env.CALLMEBOT_APIKEY });
+      if (url.pathname === '/api/health') response = json({ ok: true, repo: env.GITHUB_REPO, configured: !!env.GITHUB_TOKEN, manual: !!env.GITHUB_TOKEN, mercadopago: !!(env.MP_ACCESS_TOKEN && env.GITHUB_TOKEN), whatsappAlerts: !!env.CALLMEBOT_APIKEY, ...(url.searchParams.get('check') === 'mp' ? await mpCheck(env) : {}) });
       else if (url.pathname === '/api/manual-orders' && request.method === 'POST') response = await createManualOrder(request, env);
       else if (admin && request.method === 'POST') response = await adminAction(request, env, admin[1], admin[2]);
       else if (url.pathname === '/api/orders' && request.method === 'POST') response = await createOrder(request, env);
