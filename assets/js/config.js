@@ -7,7 +7,7 @@ window.AKYLLA_CONFIG = {
   "tagline": "Eletrônicos e Acessórios de Informática",
   "city": "Goiânia/GO",
   "whatsapp": "556281517002",
-  "whatsappDisplay": "(62) 8151-7002",
+  "whatsappDisplay": "(62) 98151-7002",
   "whatsappMessage": "Olá! Vim pelo site da Akylla Shop e gostaria de tirar uma dúvida.",
   "pixKey": "7dda9a3c-400d-45de-906b-f22b2615f1d5",
   "pixHolder": "Joás Santana Nascimento",
