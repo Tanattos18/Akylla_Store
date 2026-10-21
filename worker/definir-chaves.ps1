@@ -6,10 +6,16 @@
 
 Set-Location -Path $PSScriptRoot
 
-$chaves = @(
-  @{ Nome = 'GITHUB_TOKEN';     Dica = 'OBRIGATORIA - GitHub, chave "Servidor Akylla" (comeca com github_pat_). Reserva e devolve o estoque.' },
-  @{ Nome = 'CALLMEBOT_APIKEY'; Dica = 'OPCIONAL - CallMeBot apikey (alerta extra no WhatsApp). Se nao tiver, aperte Ctrl+C.' }
+$todas = @(
+  @{ Nome = 'GITHUB_TOKEN';      Dica = 'OBRIGATORIA - GitHub, chave "Servidor Akylla" (comeca com github_pat_). Reserva e devolve o estoque.' },
+  @{ Nome = 'CALLMEBOT_APIKEY';  Dica = 'OPCIONAL - CallMeBot apikey (alerta extra no WhatsApp). Se nao tiver, aperte Ctrl+C.' },
+  @{ Nome = 'MP_ACCESS_TOKEN';   Dica = 'MERCADO PAGO - Access Token de PRODUCAO (comeca com APP_USR-).' },
+  @{ Nome = 'MP_WEBHOOK_SECRET'; Dica = 'MERCADO PAGO - Assinatura secreta do Webhook (aplicacao > Webhooks).' }
 )
+
+# Para cadastrar so algumas:  & .\definir-chaves.ps1 MP_ACCESS_TOKEN MP_WEBHOOK_SECRET
+if ($args.Count -gt 0) { $chaves = @($todas | Where-Object { $args -contains $_.Nome }) }
+else { $chaves = @($todas | Select-Object -First 2) }
 
 $i = 1
 foreach ($c in $chaves) {
@@ -23,4 +29,4 @@ foreach ($c in $chaves) {
 Write-Host ''
 Write-Host 'Conferindo o servidor...' -ForegroundColor Cyan
 Invoke-RestMethod 'https://akylla-shop-api.akyllashop.workers.dev/api/health' | ConvertTo-Json
-Write-Host 'Se aparecer "configured": true, volte ao chat e diga "pronto".' -ForegroundColor Green
+Write-Host 'Confira: "configured": true (GitHub) e "mercadopago": true (Mercado Pago). Depois volte ao chat e diga "pronto".' -ForegroundColor Green
