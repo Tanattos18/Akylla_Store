@@ -4872,3 +4872,25 @@ dialog::backdrop {
 
 /* Menções ao cartão: só aparecem com o cartão ligado no painel */
 [data-card-only][hidden] { display: none !important; }
+
+/* ===== Meus pedidos (topo) e pagamento não concluído ===== */
+.orders-btn { position: relative; display: inline-flex; align-items: center; gap: 0.45rem; min-height: 42px; padding: 0.4rem 0.85rem; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--text); font-size: 0.77rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s ease; }
+.orders-btn:hover { border-color: #ff8a00; }
+.orders-btn svg { width: 19px; height: 19px; flex: none; }
+.orders-dot { position: absolute; top: 4px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: #ff5e00; box-shadow: 0 0 0 2px var(--white); }
+.orders-dot[hidden] { display: none; }
+@media (max-width: 760px) {
+  .orders-btn { width: 42px; padding: 0; justify-content: center; }
+  .orders-btn-label { display: none; }
+}
+.resume-bar { background: #fff1e0; border-bottom: 1px solid #f3c48b; }
+.resume-bar[hidden] { display: none; }
+.resume-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; padding-top: 0.7rem; padding-bottom: 0.7rem; }
+.resume-inner p { margin: 0; color: #5b2e00; font-size: 0.9rem; }
+.resume-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.resume-btn { min-height: 40px; padding: 0.45rem 1rem; font-size: 0.85rem; }
+@media (max-width: 640px) { .resume-actions, .resume-btn { width: 100%; } .resume-btn { justify-content: center; } }
+.track-pending { display: grid; grid-template-columns: auto auto 1fr; gap: 0.6rem; align-items: center; padding: 1rem; border: 1px solid #f3c48b; border-radius: 22px; background: #fff8ef; }
+.track-pending[hidden] { display: none; }
+.track-pending-note { grid-column: 1 / -1; margin: 0; color: #5b2e00; font-size: 0.85rem; }
+@media (max-width: 640px) { .track-pending { grid-template-columns: 1fr; } .track-pending .btn { justify-content: center; } }

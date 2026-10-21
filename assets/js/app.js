@@ -123,6 +123,11 @@
     manualCustomer: document.getElementById('manualCustomer'),
     manualName: document.getElementById('manualName'),
     cardBox: document.getElementById('cardBox'),
+    resumeBar: document.getElementById('resumeBar'),
+    resumeText: document.getElementById('resumeText'),
+    resumePay: document.getElementById('resumePay'),
+    resumeCancel: document.getElementById('resumeCancel'),
+    ordersDot: document.getElementById('ordersDot'),
     cardPrice: document.getElementById('cardPrice'),
     cardNote: document.getElementById('cardNote'),
     cardPay: document.getElementById('cardPay'),
@@ -1281,7 +1286,7 @@
     var d = state.delivery;
     cardBusy = true;
     renderCheckout();
-    mpApi('/api/card-orders', {
+    cancelOpenCard().then(function () { return mpApi('/api/card-orders', {
       method: 'POST',
       body: {
         items: state.cart.map(function (i) { return { id: i.id, qty: i.qty }; }),
@@ -1294,7 +1299,7 @@
         email: c.email,
         customer: { name: c.name, phone: c.phone }
       }
-    }).then(function (order) {
+    }); }).then(function (order) {
       rememberCustomer(c);
       rememberOrder(order.id, c.phone, order.total);
       writeLocal(CARD_PENDING_KEY, order.id);
@@ -1494,7 +1499,58 @@
     toast('Pagamento confirmado! Obrigado pela compra.');
   }
 
+  /* Pedido no cartão deixado em aberto neste aparelho (cliente voltou sem pagar). */
+  function openCard() {
+    var id = readLocal(CARD_PENDING_KEY, '');
+    if (!id) return null;
+    var mine = readLocal(MY_ORDERS_KEY, []).find(function (o) { return o.id === id; }) || {};
+    return { id: id, phone: mine.phone || '' };
+  }
+
+  function forgetOpenCard() {
+    try { window.localStorage.removeItem(CARD_PENDING_KEY); } catch (e) { /* ok */ }
+    if (els.resumeBar) els.resumeBar.hidden = true;
+    if (els.ordersDot) els.ordersDot.hidden = true;
+  }
+
+  function cancelOpenCard() {
+    var open = openCard();
+    if (!open || !CONFIG.paymentApiUrl) return Promise.resolve();
+    return mpApi('/api/track/cancel', { method: 'POST', body: { id: open.id, phone: open.phone } })
+      .catch(function () { return null; })
+      .then(function () { forgetOpenCard(); });
+  }
+
+  function checkOpenCard() {
+    var open = openCard();
+    if (!open || !CONFIG.paymentApiUrl) return;
+    mpApi('/api/track?id=' + encodeURIComponent(open.id) + '&phone=' + encodeURIComponent(open.phone)).then(function (o) {
+      if (o.status === 'paid') {
+        state.cart = [];
+        saveCart();
+        renderCart();
+        forgetOpenCard();
+        toast('Pagamento do pedido ' + o.id + ' confirmado! Acompanhe em Meus pedidos.');
+        return;
+      }
+      if (o.status !== 'pending' || !o.checkoutUrl) { forgetOpenCard(); return; }
+      if (els.ordersDot) els.ordersDot.hidden = false;
+      if (!els.resumeBar) return;
+      els.resumeText.textContent = '— pedido ' + o.id + ', ' + formatBRL(o.total) + '. O produto fica reservado até ' +
+        new Date(o.expiresAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
+      els.resumePay.href = o.checkoutUrl;
+      els.resumeBar.hidden = false;
+    }).catch(function (err) { if (err.status === 404) forgetOpenCard(); });
+  }
+
   function setupCard() {
+    if (els.resumeCancel) {
+      els.resumeCancel.addEventListener('click', function () {
+        if (!window.confirm('Cancelar este pedido? Os produtos continuam na sua sacola para você pagar de outro jeito.')) return;
+        cancelOpenCard().then(function () { toast('Pedido cancelado. Os produtos continuam na sua sacola.'); });
+      });
+    }
+    checkOpenCard();
     var cfg = cardConfig();
     Array.prototype.forEach.call(document.querySelectorAll('[data-card-only]'), function (n) { n.hidden = !cfg.enabled; });
     Array.prototype.forEach.call(document.querySelectorAll('[data-card-max]'), function (n) { n.textContent = String(cfg.max); });

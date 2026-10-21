@@ -23,6 +23,7 @@
  *
  * Rotas — acompanhamento e etapas:
  *   GET  /api/track?id=AK-…&phone=…      cliente acompanha o pedido (confere o WhatsApp do pedido)
+ *   POST /api/track/cancel {id, phone}   cliente cancela um pagamento online não concluído (devolve a reserva)
  *   POST /api/admin/orders/:id/stage     painel: separando → pronto/enviado → entregue
  *
  * Rotas — avisos de pedido no painel (Web Push, celular e PC):
@@ -601,6 +602,7 @@ async function createCardOrder(request, env) {
     baseTotal: base,
     cardFeePercent: card.feePercent,
     maxInstallments: card.maxInstallments,
+    checkoutUrl: pref.init_point,
     total,
     email,
     customer,
@@ -620,21 +622,23 @@ function digitsTail(phone) {
   return String(phone || '').replace(/\D/g, '').slice(-8);
 }
 
-async function trackOrder(request, env) {
-  await rateLimit(env, request, 60, 'rlt');
-  const url = new URL(request.url);
-  const id = String(url.searchParams.get('id') || '').trim().toUpperCase();
+/* Pedido do cliente: confere o número e o WhatsApp da compra (sem WhatsApp no pedido, basta o número). */
+async function findTracked(env, rawId, rawPhone) {
+  const id = String(rawId || '').trim().toUpperCase();
   if (!/^AK-[A-Z0-9]{6,16}$/.test(id)) throw new OrderError('Número de pedido inválido. Ele começa com AK-.', 400);
-  let order = await getOrder(env, id);
+  const order = await getOrder(env, id);
   const notFound = new OrderError('Não encontramos esse pedido. Confira o número e o WhatsApp.', 404);
   if (!order) throw notFound;
   const stored = digitsTail(order.customer && order.customer.phone);
-  const given = digitsTail(url.searchParams.get('phone'));
-  if (stored && stored !== given) throw notFound;
-  if (order.status === 'pending') order = await syncPayment(env, order).catch(() => order);
+  if (stored && stored !== digitsTail(rawPhone)) throw notFound;
+  return order;
+}
+
+function trackPayload(order) {
   const d = order.shipping || {};
   const a = (d.quote && d.quote.address) || d.address || {};
-  return json({
+  const open = order.status === 'pending' && Date.now() < (order.expiresAt || 0);
+  return {
     id: order.id,
     status: order.status,
     kind: order.kind || (order.manual ? 'manual' : 'pix'),
@@ -643,13 +647,54 @@ async function trackOrder(request, env) {
     createdAt: order.createdAt,
     paidAt: order.paidAt || null,
     canceledAt: order.canceledAt || null,
+    cancelReason: order.cancelReason || '',
     expiresAt: order.expiresAt || null,
     firstName: String((order.customer && order.customer.name) || '').split(' ')[0],
     lines: (order.lines || []).map((l) => ({ qty: l.qty, name: l.name })),
     total: order.total,
     installments: order.installments || null,
+    /* pagamento no cartão ainda aberto: o cliente pode voltar para concluir ou cancelar */
+    checkoutUrl: open && order.kind === 'card' ? order.checkoutUrl || '' : '',
+    canCancel: open,
     delivery: d.mode === 'pickup' ? { mode: 'pickup' } : { mode: 'delivery', area: [a.district, a.city].filter(Boolean).join(', ') }
-  });
+  };
+}
+
+/* Limite das consultas de acompanhamento em memória (sem gravar no KV, que tem cota diária de gravações). */
+const trackHits = new Map();
+function softLimit(request, perMinute) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'local';
+  const minute = Math.floor(Date.now() / 60000);
+  const key = ip + ':' + minute;
+  const n = (trackHits.get(key) || 0) + 1;
+  trackHits.set(key, n);
+  if (trackHits.size > 5000) trackHits.clear();
+  if (n > perMinute) throw new OrderError('Muitas consultas seguidas. Tente de novo em alguns minutos.', 429);
+}
+
+async function trackOrder(request, env) {
+  softLimit(request, 40);
+  const url = new URL(request.url);
+  let order = await findTracked(env, url.searchParams.get('id'), url.searchParams.get('phone'));
+  if (order.status === 'pending') order = await syncPayment(env, order).catch(() => order);
+  return json(trackPayload(order));
+}
+
+/* Cliente desiste de um pagamento online (cartão ou PIX automático) ainda não pago: devolve a reserva na hora. */
+async function cancelTracked(request, env) {
+  softLimit(request, 10);
+  const body = await request.json().catch(() => ({}));
+  let order = await findTracked(env, body.id, body.phone);
+  if (order.status !== 'pending') return json(trackPayload(order));
+  order = await syncPayment(env, order).catch(() => order);
+  if (order.status !== 'pending') return json(trackPayload(order)); // pagou (ou já venceu) enquanto isso
+  if (order.kind !== 'card' && order.paymentId) await cancelPix(env, order.paymentId).catch(() => null);
+  order.status = 'canceled';
+  order.canceledAt = Date.now();
+  order.cancelReason = 'cancelado pelo cliente (pagamento não concluído)';
+  await saveOrder(env, order);
+  await release(env, order.id);
+  return json(trackPayload(order));
 }
 
 async function adminStage(request, env, id) {
@@ -929,6 +974,7 @@ export default {
       else if (stage && request.method === 'POST') response = await adminStage(request, env, stage[1]);
       else if (url.pathname === '/api/card-orders' && request.method === 'POST') response = await createCardOrder(request, env);
       else if (url.pathname === '/api/track' && request.method === 'GET') response = await trackOrder(request, env);
+      else if (url.pathname === '/api/track/cancel' && request.method === 'POST') response = await cancelTracked(request, env);
       else if (url.pathname === '/api/orders' && request.method === 'POST') response = await createOrder(request, env);
       else if (match && match[2] && request.method === 'POST') response = await cancelOrder(env, match[1]);
       else if (match && request.method === 'GET') response = await orderStatus(env, match[1]);

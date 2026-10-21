@@ -445,3 +445,41 @@ test('cartão: pedido com acréscimo, recusa, aprovação em 6x, estoque, acompa
     global.fetch = realFetch;
   }
 });
+
+test('cartão: cliente volta sem pagar, vê o link para concluir e pode cancelar (reserva devolvida na hora)', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var body = { items: [{ id: 'w34-plus', qty: 2 }], delivery: { mode: 'pickup' }, customer: { name: 'Bruno Volta', phone: '62977776666' } };
+    var created = await call(worker, s.env, 'POST', '/api/card-orders', body);
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    var id = created.data.id;
+
+    var track = await call(worker, s.env, 'GET', '/api/track?id=' + id + '&phone=62977776666');
+    assert.equal(track.data.status, 'pending');
+    assert.equal(track.data.checkoutUrl, created.data.checkoutUrl, 'link para concluir o pagamento');
+    assert.equal(track.data.canCancel, true);
+
+    // com as 2 unidades reservadas, outro cliente não consegue comprar
+    var blocked = await call(worker, s.env, 'POST', '/api/card-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Outra Pessoa' } });
+    assert.equal(blocked.status, 409);
+
+    // cancelar exige o WhatsApp da compra
+    var wrong = await call(worker, s.env, 'POST', '/api/track/cancel', { id: id, phone: '62900000000' });
+    assert.equal(wrong.status, 404);
+    var canceled = await call(worker, s.env, 'POST', '/api/track/cancel', { id: id, phone: '(62) 97777-6666' });
+    assert.equal(canceled.status, 200, JSON.stringify(canceled.data));
+    assert.equal(canceled.data.status, 'canceled');
+    assert.equal(canceled.data.checkoutUrl, '');
+    assert.equal(canceled.data.canCancel, false);
+
+    // reserva devolvida: agora outro cliente consegue
+    var again = await call(worker, s.env, 'POST', '/api/card-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Outra Pessoa' } });
+    assert.equal(again.status, 201, JSON.stringify(again.data));
+    assert.equal(s.commits.filter(function (m) { return m.indexOf('venda: pedido ' + id) === 0; }).length, 0, 'nada vendido');
+  } finally {
+    global.fetch = realFetch;
+  }
+});

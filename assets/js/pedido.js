@@ -14,6 +14,7 @@
   var api = String(CONFIG.paymentApiUrl || '').replace(/\/+$/, '');
   var $ = function (id) { return document.getElementById(id); };
   var pollTimer = null;
+  var pageOpenedAt = Date.now();
   var current = null;
 
   function read(key, fallback) {
@@ -81,6 +82,7 @@
       ? ['💳', 'Aguardando o pagamento no cartão', 'Se você já pagou, a confirmação do Mercado Pago chega em instantes. Esta página atualiza sozinha.']
       : ['⏳', 'Aguardando o pagamento', 'Assim que o pagamento for confirmado, o pedido segue para separação.'];
     if (o.status === 'review') return ['🔎', 'Pagamento em conferência', 'Recebemos um pagamento que precisa de conferência. Fale com a gente no WhatsApp.'];
+    if (/cliente/.test(o.cancelReason || '')) return ['✖️', 'Pedido cancelado', 'Você cancelou este pedido e os produtos voltaram para a loja. Quando quiser, é só fazer um novo pedido.'];
     return ['✖️', 'Pedido cancelado', o.kind === 'card' ? 'O pagamento não foi concluído e o pedido foi cancelado. Você pode fazer um novo pedido na loja.' : 'Este pedido foi cancelado. Se tiver dúvida, fale com a gente no WhatsApp.'];
   }
 
@@ -109,6 +111,18 @@
     $('trackOrderId').textContent = 'Pedido ' + o.id + (o.firstName ? ' · ' + o.firstName : '');
     $('trackHeadline').textContent = d[1];
     $('trackText').textContent = d[2];
+
+    /* pagamento online aberto: concluir (volta ao Mercado Pago) ou cancelar */
+    $('trackPending').hidden = !o.canCancel;
+    if (o.canCancel) {
+      $('trackResume').hidden = !o.checkoutUrl;
+      if (o.checkoutUrl) $('trackResume').href = o.checkoutUrl;
+      $('trackPendingNote').textContent = 'Ainda não recebemos o pagamento. O produto fica reservado para você até ' +
+        new Date(o.expiresAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '; depois disso o pedido é cancelado sozinho.';
+    }
+    if (o.status !== 'pending' && read(CARD_PENDING_KEY, '') === o.id && o.status !== 'paid') {
+      try { localStorage.removeItem(CARD_PENDING_KEY); } catch (e) { /* ok */ }
+    }
 
     var ol = $('trackSteps');
     ol.innerHTML = '';
@@ -141,8 +155,26 @@
 
     clearTimeout(pollTimer);
     if (o.status === 'pending' || o.status === 'awaiting') {
-      pollTimer = setTimeout(function () { search(true); }, o.status === 'pending' ? 4000 : 30000);
+      /* logo depois de voltar do pagamento: a cada 5 s por 3 min; depois a cada 30 s; para quando a reserva vence */
+      var fresh = Date.now() - pageOpenedAt < 3 * 60000;
+      var open = o.status === 'awaiting' || !o.expiresAt || Date.now() < o.expiresAt + 5 * 60000;
+      if (open) pollTimer = setTimeout(function () { search(true); }, o.status === 'pending' && fresh ? 5000 : 30000);
     }
+  }
+
+  function cancelOrder() {
+    if (!current) return;
+    if (!window.confirm('Cancelar o pedido ' + current.id + '? Os produtos voltam para a loja.')) return;
+    $('trackCancel').disabled = true;
+    fetch(api + '/api/track/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: current.id, phone: $('trackPhone').value.trim() })
+    })
+      .then(function (res) { return res.json().catch(function () { return {}; }).then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
+      .then(function (o) { fail(''); render(o); })
+      .catch(function (err) { fail(err.message); })
+      .finally(function () { $('trackCancel').disabled = false; });
   }
 
   function fail(message) {
@@ -178,6 +210,7 @@
     renderMine();
     $('trackForm').addEventListener('submit', function (e) { e.preventDefault(); search(); });
     $('trackRefresh').addEventListener('click', function () { search(); });
+    $('trackCancel').addEventListener('click', cancelOrder);
     var id = new URLSearchParams(location.search).get('id');
     if (id) {
       $('trackId').value = id.toUpperCase();

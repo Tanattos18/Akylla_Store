@@ -306,6 +306,8 @@ Proteções:
 
 - **Cliente:** <https://akyllashop.com/pedido.html> (link no rodapé, no menu e nas mensagens do WhatsApp). Digita o número do pedido e o WhatsApp da compra e vê: situação do pagamento, etapas (Recebido → Pago → Separando → Pronto para retirada / Saiu para entrega → Entregue), itens, total e forma de pagamento. Não mostra endereço nem telefone. O aparelho lembra os pedidos feitos nele.
 - **Loja:** painel → **Pedidos** → filtro **Para entregar** → em cada pedido pago, botões de **Etapa**. Depois de mudar a etapa, o botão **WhatsApp** já traz a mensagem certa ("pronto para retirada", "saiu para entrega"…) com o link de acompanhamento.
+- **Meus pedidos** no topo do site leva à página de acompanhamento.
+- **Pagamento no cartão não concluído** (o cliente voltou do Mercado Pago sem pagar): a página principal mostra um aviso com **Concluir pagamento** (volta para a mesma página do Mercado Pago) e **Cancelar pedido**; a página do pedido tem os mesmos botões. Cancelar devolve a reserva na hora. Se o cliente iniciar outro pagamento no cartão, o anterior é cancelado sozinho. Sem ação, a reserva vence em 1 h.
 - O site também **lembra nome, WhatsApp e e-mail** do cliente no próprio aparelho para a próxima compra.
 
 ## 5. Painel administrativo (`/admin/`)

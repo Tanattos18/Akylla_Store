@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="assets/img/logo-mark.jpg">
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-4">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-8">
 </head>
 <body>
   <header class="site-header">
@@ -65,6 +65,11 @@
             <p id="trackText"></p>
           </div>
         </div>
+        <div class="track-pending" id="trackPending" hidden>
+          <a class="btn btn-primary" id="trackResume" href="#">Concluir pagamento no cartão</a>
+          <button class="btn btn-outline" type="button" id="trackCancel">Cancelar pedido</button>
+          <p class="track-pending-note" id="trackPendingNote"></p>
+        </div>
         <ol class="track-steps" id="trackSteps"></ol>
         <div class="track-box">
           <h3>Itens</h3>
@@ -74,7 +79,7 @@
         </div>
         <div class="track-actions">
           <a class="btn btn-whatsapp" id="trackWhats" href="#" target="_blank" rel="noopener noreferrer">Falar com a loja no WhatsApp</a>
-          <button class="btn btn-ghost" type="button" id="trackRefresh">Atualizar</button>
+          <button class="btn btn-outline" type="button" id="trackRefresh">Atualizar</button>
         </div>
       </section>
     </div>
@@ -88,7 +93,7 @@
     </div>
   </footer>
 
-  <script src="assets/js/config.js?v=20261021-4" defer></script>
-  <script src="assets/js/pedido.js?v=20261021-4" defer></script>
+  <script src="assets/js/config.js?v=20261021-8" defer></script>
+  <script src="assets/js/pedido.js?v=20261021-8" defer></script>
 </body>
 </html>

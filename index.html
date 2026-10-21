@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-7">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-8">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -230,6 +230,11 @@
         <a class="icon-btn header-whatsapp" href="https://wa.me/556281517002" data-whatsapp target="_blank" rel="noopener noreferrer" aria-label="Falar com a Akylla Shop no WhatsApp">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
         </a>
+        <a class="orders-btn" href="pedido.html" aria-label="Meus pedidos: acompanhar pedido">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9 8h6M9 12h6M9 16h3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <span class="orders-btn-label">Meus pedidos</span>
+          <span class="orders-dot" id="ordersDot" hidden></span>
+        </a>
         <button class="cart-btn" type="button" id="cartOpen" aria-haspopup="dialog" aria-controls="cartDrawer" aria-expanded="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-bag"></use></svg>
           <span class="cart-btn-label">Sacola</span>
@@ -241,6 +246,16 @@
       </div>
     </div>
   </header>
+
+  <div class="resume-bar" id="resumeBar" role="status" hidden>
+    <div class="container resume-inner">
+      <p><strong>Pagamento no cartão não concluído</strong> <span id="resumeText"></span></p>
+      <div class="resume-actions">
+        <a class="btn btn-primary resume-btn" id="resumePay" href="#">Concluir pagamento</a>
+        <button class="btn btn-outline resume-btn" type="button" id="resumeCancel">Cancelar pedido</button>
+      </div>
+    </div>
+  </div>
 
   <main id="conteudo">
     <section class="hero" aria-labelledby="hero-title">
@@ -958,12 +973,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261021-7" defer></script>
-  <script src="assets/js/config.js?v=20261021-7" defer></script>
-  <script src="assets/js/products.js?v=20261021-7" defer></script>
-  <script src="assets/js/pix.js?v=20261021-7" defer></script>
-  <script src="assets/js/promo.js?v=20261021-7" defer></script>
-  <script src="assets/js/frete.js?v=20261021-7" defer></script>
-  <script src="assets/js/app.js?v=20261021-7" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261021-8" defer></script>
+  <script src="assets/js/config.js?v=20261021-8" defer></script>
+  <script src="assets/js/products.js?v=20261021-8" defer></script>
+  <script src="assets/js/pix.js?v=20261021-8" defer></script>
+  <script src="assets/js/promo.js?v=20261021-8" defer></script>
+  <script src="assets/js/frete.js?v=20261021-8" defer></script>
+  <script src="assets/js/app.js?v=20261021-8" defer></script>
 </body>
 </html>
