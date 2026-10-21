@@ -545,10 +545,18 @@ async function webhook(request, env) {
   const type = body.type || url.searchParams.get('type') || url.searchParams.get('topic');
   const dataId = (body.data && body.data.id) || url.searchParams.get('data.id') || url.searchParams.get('id');
   const expected = useOrdersApi(env) ? 'order' : 'payment';
+  if (!env.MP_ACCESS_TOKEN) return json({ ok: true, ignored: 'Mercado Pago não configurado' });
   if (type !== expected || !dataId) return json({ ok: true, ignored: true });
   if (!(await validSignature(request, env, url.searchParams.get('data.id') || dataId))) return json({ ok: false, error: 'assinatura inválida' }, 401);
 
-  const pay = await readPix(env, dataId);
+  let pay;
+  try {
+    pay = await readPix(env, dataId);
+  } catch (err) {
+    /* notificação de teste do painel do Mercado Pago (id inexistente): responde ok para não ficar reenviando */
+    if (err.status === 404 || err.status === 400) return json({ ok: true, unknown: true });
+    throw err; // falha temporária: o Mercado Pago tenta de novo
+  }
   const id = pay.ref;
   const order = id ? await getOrder(env, id) : null;
   if (!order) return json({ ok: true, unknown: true });

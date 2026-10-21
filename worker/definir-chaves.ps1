@@ -14,7 +14,12 @@ $todas = @(
 )
 
 # Para cadastrar so algumas:  & .\definir-chaves.ps1 MP_ACCESS_TOKEN MP_WEBHOOK_SECRET
-if ($args.Count -gt 0) { $chaves = @($todas | Where-Object { $args -contains $_.Nome }) }
+# (guarda os nomes antes: dentro do Where-Object, $args seria outra variável)
+$pedidas = @($args)
+if ($pedidas.Count -gt 0) {
+  $chaves = @($todas | Where-Object { $pedidas -contains $_.Nome })
+  if ($chaves.Count -eq 0) { Write-Host ('Nenhuma chave conhecida em: ' + ($pedidas -join ', ')) -ForegroundColor Red; exit 1 }
+}
 else { $chaves = @($todas | Select-Object -First 2) }
 
 $i = 1
