@@ -355,7 +355,7 @@
   /* ------------------------------ render ------------------------------ */
 
   function stockBadge(p) {
-    if (p.hidden) return el('span', { class: 'badge', text: 'Oculto' });
+    if (p.hidden) return el('span', { class: 'badge off', text: 'Fora da loja' });
     if (!(p.stock > 0)) return el('span', { class: 'badge out', text: 'Esgotado' });
     if (p.stock <= 3) return el('span', { class: 'badge low', text: p.stock === 1 ? 'Última unidade' : 'Restam ' + p.stock });
     return el('span', { class: 'badge ok', text: 'Em estoque' });
@@ -429,12 +429,33 @@
     renderStock(); renderProducts(); refreshPending();
   }
 
+  var productFilter = 'all';
+
+  /* Colocar na loja / tirar da loja (fica pendente até Publicar). */
+  function toggleLive(index) {
+    var p = state.products[index];
+    if (p.hidden) {
+      if (!(p.stock > 0) && !confirm(p.shortName + ' está com estoque 0 e vai aparecer como "Esgotado" na loja. Colocar na loja mesmo assim?\n\nDica: ajuste o estoque na aba Estoque antes.')) return;
+      delete p.hidden;
+      toast(p.shortName + ' vai para a loja. Clique em Publicar para valer.', 5000);
+    } else {
+      p.hidden = true;
+      toast(p.shortName + ' sai da loja (fica só no painel). Clique em Publicar para valer.', 5000);
+    }
+    renderAll();
+  }
+
   function renderProducts() {
     var list = $('#productList');
     var query = normQuery($('#productSearch'));
     list.innerHTML = '';
+    var counts = { all: state.products.length, live: 0, hidden: 0 };
+    state.products.forEach(function (p) { counts[p.hidden ? 'hidden' : 'live'] += 1; });
+    Object.keys(counts).forEach(function (k) { var n = document.querySelector('[data-pcount="' + k + '"]'); if (n) n.textContent = counts[k] ? String(counts[k]) : ''; });
     state.products.forEach(function (p, index) {
       if (!matches(p, query)) return;
+      if (productFilter === 'live' && p.hidden) return;
+      if (productFilter === 'hidden' && !p.hidden) return;
       list.appendChild(el('li', { class: 'product-item' + (isChanged(p) ? ' is-changed' : '') }, [
         el('img', { class: 'thumb', src: photoUrl(p.image), alt: '', loading: 'lazy', width: '56', height: '56' }),
         el('div', { class: 'item-main' }, [
@@ -443,6 +464,7 @@
           el('div', { class: 'badges' }, [stockBadge(p), p.illustrative ? el('span', { class: 'badge', text: 'Foto ilustrativa' }) : null])
         ]),
         el('div', { class: 'item-actions' }, [
+          el('button', { type: 'button', class: 'btn btn-sm ' + (p.hidden ? 'btn-live' : 'btn-ghost'), text: p.hidden ? '✓ Colocar na loja' : 'Tirar da loja', title: p.hidden ? 'Mostrar este produto no site' : 'Esconder do site (fica no painel)', onclick: function () { toggleLive(index); } }),
           el('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Duplicar', onclick: function () { duplicateProduct(index); } }),
           el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Editar', onclick: function () { openEditor(index); } })
         ])
@@ -1370,7 +1392,7 @@
     var tab = document.querySelector('[data-tab="' + name + '"]');
     if (tab) tab.click();
     if (filter) {
-      var btn = document.querySelector('[data-' + (name === 'pedidos' ? 'ofilter' : 'sfilter') + '="' + filter + '"]');
+      var btn = document.querySelector('[data-' + (name === 'pedidos' ? 'ofilter' : name === 'produtos' ? 'pfilter' : 'sfilter') + '="' + filter + '"]');
       if (btn) btn.click();
     }
   }
@@ -1504,6 +1526,9 @@
       var days = Math.ceil((end - Date.now()) / 864e5);
       if (days >= 0 && days <= 7) items.push(['info', '🏷️', 'Promoção termina ' + (days === 0 ? 'hoje' : days === 1 ? 'amanhã' : 'em ' + days + ' dias'), (promo.text || 'Promoção') + ' · ' + promo.percent + '% · lembre de refazer os anúncios', 'Ajustar', function () { goTab('promocao'); }]);
     }
+    var drafts = state.products.filter(function (p) { return p.hidden; });
+    if (drafts.length) items.push(['info', '🗂️', drafts.length + (drafts.length === 1 ? ' produto fora da loja' : ' produtos fora da loja'),
+      drafts.slice(0, 3).map(function (p) { return p.shortName; }).join(', ') + (drafts.length > 3 ? '…' : '') + ' · confira o estoque e coloque na loja', 'Ver', function () { goTab('produtos', 'hidden'); }]);
     var pending = changeList().length;
     if (pending) items.push(['info', '⬆️', pending + (pending === 1 ? ' alteração não publicada' : ' alterações não publicadas'), 'Só vão para o site depois de publicar', 'Publicar', publish]);
     var box = $('#todoList');
@@ -2106,6 +2131,13 @@
     $('#discardBtn').addEventListener('click', discard);
     $('#stockSearch').addEventListener('input', renderStock);
     $('#productSearch').addEventListener('input', renderProducts);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pfilter]'), function (b) {
+      b.addEventListener('click', function () {
+        productFilter = b.getAttribute('data-pfilter');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-pfilter]'), function (x) { x.classList.toggle('is-active', x === b); });
+        renderProducts();
+      });
+    });
     $('#newProductBtn').addEventListener('click', function () { openEditor(null, blankProduct()); });
     $('#editorForm').addEventListener('submit', applyEditor);
     Array.prototype.forEach.call(document.querySelectorAll('[data-close-editor]'), function (btn) {

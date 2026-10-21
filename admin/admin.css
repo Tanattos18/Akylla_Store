@@ -577,3 +577,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .info-box { margin: 0; padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); font-size: 0.85rem; line-height: 1.5; }
 .info-box summary { cursor: pointer; font-weight: 800; color: var(--strong); }
 .info-box ul { margin: 0.5rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; }
+
+/* Na loja / Fora da loja */
+.badge.off { background: var(--soft); color: var(--muted); border: 1px dashed var(--line); }
+.btn-live { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.btn-live:hover { filter: brightness(0.95); }

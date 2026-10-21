@@ -437,6 +437,174 @@ window.AKYLLA_PRODUCTS = [
     ]
   },
   {
+    "id": "power-bank-inova-b078c",
+    "name": "Power Bank Inova 10.000 mAh com Cabos USB-C e Lightning",
+    "shortName": "Power Bank Inova 10.000 mAh",
+    "brand": "Inova",
+    "model": "B-078C",
+    "code": "B-078C",
+    "category": "acessorios",
+    "visual": "powerbank",
+    "price": 10780,
+    "stock": 0,
+    "hidden": true,
+    "summary": "10.000 mAh, cabos USB-C e Lightning embutidos, display LED e carga rápida de até 22,5W.",
+    "description": "Power bank de 10.000 mAh com cabos USB-C e Lightning integrados — não precisa levar cabo. Carga rápida de até 22,5W no USB-C e PD 10W no Lightning, porta USB-C bidirecional (carrega e recarrega o próprio power bank), display LED com o nível da bateria e chip inteligente de proteção. Pode ser levado na bagagem de mão em voos.",
+    "image": "assets/img/products/power-bank-inova-b078c.webp",
+    "imageAlt": "Embalagem do power bank Inova B-078C de 10.000 mAh com cabos USB-C e Lightning integrados",
+    "specs": [
+      {
+        "label": "Capacidade",
+        "value": "10.000 mAh"
+      },
+      {
+        "label": "Cabos",
+        "value": "Cabos integrados USB-C e Lightning"
+      },
+      {
+        "label": "Carga rápida",
+        "value": "Até 22,5W (USB-C) · PD 10W (Lightning)"
+      },
+      {
+        "label": "Porta USB-C",
+        "value": "Bidirecional (entrada e saída)"
+      },
+      {
+        "label": "Display",
+        "value": "LED com nível da bateria"
+      },
+      {
+        "label": "Extras",
+        "value": "Chip inteligente · pode ir na bagagem de mão"
+      }
+    ]
+  },
+  {
+    "id": "power-bank-kapbom-ka9923",
+    "name": "Power Bank Kapbom 10.000 mAh 22,5W Turbo com Cabo Integrado",
+    "shortName": "Power Bank Kapbom 10.000 mAh",
+    "brand": "Kapbom",
+    "model": "KA-9923",
+    "code": "KA-9923",
+    "category": "acessorios",
+    "visual": "powerbank",
+    "price": 11980,
+    "stock": 0,
+    "hidden": true,
+    "summary": "10.000 mAh compacto, carga turbo de 22,5W, cabo integrado e display digital.",
+    "description": "Power bank compacto de 10.000 mAh com carregamento turbo de 22,5W, cabo integrado em formato de alça e display digital com a porcentagem da bateria. Homologado pela Anatel.",
+    "image": "assets/img/products/power-bank-kapbom-ka9923.webp",
+    "imageAlt": "Embalagem do power bank Kapbom KA-9923 de 10.000 mAh com cabo integrado",
+    "specs": [
+      {
+        "label": "Capacidade",
+        "value": "10.000 mAh"
+      },
+      {
+        "label": "Carga",
+        "value": "22,5W Turbo"
+      },
+      {
+        "label": "Cabo",
+        "value": "Integrado (alça)"
+      },
+      {
+        "label": "Display",
+        "value": "Digital com porcentagem da bateria"
+      },
+      {
+        "label": "Formato",
+        "value": "Compacto"
+      },
+      {
+        "label": "Anatel",
+        "value": "08974-24-15167"
+      }
+    ]
+  },
+  {
+    "id": "power-bank-kapbom-ka959",
+    "name": "Power Bank Kapbom 20.000 mAh com 2 Cabos Embutidos",
+    "shortName": "Power Bank Kapbom 20.000 mAh",
+    "brand": "Kapbom",
+    "model": "KA-959",
+    "code": "KA-959",
+    "category": "acessorios",
+    "visual": "powerbank",
+    "price": 12700,
+    "stock": 0,
+    "hidden": true,
+    "summary": "20.000 mAh, 2 cabos embutidos e display LED com o nível da bateria.",
+    "description": "Power bank de 20.000 mAh com 2 cabos embutidos, display LED com a porcentagem da bateria e ampla compatibilidade com celulares e acessórios. Homologado pela Anatel.",
+    "image": "assets/img/products/power-bank-kapbom-ka959.webp",
+    "imageAlt": "Embalagem do power bank Kapbom KA-959 branco de 20.000 mAh com 2 cabos embutidos",
+    "specs": [
+      {
+        "label": "Capacidade",
+        "value": "20.000 mAh"
+      },
+      {
+        "label": "Cabos",
+        "value": "2 cabos embutidos"
+      },
+      {
+        "label": "Display",
+        "value": "LED com porcentagem da bateria"
+      },
+      {
+        "label": "Compatibilidade",
+        "value": "Ampla (celulares e acessórios)"
+      },
+      {
+        "label": "Anatel",
+        "value": "08435-22-11767"
+      }
+    ]
+  },
+  {
+    "id": "power-bank-inova-b079d",
+    "name": "Power Bank Inova 20.000 mAh com Cabos USB-C e Lightning",
+    "shortName": "Power Bank Inova 20.000 mAh",
+    "brand": "Inova",
+    "model": "B-079D",
+    "code": "B-079D",
+    "category": "acessorios",
+    "visual": "powerbank",
+    "price": 13580,
+    "stock": 0,
+    "hidden": true,
+    "summary": "20.000 mAh, cabos USB-C e Lightning embutidos, display LED e carga rápida de até 22,5W.",
+    "description": "Power bank de 20.000 mAh — energia para várias recargas — com cabos USB-C e Lightning integrados. Carga rápida de até 22,5W no USB-C e PD 10W no Lightning, porta USB-C bidirecional, display LED com o nível da bateria e chip inteligente de proteção. Pode ser levado na bagagem de mão em voos.",
+    "image": "assets/img/products/power-bank-inova-b079d.webp",
+    "imageAlt": "Embalagem do power bank Inova B-079D de 20.000 mAh com cabos USB-C e Lightning integrados",
+    "specs": [
+      {
+        "label": "Capacidade",
+        "value": "20.000 mAh"
+      },
+      {
+        "label": "Cabos",
+        "value": "Cabos integrados USB-C e Lightning"
+      },
+      {
+        "label": "Carga rápida",
+        "value": "Até 22,5W (USB-C) · PD 10W (Lightning)"
+      },
+      {
+        "label": "Porta USB-C",
+        "value": "Bidirecional (entrada e saída)"
+      },
+      {
+        "label": "Display",
+        "value": "LED com nível da bateria"
+      },
+      {
+        "label": "Extras",
+        "value": "Chip inteligente · pode ir na bagagem de mão"
+      }
+    ]
+  },
+  {
     "id": "microfone-lapela",
     "name": "Microfone de Lapela Sem Fio com Case",
     "shortName": "Microfone de Lapela",
