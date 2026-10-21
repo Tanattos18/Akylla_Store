@@ -86,7 +86,29 @@
     return m ? m[3] + '/' + m[2] : '';
   }
 
+  /*
+   * Venda com reposição pelo fornecedor (config.js → `restock`: { enabled, default, days }).
+   * Além do estoque físico (`stock`), cada produto pode vender até N a mais
+   * (`product.restock`; sem o campo usa o padrão; 0 = só o que tem em casa).
+   * O estoque físico pode ficar negativo: −3 = 3 unidades para comprar no fornecedor.
+   */
+  function restockLimit(product, config) {
+    var r = (config && config.restock) || {};
+    if (!r.enabled || !product) return 0;
+    var own = product.restock;
+    var n = own != null && own !== '' ? Number(own) : Number(r['default']);
+    return Number.isFinite(n) && n > 0 ? Math.min(99, Math.floor(n)) : 0;
+  }
+
+  /* Quanto ainda dá para vender: físico + reposição permitida. */
+  function available(product, config) {
+    if (!product || typeof product.stock !== 'number') return 99;
+    return Math.max(0, Math.min(99, product.stock + restockLimit(product, config)));
+  }
+
   var api = {
+    restockLimit: restockLimit,
+    available: available,
     priceFor: priceFor,
     summary: summary,
     discounted: discounted,

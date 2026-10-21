@@ -57,7 +57,7 @@ export function buildLines({ products, config, items, reserved, now }) {
   const lines = Object.keys(merged).map((id) => {
     const p = byId[id];
     if (!p || p.hidden) throw new OrderError('Um dos produtos não está mais disponível. Atualize a página.', 409);
-    const free = Math.max(0, (Number(p.stock) || 0) - ((reserved && reserved[id]) || 0));
+    const free = Math.max(0, Promo.available(p, config) - ((reserved && reserved[id]) || 0));
     if (merged[id] > free) {
       throw new OrderError(free > 0
         ? 'Temos só ' + free + (free === 1 ? ' unidade disponível' : ' unidades disponíveis') + ' de ' + p.shortName + ' agora.'
@@ -102,26 +102,31 @@ export function applyReturn(products, lines) {
   return { products: next, warnings };
 }
 
-/* Itens sem estoque suficiente (para recusar antes de reservar). */
-export function stockShortfall(products, lines) {
+/* Itens sem estoque suficiente (físico + reposição) — para recusar antes de reservar. */
+export function stockShortfall(products, lines, config) {
   return lines.filter((l) => {
     const p = products.find((x) => x.id === l.id);
-    return !p || (Number(p.stock) || 0) < l.qty;
+    return !p || Promo.available(p, config) < l.qty;
   }).map((l) => l.name);
 }
 
-/* Baixa o estoque dos itens vendidos. Retorna { products, warnings }. */
+/*
+ * Baixa o estoque dos itens vendidos. O físico pode ficar negativo (venda com reposição):
+ * `supply[id]` = quantas unidades da linha vêm do fornecedor. Retorna { products, warnings, supply }.
+ */
 export function applySale(products, lines) {
   const warnings = [];
+  const supply = {};
   const next = products.map((p) => ({ ...p }));
   lines.forEach((l) => {
     const p = next.find((x) => x.id === l.id);
     if (!p) { warnings.push('produto removido do catálogo: ' + l.name); return; }
     const before = Number(p.stock) || 0;
-    if (l.qty > before) warnings.push(l.name + ': vendido ' + l.qty + ', havia ' + before + ' em estoque');
-    p.stock = Math.max(0, before - l.qty);
+    const fromHouse = Math.max(0, Math.min(before, l.qty));
+    if (l.qty > fromHouse) supply[l.id] = l.qty - fromHouse;
+    p.stock = before - l.qty;
   });
-  return { products: next, warnings };
+  return { products: next, warnings, supply };
 }
 
 export function centsToReais(cents) {

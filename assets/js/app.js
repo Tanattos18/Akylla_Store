@@ -123,6 +123,7 @@
     manualCustomer: document.getElementById('manualCustomer'),
     manualName: document.getElementById('manualName'),
     cardBox: document.getElementById('cardBox'),
+    restockNote: document.getElementById('restockNote'),
     resumeBar: document.getElementById('resumeBar'),
     resumeText: document.getElementById('resumeText'),
     resumePay: document.getElementById('resumePay'),
@@ -341,18 +342,31 @@
     }, 0);
   }
 
-  /* Estoque vem da planilha (campo `stock`). Sem o campo, não limita. */
+  /* Quanto dá para vender: estoque físico + reposição pelo fornecedor (regra em promo.js). */
   function maxQty(product) {
-    return product && typeof product.stock === 'number' ? Math.max(0, Math.min(99, product.stock)) : 99;
+    if (!product) return 99;
+    return window.AkyllaPromo ? window.AkyllaPromo.available(product, CONFIG) : (typeof product.stock === 'number' ? Math.max(0, Math.min(99, product.stock)) : 99);
+  }
+
+  function restockOn(product) {
+    return !!(window.AkyllaPromo && window.AkyllaPromo.restockLimit(product, CONFIG) > 0);
   }
 
   function stockInfo(product) {
     var stock = maxQty(product);
     if (typeof product.stock !== 'number') return null;
     if (stock <= 0) return { text: 'Esgotado', tone: 'out' };
+    if (restockOn(product)) return { text: 'Em estoque', tone: 'ok' };
     if (stock === 1) return { text: 'Última unidade', tone: 'low' };
     if (stock <= 3) return { text: 'Restam ' + stock + ' unidades', tone: 'low' };
     return { text: 'Em estoque', tone: 'ok' };
+  }
+
+  /* Itens da sacola que passam do estoque físico (vêm do fornecedor). */
+  function supplierItems() {
+    return getCartItems().filter(function (item) {
+      return typeof item.product.stock === 'number' && item.qty > Math.max(0, item.product.stock);
+    });
   }
 
   function stockBadge(product, extraClass) {
@@ -365,7 +379,7 @@
     var html = '';
     if (product.bestseller) html += '<span class="stock-badge stock-badge--best">Mais vendido</span>';
     var info = stockInfo(product);
-    if (info && (info.tone === 'out' || maxQty(product) === 1)) html += stockBadge(product);
+    if (info && (info.tone === 'out' || (maxQty(product) === 1 && !restockOn(product)))) html += stockBadge(product);
     return html ? '    <div class="card-badges">' + html + '</div>' : '';
   }
 
@@ -946,6 +960,13 @@
     if (els.checkoutSubtotal) els.checkoutSubtotal.textContent = formatBRL(order.subtotal);
     if (els.checkoutShipping) els.checkoutShipping.textContent = shippingSummaryText();
     renderDelivery();
+    if (els.restockNote) {
+      var later = supplierItems();
+      var days = (CONFIG.restock && CONFIG.restock.days) || 2;
+      els.restockNote.hidden = !later.length;
+      els.restockNote.textContent = later.length ? '📦 ' + later.map(function (i) { return i.product.shortName; }).join(', ') +
+        (later.length === 1 ? ' é enviado' : ' são enviados') + ' em até ' + days + (days === 1 ? ' dia útil' : ' dias úteis') + ' (reposição do fornecedor).' : '';
+    }
     var auto = mpEnabled();
     if (els.pixBox) els.pixBox.hidden = !ready || auto;
     if (els.pixLocked) els.pixLocked.hidden = ready;

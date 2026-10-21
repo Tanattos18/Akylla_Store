@@ -582,3 +582,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .badge.off { background: var(--soft); color: var(--muted); border: 1px dashed var(--line); }
 .btn-live { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
 .btn-live:hover { filter: brightness(0.95); }
+
+/* Venda com reposição */
+.restock-card summary { cursor: pointer; }
+.restock-card form { margin-top: 0.8rem; }
+.badge-group { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.badge.supply { margin-left: 0.4rem; white-space: nowrap; }

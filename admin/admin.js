@@ -354,11 +354,19 @@
 
   /* ------------------------------ render ------------------------------ */
 
+  function restockOf(p) { return window.AkyllaPromo ? window.AkyllaPromo.restockLimit(p, state.config) : 0; }
+  function sellable(p) { return window.AkyllaPromo ? window.AkyllaPromo.available(p, state.config) : Math.max(0, p.stock || 0); }
+
   function stockBadge(p) {
     if (p.hidden) return el('span', { class: 'badge off', text: 'Fora da loja' });
-    if (!(p.stock > 0)) return el('span', { class: 'badge out', text: 'Esgotado' });
-    if (p.stock <= 3) return el('span', { class: 'badge low', text: p.stock === 1 ? 'Última unidade' : 'Restam ' + p.stock });
-    return el('span', { class: 'badge ok', text: 'Em estoque' });
+    var badges = [];
+    if (p.stock < 0) badges.push(el('span', { class: 'badge low', text: 'Comprar ' + (-p.stock) + ' no fornecedor' }));
+    var r = restockOf(p);
+    if (!(sellable(p) > 0)) badges.push(el('span', { class: 'badge out', text: 'Esgotado' }));
+    else if (r > 0) badges.push(el('span', { class: 'badge ok', text: 'Em estoque · +' + r + ' fornecedor' }));
+    else if (p.stock <= 3) badges.push(el('span', { class: 'badge low', text: p.stock === 1 ? 'Última unidade' : 'Restam ' + p.stock }));
+    else badges.push(el('span', { class: 'badge ok', text: 'Em estoque' }));
+    return badges.length === 1 ? badges[0] : el('span', { class: 'badge-group' }, badges);
   }
 
   function matches(p, query) {
@@ -371,6 +379,31 @@
     return input.value.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   }
 
+  function restockCfg() {
+    var r = state.config.restock || {};
+    return { enabled: !!r.enabled, 'default': Number.isFinite(Number(r['default'])) ? Number(r['default']) : 10, days: Number(r.days) || 2 };
+  }
+
+  function renderRestock() {
+    var r = restockCfg();
+    var f = $('#restockForm');
+    f.elements.restock_enabled.checked = r.enabled;
+    f.elements.restock_default.value = String(r['default']);
+    f.elements.restock_days.value = String(r.days);
+    var owed = state.products.filter(function (p) { return p.stock < 0; }).reduce(function (t, p) { return t - p.stock; }, 0);
+    $('#restockSummary').textContent = r.enabled ? '— ligada: +' + r['default'] + ' por produto, prazo ' + r.days + ' dia(s) útil(eis)' + (owed ? ' · ' + owed + ' unidade(s) para comprar' : '') : '— desligada (vende só o físico)';
+  }
+
+  function handleRestock(e) {
+    var r = restockCfg();
+    var n = e.target.name;
+    if (n === 'restock_enabled') r.enabled = e.target.checked;
+    if (n === 'restock_default') r['default'] = Math.max(0, Math.min(99, parseInt(e.target.value, 10) || 0));
+    if (n === 'restock_days') r.days = Math.max(1, Math.min(15, parseInt(e.target.value, 10) || 2));
+    state.config.restock = r;
+    renderRestock(); renderStock(); renderProducts(); refreshPending();
+  }
+
   var stockFilter = 'all';
   function renderStock() {
     var list = $('#stockList');
@@ -379,11 +412,11 @@
     var units = 0, out = 0, low = 0;
     state.products.forEach(function (p, index) {
       units += p.stock > 0 ? p.stock : 0;
-      if (!(p.stock > 0)) out += 1;
-      else if (p.stock <= 1) low += 1;
+      if (!(sellable(p) > 0)) out += 1;
+      else if (sellable(p) <= 1) low += 1;
       if (!matches(p, query)) return;
-      if (stockFilter === 'low' && !(p.stock > 0 && p.stock <= 1)) return;
-      if (stockFilter === 'out' && p.stock > 0) return;
+      if (stockFilter === 'low' && !(sellable(p) > 0 && sellable(p) <= 1)) return;
+      if (stockFilter === 'out' && sellable(p) > 0) return;
 
       var qty = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', value: String(p.stock || 0), 'aria-label': 'Estoque de ' + p.shortName });
       qty.addEventListener('change', function () { setStock(index, parseInt(qty.value, 10)); });
@@ -424,7 +457,7 @@
   }
 
   function setStock(index, value) {
-    var n = Math.max(0, Math.min(9999, Number.isFinite(value) ? value : 0));
+    var n = Math.max(-99, Math.min(9999, Number.isFinite(value) ? value : 0));
     state.products[index].stock = n;
     renderStock(); renderProducts(); refreshPending();
   }
@@ -946,7 +979,7 @@
         el('ul', { class: 'order-lines' }, (o.lines || []).map(function (l) {
           return el('li', {}, [
             el('span', { class: 'qty', text: l.qty + '×' }),
-            el('span', { class: 'line-name', text: l.name + ' · cód. ' + l.code }),
+            el('span', { class: 'line-name' }, [l.name + ' · cód. ' + l.code, l.fromSupplier ? el('span', { class: 'badge low supply', text: (l.qty - l.fromSupplier) + ' de casa + ' + l.fromSupplier + ' do fornecedor' }) : null]),
             el('span', { class: 'line-price', text: brl(l.unit * l.qty) })
           ]);
         })),
@@ -1516,8 +1549,8 @@
         'Marque as etapas para o cliente acompanhar pelo site', 'Ver', function () { goTab('pedidos', 'todeliver'); }]);
     }
     var active = state.products.filter(function (p) { return !p.hidden; });
-    var out = active.filter(function (p) { return !(p.stock > 0); });
-    var low = active.filter(function (p) { return p.stock === 1; });
+    var out = active.filter(function (p) { return !(sellable(p) > 0); });
+    var low = active.filter(function (p) { return sellable(p) === 1; });
     if (out.length) items.push(['warn', '📦', out.length + (out.length === 1 ? ' produto esgotado' : ' produtos esgotados'), out.slice(0, 3).map(function (p) { return p.shortName; }).join(', ') + (out.length > 3 ? '…' : ''), 'Ver', function () { goTab('estoque', 'out'); }]);
     if (low.length) items.push(['warn', '⚠️', low.length + (low.length === 1 ? ' produto na última unidade' : ' produtos na última unidade'), low.slice(0, 3).map(function (p) { return p.shortName; }).join(', ') + (low.length > 3 ? '…' : ''), 'Ver', function () { goTab('estoque', 'low'); }]);
     var promo = state.config.promo || {};
@@ -1634,8 +1667,8 @@
     var active = state.products.filter(function (p) { return !p.hidden; });
     var units = active.reduce(function (t, p) { return t + (p.stock > 0 ? p.stock : 0); }, 0);
     var stockValue = active.reduce(function (t, p) { return t + (p.stock > 0 ? p.stock * p.price : 0); }, 0);
-    var out = active.filter(function (p) { return !(p.stock > 0); });
-    var low = active.filter(function (p) { return p.stock > 0 && p.stock <= 1; });
+    var out = active.filter(function (p) { return !(sellable(p) > 0); });
+    var low = active.filter(function (p) { return sellable(p) === 1; });
     var promo = state.config.promo || {};
     var promoOn = !!promo.active && (!promo.until || promo.until >= Promo.toDay());
     fill('#kpiStore', [
@@ -1723,7 +1756,7 @@
   function hideTip() { $('#chartTip').hidden = true; }
 
   function renderAll() {
-    renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); renderShipForm(); refreshPending();
+    renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); renderShipForm(); renderRestock(); refreshPending();
     if (!dash.orders) loadDashboard(); else renderDashboard();
     var select = $('#categorySelect');
     select.innerHTML = '';
@@ -1752,6 +1785,7 @@
     form.elements.stock.value = String(product.stock || 0);
     form.elements.illustrative.checked = !!product.illustrative;
     form.elements.hidden.checked = !!product.hidden;
+    form.elements.restock.value = product.restock == null ? '' : String(product.restock);
     form.elements.bestseller.checked = !!product.bestseller;
     $('#editorTitle').textContent = index == null ? 'Novo produto' : 'Editar: ' + product.shortName;
     $('#deleteProductBtn').hidden = index == null;
@@ -1835,6 +1869,8 @@
     p.specs = readSpecs();
     if (form.elements.illustrative.checked) p.illustrative = true; else delete p.illustrative;
     if (form.elements.hidden.checked) p.hidden = true; else delete p.hidden;
+    var rs = String(form.elements.restock.value).trim();
+    if (rs === '') delete p.restock; else p.restock = Math.max(0, Math.min(99, parseInt(rs, 10) || 0));
     if (form.elements.bestseller.checked) p.bestseller = true; else delete p.bestseller;
     p.image = editing.photos[0] || '';
     if (editing.photos.length > 1) p.gallery = editing.photos.slice(1); else delete p.gallery;
@@ -2130,6 +2166,8 @@
     $('#publishBtn').addEventListener('click', publish);
     $('#discardBtn').addEventListener('click', discard);
     $('#stockSearch').addEventListener('input', renderStock);
+    $('#restockForm').addEventListener('change', handleRestock);
+    $('#restockForm').addEventListener('submit', function (e) { e.preventDefault(); });
     $('#productSearch').addEventListener('input', renderProducts);
     Array.prototype.forEach.call(document.querySelectorAll('[data-pfilter]'), function (b) {
       b.addEventListener('click', function () {

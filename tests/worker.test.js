@@ -33,6 +33,7 @@ function scenario() {
   var config = F.parseConfig(fs.readFileSync(path.join(ROOT, 'assets/js/config.js'), 'utf8'));
   config.promo = { active: true, text: 'Teste', percent: 10, until: '2099-12-31' };
   config.card = { enabled: true, maxInstallments: 12, feePercent: 5 };
+  config.restock = { enabled: false }; // testes antigos: só o estoque físico
   catalog.products.forEach(function (p) { p.stock = 2; });
   var files = {
     'assets/js/products.js': { text: F.serializeProducts(catalog.categories, catalog.products), sha: 'p1' },
@@ -479,6 +480,41 @@ test('cartão: cliente volta sem pagar, vê o link para concluir e pode cancelar
     var again = await call(worker, s.env, 'POST', '/api/card-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Outra Pessoa' } });
     assert.equal(again.status, 201, JSON.stringify(again.data));
     assert.equal(s.commits.filter(function (m) { return m.indexOf('venda: pedido ' + id) === 0; }).length, 0, 'nada vendido');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('reposição: vende além do físico até o limite, marca o que vem do fornecedor e devolve ao cancelar', async function () {
+  var s = scenario();
+  var cfg = F.parseConfig(s.files['assets/js/config.js'].text);
+  cfg.restock = { enabled: true, default: 10, days: 2 };
+  s.files['assets/js/config.js'] = { text: F.serializeConfig(cfg), sha: 'c-restock' };
+  var cat = F.parseProducts(s.files['assets/js/products.js'].text);
+  cat.products.find(function (p) { return p.id === 'w69-ultra'; }).restock = 0; // este só vende o físico
+  s.files['assets/js/products.js'] = { text: F.serializeProducts(cat.categories, cat.products), sha: 'p-restock' };
+  var stockOf = function (id) { return F.parseProducts(s.files['assets/js/products.js'].text).products.find(function (p) { return p.id === id; }).stock; };
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    // físico 2 + 10 de reposição = até 12
+    var tooMany = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 13 }], delivery: { mode: 'pickup' }, customer: { name: 'Cliente Demais', phone: '62911110000' } });
+    assert.equal(tooMany.status, 409, 'passa do limite de reposição');
+    var created = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 5 }], delivery: { mode: 'pickup' }, customer: { name: 'Cliente Campanha', phone: '62922220000' } });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    assert.equal(stockOf('w34-plus'), -3, 'físico negativo = 3 para comprar');
+    assert.ok(s.commits.some(function (m) { return m.indexOf('COMPRAR NO FORNECEDOR: 3x') >= 0; }), 'commit avisa o que comprar');
+    var list = await call(worker, s.env, 'GET', '/api/admin/orders', null, { Authorization: 'Bearer gh-admin' });
+    var line = list.data.orders.find(function (o) { return o.id === created.data.id; }).lines[0];
+    assert.equal(line.fromSupplier, 3, 'pedido mostra 2 de casa + 3 do fornecedor');
+    // produto com reposição 0 vende só o físico
+    var noRestock = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w69-ultra', qty: 3 }], delivery: { mode: 'pickup' }, customer: { name: 'Outro Cliente', phone: '62933330000' } });
+    assert.equal(noRestock.status, 409);
+    // cancelar devolve: −3 + 5 = 2
+    var canceled = await call(worker, s.env, 'POST', '/api/admin/orders/' + created.data.id + '/cancel', {}, { Authorization: 'Bearer gh-admin' });
+    assert.equal(canceled.status, 200, JSON.stringify(canceled.data));
+    assert.equal(stockOf('w34-plus'), 2);
   } finally {
     global.fetch = realFetch;
   }

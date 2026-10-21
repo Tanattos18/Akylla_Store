@@ -78,7 +78,8 @@ test('preços citados na página apontam para produtos existentes', function () 
 test('estoque é inteiro e não negativo', function () {
   PRODUCTS.forEach(function (p) {
     if (p.stock == null) return;
-    assert.ok(Number.isInteger(p.stock) && p.stock >= 0, p.id + ': estoque inválido (' + p.stock + ')');
+    /* pode ficar negativo com a venda com reposição (unidades a comprar no fornecedor) */
+    assert.ok(Number.isInteger(p.stock) && p.stock >= -99, p.id + ': estoque inválido (' + p.stock + ')');
   });
 });
 

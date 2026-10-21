@@ -151,16 +151,20 @@ async function commitStock(env, order, kind) {
   const prefix = kind === 'reserve' ? 'reserva: pedido ' + order.id + ' aguardando'
     : kind === 'return' ? 'estoque devolvido: pedido ' + order.id + ' cancelado'
     : 'venda: pedido ' + order.id + ' (';
+  /* configuração da reposição (para saber quanto dá para vender além do físico) */
+  const restockConfig = kind === 'reserve' ? (await loadCatalog(env, true)).config : null;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const file = await readFile(env, PRODUCTS_PATH);
     /* confere depois de ler o arquivo: se outra chamada gravou antes, a nossa gravação seria repetida */
     if (await alreadyCommitted(env, r, prefix)) { catalogCache = null; return Object.assign([], { duplicate: true }); }
     const catalog = Formato.parseProducts(file.text);
     if (kind === 'reserve') {
-      const missing = stockShortfall(catalog.products, order.lines);
+      const missing = stockShortfall(catalog.products, order.lines, restockConfig);
       if (missing.length) throw new OrderError('Sem estoque suficiente agora: ' + missing.join(', ') + '. Atualize a página.', 409);
     }
     const result = kind === 'return' ? applyReturn(catalog.products, order.lines) : applySale(catalog.products, order.lines);
+    const supply = result.supply || {};
+    const owed = order.lines.filter((l) => supply[l.id]).map((l) => supply[l.id] + 'x ' + l.name);
     const text = Formato.serializeProducts(catalog.categories, result.products);
     const summary = order.lines.map((l) => l.qty + 'x ' + l.name).join(', ');
     const title = kind === 'reserve' ? 'reserva: pedido ' + order.id + ' aguardando confirmação do PIX (' + summary + ')'
@@ -174,13 +178,16 @@ async function commitStock(env, order, kind) {
         method: 'PUT',
         body: {
           message: title + '\n\n' + detail + '\n' +
-            (result.warnings.length ? 'ATENÇÃO: ' + result.warnings.join('; ') + '\n' : '') + '\nAlteração automática de estoque pelo servidor.',
+            (result.warnings.length ? 'ATENÇÃO: ' + result.warnings.join('; ') + '\n' : '') +
+            (owed.length ? 'COMPRAR NO FORNECEDOR: ' + owed.join(', ') + '\n' : '') + '\nAlteração automática de estoque pelo servidor.',
           content: utf8ToB64(text),
           sha: file.sha,
           branch: env.GITHUB_BRANCH || 'main'
         }
       });
       catalogCache = null;
+      /* marca no pedido quantas unidades de cada item vêm do fornecedor */
+      if (kind !== 'return') order.lines.forEach((l) => { l.fromSupplier = supply[l.id] || 0; });
       return result.warnings;
     } catch (err) {
       if (err.status !== 409 && err.status !== 422) throw err;
@@ -360,9 +367,10 @@ function pushMessage(order) {
   const items = (order.lines || []).reduce((n, l) => n + l.qty, 0);
   const who = order.customer && order.customer.name ? order.customer.name + ' · ' : '';
   const status = order.status === 'paid' ? 'pago' : order.status === 'review' ? 'pagamento para revisar' : 'aguardando confirmação do PIX';
+  const owed = (order.lines || []).reduce((n, l) => n + (l.fromSupplier || 0), 0);
   return {
     title: (order.status === 'paid' ? '✅ Venda paga ' : '🛒 Novo pedido ') + order.id,
-    body: who + items + (items === 1 ? ' item' : ' itens') + ' · R$ ' + (order.total / 100).toFixed(2).replace('.', ',') + ' — ' + status,
+    body: who + items + (items === 1 ? ' item' : ' itens') + ' · R$ ' + (order.total / 100).toFixed(2).replace('.', ',') + ' — ' + status + (owed ? ' · ' + owed + ' para comprar no fornecedor' : ''),
     tag: order.id,
     url: '/admin/#pedidos'
   };

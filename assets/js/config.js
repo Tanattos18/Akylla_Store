@@ -94,5 +94,10 @@ window.AKYLLA_CONFIG = {
     "enabled": true,
     "maxInstallments": 12,
     "feePercent": 4.98
+  },
+  "restock": {
+    "enabled": true,
+    "default": 10,
+    "days": 2
   }
 };

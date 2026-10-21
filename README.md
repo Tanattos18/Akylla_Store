@@ -400,6 +400,14 @@ node scripts/atualizar-precos.js
 - Os cartões mostram só **Última unidade**, **Esgotado** e o selo **Mais vendido**. Os detalhes do produto mostram o estoque completo.
 - Com o servidor ligado, o estoque **baixa sozinho** quando o cliente envia o comprovante (reserva) e **volta** se o pedido for cancelado. Vendas feitas fora do site (no balcão, por exemplo) você ajusta com **−1** na aba Estoque.
 
+### 6.3.1 Venda com reposição pelo fornecedor
+
+- Painel → **Estoque** → *Venda com reposição pelo fornecedor*: ligar, **quantos a mais por produto** (padrão +10) e **prazo extra** para o cliente (padrão 2 dias úteis). Por produto, o editor tem o campo **Reposição** (vazio = padrão; 0 = vende só o que tem em casa; ex.: drone +2).
+- O site vende até **estoque físico + reposição** e mostra só “Em estoque” (sem “Última unidade”). Se o pedido passar do físico, o checkout avisa: “… é enviado em até 2 dias úteis (reposição do fornecedor)”.
+- O estoque físico pode ficar **negativo**: −3 = 3 unidades vendidas para comprar no fornecedor (selo “Comprar 3 no fornecedor” no Estoque). Cada pedido mostra “X de casa + Y do fornecedor”, o commit do estoque diz “COMPRAR NO FORNECEDOR” e a notificação avisa.
+- Ao receber do fornecedor, ajuste o estoque físico para o que sobrou em casa. Cancelamentos devolvem as unidades normalmente.
+- Use só em produtos que o fornecedor sempre tem; se faltar, cancele e devolva o valor ao cliente.
+
 ### 6.4 Frete e entrega
 
 - No checkout, o cliente escolhe **Retirar na loja** (grátis) ou **Entregar**. O QR do PIX só aparece depois dessa escolha.
