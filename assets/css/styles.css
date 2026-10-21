@@ -4390,3 +4390,76 @@ dialog::backdrop {
 .product-dialog-thumbs > :last-child {
   margin-right: auto;
 }
+
+/* Resumo do checkout: alterar quantidade e remover itens */
+.summary-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.45rem;
+}
+
+.summary-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  border: 1px solid var(--line-dark);
+  border-radius: 999px;
+}
+
+.summary-qty button,
+.summary-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.summary-qty button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.summary-qty svg,
+.summary-remove svg {
+  width: 15px;
+  height: 15px;
+}
+
+.summary-qty span {
+  min-width: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.summary-remove {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.summary-qty button:hover,
+.summary-remove:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--brand);
+}
+
+.summary-qty button:focus-visible,
+.summary-remove:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+#sendProof[aria-disabled="true"] {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+}

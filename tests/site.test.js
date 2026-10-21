@@ -242,3 +242,13 @@ test('frete: cotação completa (CEP → mapa → rota) com serviços simulados'
     global.fetch = realFetch;
   }
 });
+
+test('checkout: itens podem ser alterados/removidos e o PIX só sai com a entrega escolhida', function () {
+  var app = read('assets/js/app.js');
+  var html = read('index.html');
+  assert.match(app, /data-co-qty/);
+  assert.match(app, /data-co-remove/);
+  assert.match(app, /function refreshOrderFromCart/);
+  assert.match(app, /aria-disabled', ready \? 'false' : 'true'/);
+  assert.match(html, /id="productDialogBuy"/, 'botão Comprar agora');
+});

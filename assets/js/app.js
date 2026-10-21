@@ -897,6 +897,14 @@
           '  <div>',
           '    <p class="summary-item-name">' + escapeHTML(item.product.shortName) + '</p>',
           '    <p class="summary-item-meta">' + item.qty + 'x • ' + formatBRL(item.unit) + ' cada' + (item.original > item.unit ? ' <s>' + formatBRL(item.original) + '</s>' : '') + '</p>',
+          '    <div class="summary-item-controls">',
+          '      <div class="summary-qty" role="group" aria-label="Quantidade de ' + escapeHTML(item.product.shortName) + '">',
+          '        <button type="button" data-co-qty="-1" data-id="' + escapeHTML(item.product.id) + '" aria-label="Diminuir quantidade de ' + escapeHTML(item.product.shortName) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-minus"></use></svg></button>',
+          '        <span aria-live="polite">' + item.qty + '</span>',
+          '        <button type="button" data-co-qty="1" data-id="' + escapeHTML(item.product.id) + '" aria-label="Aumentar quantidade de ' + escapeHTML(item.product.shortName) + '"' + (item.qty >= maxQty(item.product) ? ' disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg></button>',
+          '      </div>',
+          '      <button type="button" class="summary-remove" data-co-remove="' + escapeHTML(item.product.id) + '" aria-label="Remover ' + escapeHTML(item.product.shortName) + ' do pedido"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-trash"></use></svg> Remover</button>',
+          '    </div>',
           '  </div>',
           '  <span class="summary-item-price">' + formatBRL(item.unit * item.qty) + '</span>',
           '</li>'
@@ -906,6 +914,8 @@
 
     if (els.sendProof) {
       els.sendProof.href = whatsappLink(buildProofMessage(order));
+      els.sendProof.setAttribute('aria-disabled', ready ? 'false' : 'true');
+      if (ready) els.sendProof.removeAttribute('tabindex'); else els.sendProof.setAttribute('tabindex', '-1');
     }
 
     if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
@@ -1102,6 +1112,25 @@
         if (state.order) renderCheckout();
       });
     }
+  }
+
+  function refreshOrderFromCart() {
+    var items = getCartItems();
+    if (!items.length) {
+      state.order = null;
+      closeDialog(els.checkoutDialog);
+      renderCart();
+      toast('Seu pedido ficou vazio. Escolha um produto para continuar.');
+      return;
+    }
+    items = items.map(function (item) {
+      var info = priceInfo(item.product);
+      return { product: item.product, qty: item.qty, unit: info.price, original: info.original };
+    });
+    state.order.items = items;
+    state.order.subtotal = items.reduce(function (total, item) { return total + item.unit * item.qty; }, 0);
+    state.order.savings = items.reduce(function (total, item) { return total + (item.original - item.unit) * item.qty; }, 0);
+    renderCheckout();
   }
 
   function openCheckout() {
@@ -1395,6 +1424,29 @@
   }
 
   function setupCheckout() {
+    if (els.checkoutItems) {
+      els.checkoutItems.addEventListener('click', function (event) {
+        var qty = event.target.closest('[data-co-qty]');
+        var remove = event.target.closest('[data-co-remove]');
+        if (qty) {
+          changeQuantity(qty.getAttribute('data-id'), Number(qty.getAttribute('data-co-qty')));
+          refreshOrderFromCart();
+        } else if (remove) {
+          removeFromCart(remove.getAttribute('data-co-remove'));
+          refreshOrderFromCart();
+        }
+      });
+    }
+
+    if (els.sendProof) {
+      els.sendProof.addEventListener('click', function (event) {
+        if (els.sendProof.getAttribute('aria-disabled') === 'true') {
+          event.preventDefault();
+          toast('Escolha a retirada ou calcule o frete para gerar o PIX primeiro.');
+        }
+      });
+    }
+
     if (els.copyKey) {
       els.copyKey.addEventListener('click', function () {
         copyText(CONFIG.pixKey, 'Chave PIX copiada.');
