@@ -390,6 +390,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 21/10/2026 | Layout: 2 produtos por linha no celular, barra fixa da sacola, 12 produtos por página, tabela de frete recolhível, selo “Mais vendido” (painel), faixa de categorias clicável, foto principal do W31. |
 | 21/10/2026 | Dashboard no painel: vendas confirmadas, total por categoria, produtos vendidos e situação da loja. |
 | 21/10/2026 | PIX manual com reserva de estoque: pedido registrado ao enviar o comprovante, alerta no WhatsApp da loja, confirmar/cancelar no painel, cancelamento automático em 48 h. |
 | 20/10/2026 | Servidor de pagamentos (Mercado Pago): PIX automático, reserva e baixa de estoque, aviso de vendas no WhatsApp, aba Pedidos (aguardando publicação do servidor). |

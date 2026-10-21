@@ -203,7 +203,12 @@ test('promoção: QR do PIX usa o total com desconto', function () {
 
 test('frete: tabela por distância de ida e cidades especiais', function () {
   var Frete = require('../assets/js/frete.js');
-  var cfg = CONFIG;
+  /* tabela fixa de exemplo: os valores reais mudam pelo painel e não devem quebrar o teste */
+  var cfg = JSON.parse(JSON.stringify(CONFIG));
+  cfg.shipping.bands = [[15, 2500], [20, 2800], [25, 3100], [30, 3400], [35, 3700], [40, 4000]].map(function (b) { return { upToKm: b[0], price: b[1] }; });
+  cfg.shipping.extraStepKm = 5;
+  cfg.shipping.extraStepPrice = 300;
+  cfg.shipping.cities = [{ name: 'Senador Canedo', price: 2500 }, { name: 'Aparecida de Goiânia', price: null }, { name: 'Goianira', price: null }, { name: 'Trindade', price: null }];
   var cases = { 0.5: 2500, 15: 2500, 15.1: 2800, 20: 2800, 25: 3100, 30: 3400, 35: 3700, 40: 4000, 40.1: 4300, 45: 4300, 45.1: 4600, 50: 4600 };
   Object.keys(cases).forEach(function (km) {
     assert.equal(Frete.feeForKm(Number(km), cfg), cases[km], km + ' km');

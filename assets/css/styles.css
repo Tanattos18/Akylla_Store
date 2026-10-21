@@ -866,7 +866,8 @@ h3 {
   animation-play-state: paused;
 }
 
-.marquee-track span {
+.marquee-track span,
+.marquee-track a {
   font-family: var(--font-display);
   font-size: 0.78rem;
   font-weight: 700;
@@ -4660,4 +4661,149 @@ dialog::backdrop {
 #sendProof[aria-busy="true"] {
   opacity: 0.7;
   pointer-events: none;
+}
+
+/* ===== Ajustes de layout (21/10) ===== */
+
+/* Transparência: cartões com altura própria; tabela de frete em bloco separado */
+.policy-grid { align-items: start; }
+
+.shipping-details {
+  margin-top: 0.85rem;
+  border: 1px solid rgba(9, 14, 26, 0.08);
+  border-radius: 20px;
+  background: var(--white);
+  overflow: hidden;
+}
+
+.shipping-details summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.05rem 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.shipping-details summary::-webkit-details-marker { display: none; }
+
+.shipping-details summary::after {
+  content: "+";
+  margin-left: auto;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.shipping-details[open] summary::after { content: "−"; }
+
+.shipping-details summary svg { width: 20px; height: 20px; }
+
+.shipping-details .shipping-table {
+  width: calc(100% - 2.8rem);
+  max-width: 640px;
+  margin: 0 1.4rem 1.3rem;
+}
+
+/* Selos do cartão */
+.card-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+.card-badges .stock-badge { margin: 0; }
+.stock-badge--best { background: var(--ink, #060913); color: #ffb35c; }
+
+/* Faixa de categorias clicável */
+.marquee-track a { color: inherit; text-decoration: none; }
+.marquee-track a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Barra fixa da sacola (celular) */
+.cart-bar { display: none; }
+
+@media (max-width: 760px) {
+  .cart-bar:not([hidden]) {
+    position: fixed;
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    left: 0.75rem;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.4rem 0.4rem 0.9rem;
+    border-radius: 999px;
+    background: #060913;
+    color: #fff;
+    box-shadow: 0 12px 30px rgba(6, 9, 19, 0.35);
+    animation: cartBarIn 0.3s ease both;
+  }
+
+  .cart-bar-open {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 0.3rem 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .cart-bar-open svg { flex: none; width: 22px; height: 22px; stroke: #ff8a00; }
+  .cart-bar-open > span { display: grid; line-height: 1.2; }
+  .cart-bar-open strong { font-size: 0.8rem; }
+  .cart-bar-open > span > span { color: rgba(255, 255, 255, 0.75); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+  .cart-bar-checkout {
+    flex: none;
+    min-height: 44px;
+    padding: 0 1.3rem;
+    border: 0;
+    border-radius: 999px;
+    background: #ff8a00;
+    color: #060913;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  body.has-cart-bar .site-footer { padding-bottom: 5.5rem; }
+  body.has-cart-bar .toast { bottom: 5.2rem; }
+}
+
+@keyframes cartBarIn { from { transform: translateY(120%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Topo mais curto no celular */
+@media (max-width: 700px) {
+  .hero-visual { max-width: 300px; }
+  .hero-visual .float-card { display: none; }
+}
+
+/* Catálogo: 2 produtos por linha no celular, cartão enxuto */
+@media (max-width: 640px) {
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+  .product-card { border-radius: 16px; }
+  .product-card:hover { transform: none; }
+  .product-media { padding: 0.55rem; }
+  .product-brand, .product-model, .product-kicker, .product-desc, .details-link, .price-label { display: none; }
+  .media-note { top: 0.45rem; right: 0.45rem; font-size: 0.42rem; }
+  .product-body { padding: 0.65rem 0.7rem 0.75rem; }
+  .card-badges { margin-bottom: 0.35rem; }
+  .card-badges .stock-badge { padding: 0.15rem 0.45rem; font-size: 0.6rem; }
+  .product-card h3 {
+    display: -webkit-box;
+    flex: 1;
+    overflow: hidden;
+    margin-bottom: 0.55rem;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .product-bottom { align-items: flex-end; padding-top: 0.55rem; }
+  .price { font-size: 1rem; }
+  .price-old { font-size: 0.66rem; }
+  .add-btn { width: 38px; height: 38px; flex: none; border-radius: 12px; }
 }

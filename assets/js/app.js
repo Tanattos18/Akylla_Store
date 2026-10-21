@@ -16,7 +16,7 @@
   var Pix = window.AkyllaPix || {};
   var qrFactory = window.qrcode;
   var STORAGE_KEY = 'akylla-cart-v1';
-  var PAGE_SIZE = 8;
+  var PAGE_SIZE = 12;
 
   var productMap = new Map(PRODUCTS.map(function (product) {
     return [product.id, product];
@@ -54,6 +54,9 @@
     cartFoot: document.getElementById('cartFoot'),
     cartTotal: document.getElementById('cartTotal'),
     cartCount: document.getElementById('cartCount'),
+    cartBar: document.getElementById('cartBar'),
+    cartBarCount: document.getElementById('cartBarCount'),
+    cartBarTotal: document.getElementById('cartBarTotal'),
     checkoutBtn: document.getElementById('checkoutBtn'),
     emptyBrowse: document.getElementById('emptyBrowse'),
     mobileMenu: document.getElementById('mobileMenu'),
@@ -157,7 +160,7 @@
   }
 
   /* Bloco de preço (card): preço normal riscado + preço com desconto + selo. */
-  function priceHTML(product) {
+  function priceHTML(product, compact) {
     var info = priceInfo(product);
     if (!info.active) {
       return '        <span class="price">' + formatBRL(info.price) + '</span>';
@@ -166,7 +169,7 @@
       '        <span class="price-old"><span class="sr-only">De </span><s>' + formatBRL(info.original) + '</s>',
       '          <span class="discount-badge">-' + percentText(info.percent) + '</span></span>',
       '        <span class="price"><span class="sr-only">Por </span>' + formatBRL(info.price) + '</span>',
-      promoUntilText(info) ? '        <span class="price-until">Promoção ' + escapeHTML(promoUntilText(info)) + '</span>' : ''
+      !compact && promoUntilText(info) ? '        <span class="price-until">Promoção ' + escapeHTML(promoUntilText(info)) + '</span>' : ''
     ].join('\n');
   }
 
@@ -347,6 +350,14 @@
     return '<span class="stock-badge stock-badge--' + info.tone + (extraClass ? ' ' + extraClass : '') + '">' + escapeHTML(info.text) + '</span>';
   }
 
+  function cardBadges(product) {
+    var html = '';
+    if (product.bestseller) html += '<span class="stock-badge stock-badge--best">Mais vendido</span>';
+    var info = stockInfo(product);
+    if (info && (info.tone === 'out' || maxQty(product) === 1)) html += stockBadge(product);
+    return html ? '    <div class="card-badges">' + html + '</div>' : '';
+  }
+
   function cartTotal() {
     return getCartItems().reduce(function (total, item) {
       return total + salePrice(item.product) * item.qty;
@@ -423,6 +434,12 @@
     }
 
     if (els.cartTotal) els.cartTotal.textContent = formatBRL(total);
+    if (els.cartBar) {
+      els.cartBar.hidden = isEmpty;
+      document.body.classList.toggle('has-cart-bar', !isEmpty);
+      els.cartBarCount.textContent = quantity + (quantity === 1 ? ' item' : ' itens');
+      els.cartBarTotal.textContent = formatBRL(total);
+    }
     if (els.cartFoot) els.cartFoot.hidden = isEmpty;
     if (els.cartEmpty) els.cartEmpty.hidden = !isEmpty;
     if (els.cartItems) els.cartItems.hidden = isEmpty;
@@ -745,7 +762,7 @@
       '  </button>',
       '  <div class="product-body">',
       '    <p class="product-kicker">' + escapeHTML(category) + ' • Cód. ' + escapeHTML(product.code) + '</p>',
-      stockBadge(product),
+      cardBadges(product),
       '    <h3><button class="product-name" type="button" data-view="' + escapeHTML(product.id) + '">' + productName + '</button></h3>',
       '    <p class="product-desc">' + escapeHTML(product.summary || product.description) + '</p>',
       '    <button class="details-link" type="button" data-view="' + escapeHTML(product.id) + '">',
@@ -755,7 +772,7 @@
       '    <div class="product-bottom">',
       '      <span class="price-wrap">',
       '        <span class="price-label">à vista no PIX</span>',
-      priceHTML(product),
+      priceHTML(product, true),
       '      </span>',
       '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="' + (maxQty(product) < 1 ? productName + ' esgotado' : 'Adicionar ' + productName + ' à sacola') + '"' + (maxQty(product) < 1 ? ' disabled' : '') + '>',
       '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',
@@ -1641,6 +1658,17 @@
   }
 
   function setupCart() {
+    var barOpen = document.getElementById('cartBarOpen');
+    var barCheckout = document.getElementById('cartBarCheckout');
+    if (barOpen) barOpen.addEventListener('click', function () { renderCart(); openDialog(els.cartDrawer); });
+    if (barCheckout) barCheckout.addEventListener('click', function () { openCheckout(); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-open-shipping]'), function (link) {
+      link.addEventListener('click', function () {
+        var box = document.getElementById('tabela-frete');
+        if (box) box.open = true;
+      });
+    });
+
     if (els.cartOpen) {
       els.cartOpen.addEventListener('click', function () {
         renderCart();

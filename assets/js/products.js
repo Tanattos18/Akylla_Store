@@ -240,14 +240,14 @@ window.AKYLLA_PRODUCTS = [
     "stock": 3,
     "summary": "Monitoramento de saúde, modos esportivos e carregamento por indução.",
     "description": "Smartwatch com monitoramento cardíaco, pressão arterial e sono, modos esportivos e notificações. Acompanha pulseira e cabo de carregamento por indução; app RDFit para Android e iOS.",
-    "image": "assets/img/products/w31-pro-max.webp",
-    "imageAlt": "Embalagem do relógio inteligente W31 Pro Max Bazik",
+    "image": "assets/img/products/w31-pro-max-5.webp",
+    "imageAlt": "Relógio inteligente W31 Pro Max Bazik com caixa redonda preta",
     "gallery": [
       "assets/img/products/w31-pro-max-1.webp",
       "assets/img/products/w31-pro-max-2.webp",
       "assets/img/products/w31-pro-max-3.webp",
       "assets/img/products/w31-pro-max-4.webp",
-      "assets/img/products/w31-pro-max-5.webp"
+      "assets/img/products/w31-pro-max.webp"
     ],
     "specs": [
       {

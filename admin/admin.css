@@ -340,3 +340,6 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
 .dash-table th { text-align: left; color: var(--muted); font-size: 0.75rem; font-weight: 700; padding: 0.4rem 0.4rem; border-bottom: 1px solid var(--line); }
 .dash-table td { padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--line); }
 .dash-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.dash-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.8rem; }
+.dash-head h3 { margin: 0; }

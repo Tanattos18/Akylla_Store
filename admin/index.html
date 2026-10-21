@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#060913">
   <title>Painel Akylla</title>
   <link rel="icon" href="../assets/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="admin.css?v=20261021-2">
+  <link rel="stylesheet" href="admin.css?v=20261021-3">
 </head>
 <body>
   <header class="topbar">
@@ -106,7 +106,10 @@
       </div>
 
       <section class="card">
-        <h3>Produtos vendidos</h3>
+        <div class="dash-head">
+          <h3>Produtos vendidos</h3>
+          <button type="button" class="btn btn-ghost btn-sm" id="markBest">Marcar os 3 mais vendidos com selo</button>
+        </div>
         <div class="table-wrap"><table class="dash-table" id="prodTable"></table></div>
       </section>
 
@@ -307,6 +310,7 @@
           <label>Preço à vista no PIX (R$) <input name="price" inputmode="decimal" required placeholder="0,00"></label>
           <label>Estoque (unidades) <input name="stock" type="number" min="0" step="1" inputmode="numeric" required></label>
           <label class="check full"><input type="checkbox" name="hidden"> Ocultar do site (rascunho)</label>
+          <label class="check full"><input type="checkbox" name="bestseller"> Selo “Mais vendido” no site</label>
         </section>
 
         <section class="calc">
@@ -350,6 +354,6 @@
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
   <script src="../assets/js/frete.js?v=20261020-13"></script>
-  <script src="admin.js?v=20261021-2"></script>
+  <script src="admin.js?v=20261021-3"></script>
 </body>
 </html>

@@ -948,8 +948,9 @@
     ]);
 
     /* Produtos vendidos */
-    var prods = Object.keys(byProduct).map(function (k) { return byProduct[k]; })
+    var prods = Object.keys(byProduct).map(function (k) { byProduct[k].id = k; return byProduct[k]; })
       .sort(function (a, b) { return b.qty - a.qty || b.value - a.value; });
+    dash.ranking = prods;
     table('#prodTable', ['Produto', 'Código', 'Categoria', 'Qtde vendida', 'Receita', 'Estoque atual'], prods.map(function (p) {
       return [p.name, p.code, catLabel(p.cat), p.qty, brl(p.value), p.stock];
     }), 'Nenhuma venda confirmada no período.');
@@ -973,6 +974,16 @@
     table('#lowTable', ['Produto', 'Código', 'Estoque', 'Situação'], out.concat(low).map(function (p) {
       return [p.shortName, p.code, p.stock || 0, p.stock > 0 ? 'Última unidade' : 'Esgotado'];
     }), 'Tudo com estoque. 👍');
+  }
+
+  /* Selo "Mais vendido": os 3 que mais venderam no período escolhido (fica pendente até publicar) */
+  function markBestsellers() {
+    var top = (dash.ranking || []).filter(function (r) { return state.products.some(function (p) { return p.id === r.id; }); }).slice(0, 3);
+    if (!top.length) { toast('Ainda não há vendas confirmadas no período para escolher os mais vendidos.'); return; }
+    var ids = top.map(function (r) { return r.id; });
+    state.products.forEach(function (p) { if (ids.indexOf(p.id) >= 0) p.bestseller = true; else delete p.bestseller; });
+    renderAll();
+    toast('Selo aplicado em: ' + top.map(function (r) { return r.name; }).join(', ') + '. Clique em Publicar para ir ao site.', 6000);
   }
 
   function renderDayChart(byDay, start) {
@@ -1066,6 +1077,7 @@
     form.elements.stock.value = String(product.stock || 0);
     form.elements.illustrative.checked = !!product.illustrative;
     form.elements.hidden.checked = !!product.hidden;
+    form.elements.bestseller.checked = !!product.bestseller;
     $('#editorTitle').textContent = index == null ? 'Novo produto' : 'Editar: ' + product.shortName;
     $('#deleteProductBtn').hidden = index == null;
     $('#editorError').hidden = true;
@@ -1148,6 +1160,7 @@
     p.specs = readSpecs();
     if (form.elements.illustrative.checked) p.illustrative = true; else delete p.illustrative;
     if (form.elements.hidden.checked) p.hidden = true; else delete p.hidden;
+    if (form.elements.bestseller.checked) p.bestseller = true; else delete p.bestseller;
     p.image = editing.photos[0] || '';
     if (editing.photos.length > 1) p.gallery = editing.photos.slice(1); else delete p.gallery;
     if (!p.image) delete p.image;
@@ -1406,6 +1419,7 @@
     $('#promoSearch').addEventListener('input', renderPromoList);
     $('#ordersReload').addEventListener('click', loadOrders);
     $('#dashReload').addEventListener('click', loadDashboard);
+    $('#markBest').addEventListener('click', markBestsellers);
     document.querySelector('[data-tab="dashboard"]').addEventListener('click', loadDashboard);
     Array.prototype.forEach.call(document.querySelectorAll('[data-period]'), function (chip) {
       chip.addEventListener('click', function () {

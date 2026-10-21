@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-1">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-3">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -297,18 +297,18 @@
 
     <div class="marquee" aria-hidden="true">
       <div class="marquee-track">
-        <span>Smartwatches</span><span class="marquee-dot">•</span>
-        <span>Drones</span><span class="marquee-dot">•</span>
-        <span>Áudio</span><span class="marquee-dot">•</span>
-        <span>Carregadores</span><span class="marquee-dot">•</span>
-        <span>Cabos</span><span class="marquee-dot">•</span>
-        <span>Power banks</span><span class="marquee-dot">•</span>
-        <span>Smartwatches</span><span class="marquee-dot">•</span>
-        <span>Drones</span><span class="marquee-dot">•</span>
-        <span>Áudio</span><span class="marquee-dot">•</span>
-        <span>Carregadores</span><span class="marquee-dot">•</span>
-        <span>Cabos</span><span class="marquee-dot">•</span>
-        <span>Power banks</span><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="smartwatches" tabindex="-1">Smartwatches</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="drones" tabindex="-1">Drones</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="audio" tabindex="-1">Áudio</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="carregadores" tabindex="-1">Carregadores</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="cabos" tabindex="-1">Cabos</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="acessorios" tabindex="-1">Power banks</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="smartwatches" tabindex="-1">Smartwatches</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="drones" tabindex="-1">Drones</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="audio" tabindex="-1">Áudio</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="carregadores" tabindex="-1">Carregadores</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="cabos" tabindex="-1">Cabos</a><span class="marquee-dot">•</span>
+        <a href="#produtos" data-filter-link="acessorios" tabindex="-1">Power banks</a><span class="marquee-dot">•</span>
       </div>
     </div>
 
@@ -319,7 +319,6 @@
             <p class="eyebrow">Catálogo</p>
             <h2 id="produtos-title">Tech que faz sentido.</h2>
             <p class="section-lead"><span data-catalog-count>22</span> itens para elevar o dia a dia — do smartwatch ao drone. Preços à vista no PIX e atendimento para ajudar na escolha.</p>
-            <p class="catalog-promo" data-promo-banner hidden><span class="discount-badge" aria-hidden="true">%</span> <strong data-promo-title>Promoção</strong> <span data-promo-detail></span></p>
           </div>
           <div class="catalog-tools">
             <label class="search-field" for="searchInput">
@@ -468,10 +467,7 @@
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-truck"></use></svg></span>
             <h3>Envio e entrega</h3>
             <p>Entrega em Goiânia com frete pela distância de ida a partir da loja, calculado no checkout pelo seu CEP. Retirada grátis na loja.</p>
-            <table class="shipping-table" data-shipping-table aria-label="Tabela de fretes">
-              <thead><tr><th>Distância / cidade</th><th>Frete</th></tr></thead>
-              <tbody></tbody>
-            </table>
+            <a class="policy-link" href="#tabela-frete" data-open-shipping>Ver tabela de frete<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg></a>
           </article>
           <article class="policy-card">
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-pix"></use></svg></span>
@@ -485,6 +481,14 @@
             <a class="policy-link" href="privacidade.html">Ler a política de privacidade<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg></a>
           </article>
         </div>
+
+        <details class="shipping-details" id="tabela-frete">
+          <summary><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-truck"></use></svg> Tabela de frete por distância e cidade</summary>
+          <table class="shipping-table" data-shipping-table aria-label="Tabela de fretes">
+            <thead><tr><th>Distância / cidade</th><th>Frete</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
 
         <div class="transparency-note">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-chat"></use></svg>
@@ -919,6 +923,14 @@
     </div>
   </dialog>
 
+  <div class="cart-bar" id="cartBar" hidden>
+    <button class="cart-bar-open" type="button" id="cartBarOpen" aria-label="Abrir sacola">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-bag"></use></svg>
+      <span><strong id="cartBarCount">0 itens</strong><span id="cartBarTotal">R$ 0,00</span></span>
+    </button>
+    <button class="cart-bar-checkout" type="button" id="cartBarCheckout">Finalizar</button>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <noscript>
@@ -927,12 +939,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261021-1" defer></script>
-  <script src="assets/js/config.js?v=20261021-1" defer></script>
-  <script src="assets/js/products.js?v=20261021-1" defer></script>
-  <script src="assets/js/pix.js?v=20261021-1" defer></script>
-  <script src="assets/js/promo.js?v=20261021-1" defer></script>
-  <script src="assets/js/frete.js?v=20261021-1" defer></script>
-  <script src="assets/js/app.js?v=20261021-1" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261021-3" defer></script>
+  <script src="assets/js/config.js?v=20261021-3" defer></script>
+  <script src="assets/js/products.js?v=20261021-3" defer></script>
+  <script src="assets/js/pix.js?v=20261021-3" defer></script>
+  <script src="assets/js/promo.js?v=20261021-3" defer></script>
+  <script src="assets/js/frete.js?v=20261021-3" defer></script>
+  <script src="assets/js/app.js?v=20261021-3" defer></script>
 </body>
 </html>
