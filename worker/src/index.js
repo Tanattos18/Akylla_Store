@@ -1,7 +1,13 @@
 /*
  * Akylla Shop — servidor de pagamentos (Cloudflare Worker).
  *
- * Rotas:
+ * Rotas — PIX manual com reserva (padrão atual):
+ *   POST /api/manual-orders              registra o pedido do PIX manual e RESERVA (baixa) o estoque
+ *   POST /api/admin/orders/:id/confirm   painel: pagamento conferido → mantém a baixa
+ *   POST /api/admin/orders/:id/cancel    painel: não pago → devolve o estoque
+ *   (agendado, de hora em hora)          pedidos sem confirmação há AUTO_CANCEL_HOURS → cancela e devolve
+ *
+ * Rotas — Mercado Pago automático (opcional, para o futuro):
  *   POST /api/orders              cria o pedido: valida estoque, recalcula preço/frete,
  *                                 reserva o estoque e gera o PIX no Mercado Pago
  *   GET  /api/orders/:id          status do pedido (consulta o Mercado Pago se estiver pendente)
@@ -21,7 +27,7 @@
  */
 import {
   OrderError, brazilNow, newOrderId, reservedByProduct, buildLines, serverShipping,
-  applySale, centsToReais, mpDate, Formato, cleanCustomer, saleMessage
+  applySale, applyReturn, stockShortfall, centsToReais, mpDate, Formato, cleanCustomer, saleMessage
 } from './logic.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
@@ -110,21 +116,36 @@ async function loadCatalog(env, fresh) {
   return catalogCache;
 }
 
-/* Baixa o estoque no products.js (com nova tentativa se alguém publicou ao mesmo tempo). */
-async function commitSale(env, order) {
+/*
+ * Grava uma mudança de estoque no products.js (com nova tentativa se alguém publicou ao mesmo tempo).
+ *   kind 'sale'    → baixa (venda paga pelo Mercado Pago)
+ *   kind 'reserve' → baixa (pedido PIX manual aguardando confirmação); recusa se faltar estoque
+ *   kind 'return'  → devolve (pedido cancelado)
+ */
+async function commitStock(env, order, kind) {
   const r = await repo(env);
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const file = await readFile(env, PRODUCTS_PATH);
     const catalog = Formato.parseProducts(file.text);
-    const result = applySale(catalog.products, order.lines);
+    if (kind === 'reserve') {
+      const missing = stockShortfall(catalog.products, order.lines);
+      if (missing.length) throw new OrderError('Sem estoque suficiente agora: ' + missing.join(', ') + '. Atualize a página.', 409);
+    }
+    const result = kind === 'return' ? applyReturn(catalog.products, order.lines) : applySale(catalog.products, order.lines);
     const text = Formato.serializeProducts(catalog.categories, result.products);
     const summary = order.lines.map((l) => l.qty + 'x ' + l.name).join(', ');
+    const title = kind === 'reserve' ? 'reserva: pedido ' + order.id + ' aguardando confirmação do PIX (' + summary + ')'
+      : kind === 'return' ? 'estoque devolvido: pedido ' + order.id + ' cancelado (' + summary + ')'
+      : 'venda: pedido ' + order.id + ' (' + summary + ')';
+    const detail = kind === 'sale' ? 'Pagamento Mercado Pago ' + order.paymentId + ' aprovado.'
+      : kind === 'reserve' ? 'Cliente: ' + ((order.customer && order.customer.name) || '—') + '. Confirmar ou cancelar no painel → Pedidos.'
+      : 'Motivo: ' + (order.cancelReason || 'cancelado');
     try {
       await gh(env, '/repos/' + r + '/contents/' + PRODUCTS_PATH, {
         method: 'PUT',
         body: {
-          message: 'venda: pedido ' + order.id + ' (' + summary + ')\n\nPagamento Mercado Pago ' + order.paymentId + ' aprovado.\n' +
-            (result.warnings.length ? 'ATENÇÃO: ' + result.warnings.join('; ') + '\n' : '') + '\nBaixa automática de estoque pelo servidor.',
+          message: title + '\n\n' + detail + '\n' +
+            (result.warnings.length ? 'ATENÇÃO: ' + result.warnings.join('; ') + '\n' : '') + '\nAlteração automática de estoque pelo servidor.',
           content: utf8ToB64(text),
           sha: file.sha,
           branch: env.GITHUB_BRANCH || 'main'
@@ -138,6 +159,10 @@ async function commitSale(env, order) {
     }
   }
   throw new Error('Não consegui gravar o estoque no GitHub depois de várias tentativas.');
+}
+
+function commitSale(env, order) {
+  return commitStock(env, order, 'sale');
 }
 
 /* ------------------------------ Mercado Pago ------------------------------ */
@@ -290,7 +315,7 @@ async function getOrder(env, id) {
 async function saveOrder(env, order) {
   await env.ORDERS.put('order:' + order.id, JSON.stringify(order), {
     expirationTtl: ORDER_TTL,
-    metadata: { status: order.status, total: order.total, createdAt: order.createdAt }
+    metadata: { status: order.status, total: order.total, createdAt: order.createdAt, manual: !!order.manual }
   });
 }
 
@@ -330,6 +355,10 @@ function publicOrder(order) {
     paymentId: order.paymentId,
     pix: order.status === 'pending' ? order.pix : undefined,
     paidAt: order.paidAt,
+    createdAt: order.createdAt,
+    manual: !!order.manual,
+    canceledAt: order.canceledAt,
+    cancelReason: order.cancelReason,
     customerName: order.customer ? order.customer.name : ''
   };
 }
@@ -450,8 +479,8 @@ async function webhook(request, env) {
   return json({ ok: true, status: result.status });
 }
 
-/* Painel: lista pedidos (quem tem a chave do GitHub com permissão de escrita). */
-async function adminOrders(request, env) {
+/* Quem tem a chave do GitHub com permissão de escrita no repositório = dono da loja. */
+async function requireAdmin(request, env) {
   const auth = request.headers.get('Authorization') || '';
   const token = auth.replace(/^Bearer\s+/i, '');
   if (!token) throw new OrderError('Sem autorização.', 401);
@@ -460,6 +489,95 @@ async function adminOrders(request, env) {
   });
   const info = await check.json().catch(() => ({}));
   if (!check.ok || !info.permissions || !info.permissions.push) throw new OrderError('Chave sem permissão.', 403);
+}
+
+/* ------------------------- PIX manual com reserva ------------------------- */
+
+async function rateLimit(env, request, limit) {
+  const ip = request.headers.get('CF-Connecting-IP') || 'local';
+  const key = 'rl:' + ip + ':' + Math.floor(Date.now() / 3600000);
+  const count = Number(await env.ORDERS.get(key)) || 0;
+  if (count >= limit) throw new OrderError('Muitos pedidos seguidos deste aparelho. Fale com a gente no WhatsApp.', 429);
+  await env.ORDERS.put(key, String(count + 1), { expirationTtl: 3700 });
+}
+
+async function createManualOrder(request, env) {
+  await rateLimit(env, request, Number(env.MANUAL_ORDERS_PER_HOUR) || 5);
+  const body = await request.json().catch(() => null);
+  if (!body) throw new OrderError('Pedido inválido.');
+  const catalog = await loadCatalog(env, true);
+  const now = Date.now();
+  const built = buildLines({ products: catalog.products, config: catalog.config, items: body.items, reserved: {}, now: brazilNow(now) });
+  const customer = cleanCustomer(body.customer);
+  const shipping = await serverShipping(body.delivery, catalog.config);
+
+  /* Usa o número que já está no PIX do cliente (txid), se for válido e inédito. */
+  let id = /^AK-[A-Z0-9]{6,16}$/.test(String(body.orderId || '')) ? String(body.orderId) : newOrderId(now);
+  if (await getOrder(env, id)) id = newOrderId(now);
+
+  const hours = Math.max(1, Number(env.AUTO_CANCEL_HOURS) || 48);
+  const order = {
+    id,
+    manual: true,
+    status: 'awaiting',
+    createdAt: now,
+    autoCancelAt: now + hours * 3600 * 1000,
+    lines: built.lines,
+    subtotal: built.subtotal,
+    savings: built.savings,
+    shipping,
+    total: built.subtotal + shipping.fee,
+    customer,
+    paymentId: ''
+  };
+  await commitStock(env, order, 'reserve');
+  order.stockUpdated = true;
+  order.notified = await notifyStore(env, order);
+  await saveOrder(env, order);
+  return json(publicOrder(order), 201);
+}
+
+async function cancelManual(env, order, reason) {
+  if (order.status !== 'awaiting') return order;
+  order.cancelReason = reason;
+  await commitStock(env, order, 'return');
+  order.status = 'canceled';
+  order.canceledAt = Date.now();
+  await saveOrder(env, order);
+  return order;
+}
+
+async function adminAction(request, env, id, action) {
+  await requireAdmin(request, env);
+  const order = await getOrder(env, id);
+  if (!order) throw new OrderError('Pedido não encontrado.', 404);
+  if (order.status !== 'awaiting') throw new OrderError('Este pedido já está ' + (order.status === 'paid' ? 'confirmado' : 'cancelado') + '.', 409);
+  if (action === 'confirm') {
+    order.status = 'paid';
+    order.paidAt = Date.now();
+    await saveOrder(env, order);
+  } else {
+    await cancelManual(env, order, 'cancelado no painel (pagamento não confirmado)');
+  }
+  return json(publicOrder(order));
+}
+
+/* Executado de hora em hora: pedidos sem confirmação há muito tempo voltam para o estoque. */
+async function autoCancel(env) {
+  const list = await env.ORDERS.list({ prefix: 'order:' });
+  const now = Date.now();
+  const hours = Math.max(1, Number(env.AUTO_CANCEL_HOURS) || 48);
+  const due = list.keys.filter((k) => k.metadata && k.metadata.status === 'awaiting' && now - k.metadata.createdAt > hours * 3600 * 1000);
+  for (const k of due) {
+    const order = await env.ORDERS.get(k.name, 'json');
+    if (order) await cancelManual(env, order, 'sem confirmação em ' + hours + ' h (cancelado automaticamente)').catch((err) => console.error(err));
+  }
+  return due.length;
+}
+
+/* Painel: lista pedidos. */
+async function adminOrders(request, env) {
+  await requireAdmin(request, env);
 
   const list = await env.ORDERS.list({ prefix: 'order:' });
   const keys = list.keys
@@ -480,7 +598,10 @@ export default {
     try {
       let response;
       const match = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]{6,40})(\/cancel)?$/);
-      if (url.pathname === '/api/health') response = json({ ok: true, repo: env.GITHUB_REPO, configured: !!(env.MP_ACCESS_TOKEN && env.GITHUB_TOKEN) });
+      const admin = url.pathname.match(/^\/api\/admin\/orders\/([A-Z0-9-]{6,40})\/(confirm|cancel)$/);
+      if (url.pathname === '/api/health') response = json({ ok: true, repo: env.GITHUB_REPO, configured: !!env.GITHUB_TOKEN, manual: !!env.GITHUB_TOKEN, mercadopago: !!(env.MP_ACCESS_TOKEN && env.GITHUB_TOKEN), whatsappAlerts: !!env.CALLMEBOT_APIKEY });
+      else if (url.pathname === '/api/manual-orders' && request.method === 'POST') response = await createManualOrder(request, env);
+      else if (admin && request.method === 'POST') response = await adminAction(request, env, admin[1], admin[2]);
       else if (url.pathname === '/api/orders' && request.method === 'POST') response = await createOrder(request, env);
       else if (match && match[2] && request.method === 'POST') response = await cancelOrder(env, match[1]);
       else if (match && request.method === 'GET') response = await orderStatus(env, match[1]);
@@ -495,5 +616,11 @@ export default {
       if (!(err instanceof OrderError)) console.error(err);
       return json({ error: message }, status, cors);
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(autoCancel(env));
   }
 };
+
+export { autoCancel };

@@ -4630,3 +4630,34 @@ dialog::backdrop {
   color: #17723a;
   font-weight: 700;
 }
+
+/* PIX manual: dados do cliente */
+.manual-customer {
+  margin-top: 1.2rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+}
+
+.manual-customer[hidden] {
+  display: none;
+}
+
+.manual-error {
+  margin: 0.6rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  background: #fde8e8;
+  color: #b42318;
+  font-size: 0.88rem;
+}
+
+.manual-error[hidden] {
+  display: none;
+}
+
+#sendProof[aria-busy="true"] {
+  opacity: 0.7;
+  pointer-events: none;
+}

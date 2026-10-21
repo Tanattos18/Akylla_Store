@@ -720,8 +720,28 @@
     paid: ['ok', 'Pago'],
     pending: ['low', 'Aguardando PIX'],
     expired: ['', 'Expirado/cancelado'],
-    review: ['out', 'Conferir pagamento']
+    review: ['out', 'Conferir pagamento'],
+    awaiting: ['low', 'Aguardando confirmação do PIX'],
+    canceled: ['', 'Cancelado (estoque devolvido)']
   };
+
+  function orderAction(id, action) {
+    var api = String(state.config.paymentApiUrl || '').replace(/\/+$/, '');
+    var question = action === 'confirm'
+      ? 'Confirmar que o PIX do pedido ' + id + ' caiu na conta? O produto continua fora do estoque.'
+      : 'Cancelar o pedido ' + id + '? O produto VOLTA para o estoque e para a vitrine.';
+    if (!confirm(question)) return;
+    busy(action === 'confirm' ? 'Confirmando…' : 'Cancelando e devolvendo ao estoque…');
+    fetch(api + '/api/admin/orders/' + encodeURIComponent(id) + '/' + action, { method: 'POST', headers: { Authorization: 'Bearer ' + state.token } })
+      .then(function (res) { return res.json().then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
+      .then(function () {
+        toast(action === 'confirm' ? 'Pagamento confirmado.' : 'Pedido cancelado e estoque devolvido (o site atualiza em ~1 min).', 5000);
+        loadOrders();
+        return loadData().then(renderAll);
+      })
+      .catch(function (err) { toast('Não foi possível: ' + err.message, 6000); })
+      .finally(function () { busy(''); });
+  }
 
   function loadOrders() {
     var api = String(state.config.paymentApiUrl || '').replace(/\/+$/, '');
@@ -739,14 +759,15 @@
       .then(function (data) {
         list.innerHTML = '';
         var paid = data.orders.filter(function (o) { return o.status === 'paid'; });
+        var waiting = data.orders.filter(function (o) { return o.status === 'awaiting'; }).length;
         var sum = paid.reduce(function (t, o) { return t + o.total; }, 0);
-        $('#ordersSummary').textContent = data.orders.length + ' pedido(s) · ' + paid.length + ' pago(s) · ' + brl(sum);
+        $('#ordersSummary').textContent = (waiting ? waiting + ' aguardando confirmação · ' : '') + paid.length + ' pago(s) · ' + brl(sum) + ' · ' + data.orders.length + ' no total';
         if (!data.orders.length) list.appendChild(el('li', { class: 'muted', text: 'Nenhum pedido ainda.' }));
         data.orders.forEach(function (o) {
           var st = STATUS[o.status] || ['', o.status];
           var d = o.delivery || {};
           var a = d.address || {};
-          var when = new Date(o.paidAt || o.expiresAt - 30 * 60000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+          var when = new Date(o.createdAt || o.paidAt || o.expiresAt - 30 * 60000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
           var where = d.mode === 'pickup' ? 'Retirada na loja'
             : [a.street, a.number].filter(Boolean).join(', ') + (d.complement ? ' — ' + d.complement : '') + ' · ' + a.district + ', ' + a.city + '/' + a.uf + ' · CEP ' + a.cep;
           var c = o.customer || {};
@@ -763,7 +784,12 @@
             el('p', { text: 'Entrega: ' + where + ' · Frete: ' + (d.mode === 'pickup' ? 'grátis' : d.kind === 'carrier' ? 'transportadora (cotar)' : d.kind === 'negotiable' ? 'a combinar' : brl(o.shipping)) }),
             el('p', { class: 'order-total', text: 'Total: ' + brl(o.total) + (o.paymentId ? ' · Mercado Pago #' + o.paymentId : '') }),
             o.status === 'paid' ? el('p', { class: 'muted', text: (o.stockUpdated ? 'Estoque baixado automaticamente.' : 'ATENÇÃO: estoque não atualizado — ' + (o.stockError || '')) + (o.notified ? ' Aviso enviado no WhatsApp.' : '') }) : null,
-            o.reviewReason ? el('p', { class: 'warn', text: o.reviewReason }) : null
+            o.reviewReason ? el('p', { class: 'warn', text: o.reviewReason }) : null,
+            o.cancelReason && o.status === 'canceled' ? el('p', { class: 'muted', text: 'Motivo: ' + o.cancelReason }) : null,
+            o.status === 'awaiting' ? el('div', { class: 'order-actions' }, [
+              el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: '✓ Confirmar pagamento', onclick: function () { orderAction(o.id, 'confirm'); } }),
+              el('button', { type: 'button', class: 'btn btn-danger btn-sm', text: 'Cancelar e devolver ao estoque', onclick: function () { orderAction(o.id, 'cancel'); } })
+            ]) : null
           ]));
         });
       })

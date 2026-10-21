@@ -293,3 +293,5 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
 .order-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .order-lines { margin: 0.4rem 0 0; padding-left: 1.1rem; font-size: 0.88rem; }
 .order-total { font-weight: 700; }
+
+.order-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }

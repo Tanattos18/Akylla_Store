@@ -117,6 +117,10 @@
     mpErrorText: document.getElementById('mpErrorText'),
     mpManual: document.getElementById('mpManual'),
     checkoutSteps: document.getElementById('checkoutSteps'),
+    manualCustomer: document.getElementById('manualCustomer'),
+    manualName: document.getElementById('manualName'),
+    manualPhone: document.getElementById('manualPhone'),
+    manualError: document.getElementById('manualError'),
     pixLocked: document.getElementById('pixLocked'),
     checkoutSubtotal: document.getElementById('checkoutSubtotal'),
     checkoutShipping: document.getElementById('checkoutShipping'),
@@ -849,15 +853,19 @@
       .slice(0, 25);
   }
 
-  function buildProofMessage(order) {
+  function buildProofMessage(order, customer, registered) {
     var lines = order.items.map(function (item) {
       return '• ' + item.qty + 'x ' + item.product.shortName + ' (cód. ' + item.product.code + ') — ' + formatBRL(item.unit * item.qty);
     });
+    var c = customer || {};
+    var when = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
     return [
-      'Olá! Fiz um pedido na Akylla Shop.',
+      registered ? '🧾 NOVO PEDIDO — Akylla Shop' : 'Olá! Fiz um pedido na Akylla Shop.',
       '',
       'Pedido: ' + order.id,
+      'Data: ' + when,
+      c.name ? 'Cliente: ' + c.name + (c.phone ? ' · WhatsApp ' + c.phone : '') : '',
       '',
       lines.join('\n'),
       '',
@@ -866,7 +874,7 @@
       deliveryMessageLines().join('\n'),
       'Total: ' + formatBRL(order.total),
       '',
-      'Vou enviar o comprovante do PIX agora.'
+      registered ? 'Paguei o PIX e vou enviar o comprovante agora. (Pedido registrado no site — produto separado aguardando a confirmação.)' : 'Vou enviar o comprovante do PIX agora.'
     ].filter(function (line, i, all) { return line !== '' || all[i - 1] !== ''; }).join('\n');
   }
 
@@ -914,6 +922,7 @@
     if (els.pixBox) els.pixBox.hidden = !ready || auto;
     if (els.pixLocked) els.pixLocked.hidden = ready;
     if (els.mpBox) els.mpBox.hidden = !ready || !auto;
+    if (els.manualCustomer) els.manualCustomer.hidden = !ready || auto || !!state.manualSent;
     if (auto) renderMercadoPago(ready);
 
     if (els.checkoutItems) {
@@ -1668,12 +1677,91 @@
     }
   }
 
+  function manualFail(message) {
+    if (els.manualError) {
+      els.manualError.textContent = message;
+      els.manualError.hidden = !message;
+    }
+  }
+
+  function finishManual(id, link, win) {
+    if (win && !win.closed) win.location.href = link; else window.location.href = link;
+    state.manualSent = id;
+    state.cart = [];
+    saveCart();
+    renderCart();
+    showManualSent(id);
+  }
+
+  var sendingManual = false;
+  function sendManualOrder() {
+    if (sendingManual || !state.order) return;
+    var name = els.manualName ? els.manualName.value.replace(/\s+/g, ' ').trim() : '';
+    var phone = els.manualPhone ? els.manualPhone.value.trim() : '';
+    if (name.length < 3) {
+      manualFail('Informe seu nome completo para registrarmos o pedido.');
+      if (els.manualName) els.manualName.focus();
+      return;
+    }
+    manualFail('');
+    var customer = { name: name, phone: phone };
+    var order = state.order;
+    var api = String(CONFIG.paymentApiUrl || '').replace(/\/+$/, '');
+    if (!api) {
+      finishManual(order.id, whatsappLink(buildProofMessage(order, customer, false)), null);
+      return;
+    }
+
+    /* abre a aba já no clique (o navegador bloqueia janelas abertas depois de esperar a internet) */
+    var win = window.open('', '_blank');
+    var d = state.delivery;
+    sendingManual = true;
+    if (els.sendProof) els.sendProof.setAttribute('aria-busy', 'true');
+    fetch(api + '/api/manual-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: order.id,
+        items: state.cart.map(function (i) { return { id: i.id, qty: i.qty }; }),
+        delivery: d.mode === 'pickup' ? { mode: 'pickup' } : {
+          mode: 'delivery',
+          cep: d.quote ? d.quote.address.cep : '',
+          number: d.quote ? d.quote.address.number : '',
+          complement: d.complement || ''
+        },
+        customer: customer
+      })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) { var e = new Error(data.error || 'Erro ' + res.status); e.status = res.status; throw e; }
+        return data;
+      });
+    }).then(function (saved) {
+      if (saved.id && saved.id !== order.id) order.id = saved.id;
+      if (saved.total && saved.total !== order.total) {
+        toast('Valor conferido pelo sistema: ' + formatBRL(saved.total) + '.');
+      }
+      finishManual(order.id, whatsappLink(buildProofMessage(order, customer, true)), win);
+    }).catch(function (error) {
+      if (error.status === 409 || error.status === 429 || error.status === 400) {
+        if (win) win.close();
+        manualFail(error.message);
+        return;
+      }
+      /* servidor fora do ar: o pedido segue pelo WhatsApp mesmo assim (a loja ajusta o estoque no painel) */
+      finishManual(order.id, whatsappLink(buildProofMessage(order, customer, false)), win);
+    }).finally(function () {
+      sendingManual = false;
+      if (els.sendProof) els.sendProof.removeAttribute('aria-busy');
+    });
+  }
+
   function showManualSent(id) {
     if (els.pixBox) els.pixBox.hidden = true;
     if (els.pixLocked) {
       els.pixLocked.hidden = false;
       els.pixLocked.classList.add('is-sent');
-      els.pixLocked.textContent = 'Comprovante enviado! Seu pedido ' + id + ' foi registrado. Vamos conferir o pagamento e responder pelo WhatsApp para combinar a ' +
+      els.pixLocked.textContent = 'Pedido ' + id + ' registrado e produto separado para você! Envie o comprovante na conversa do WhatsApp que abriu. Vamos conferir o pagamento e responder para combinar a ' +
         (state.delivery.mode === 'pickup' ? 'retirada.' : 'entrega.');
     }
     if (els.checkoutDialog) els.checkoutDialog.classList.add('is-paying');
@@ -1702,15 +1790,10 @@
           toast('Escolha a retirada ou calcule o frete para gerar o PIX primeiro.');
           return;
         }
-        /* PIX manual: comprovante enviado → pedido registrado, sacola esvaziada. */
-        var sentId = state.order ? state.order.id : '';
-        setTimeout(function () {
-          state.manualSent = sentId;
-          state.cart = [];
-          saveCart();
-          renderCart();
-          showManualSent(sentId);
-        }, 300);
+        /* PIX manual: registra o pedido no servidor (o estoque fica reservado até a loja confirmar)
+           e abre o WhatsApp da loja com o pedido completo. */
+        event.preventDefault();
+        sendManualOrder();
       });
     }
 

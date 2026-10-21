@@ -90,6 +90,26 @@ export async function serverShipping(delivery, config, quoteFn) {
   return { fee, mode: 'delivery', kind: quote.kind, km: quote.km, precision: quote.precision, address: quote.address, complement: String(d.complement || '').slice(0, 120) };
 }
 
+/* Devolve ao estoque os itens de um pedido cancelado. */
+export function applyReturn(products, lines) {
+  const warnings = [];
+  const next = products.map((p) => ({ ...p }));
+  lines.forEach((l) => {
+    const p = next.find((x) => x.id === l.id);
+    if (!p) { warnings.push('produto removido do catálogo: ' + l.name); return; }
+    p.stock = (Number(p.stock) || 0) + l.qty;
+  });
+  return { products: next, warnings };
+}
+
+/* Itens sem estoque suficiente (para recusar antes de reservar). */
+export function stockShortfall(products, lines) {
+  return lines.filter((l) => {
+    const p = products.find((x) => x.id === l.id);
+    return !p || (Number(p.stock) || 0) < l.qty;
+  }).map((l) => l.name);
+}
+
 /* Baixa o estoque dos itens vendidos. Retorna { products, warnings }. */
 export function applySale(products, lines) {
   const warnings = [];
@@ -140,7 +160,9 @@ export function saleMessage(order) {
     : s.kind === 'carrier' ? 'TRANSPORTADORA — cotar (frete × 1,30)'
     : s.kind === 'negotiable' ? 'A COMBINAR'
     : brl(s.fee || 0) + (s.km ? ' (' + String(s.km).replace('.', ',') + ' km' + (s.precision && s.precision !== 'endereço' ? ', aprox. pela ' + s.precision : '') + ')' : '');
-  const title = order.status === 'review' ? '⚠️ PAGAMENTO PARA CONFERIR' : '🛒 NOVA VENDA — Akylla Shop';
+  const title = order.status === 'review' ? '⚠️ PAGAMENTO PARA CONFERIR'
+    : order.status === 'awaiting' ? '🧾 NOVO PEDIDO — PIX A CONFERIR (Akylla Shop)'
+    : '🛒 NOVA VENDA — Akylla Shop';
   return [
     title,
     '',
@@ -153,8 +175,12 @@ export function saleMessage(order) {
     '',
     'Entrega: ' + delivery,
     'Frete: ' + freight,
-    'TOTAL PAGO: ' + brl(order.total),
-    'Mercado Pago: #' + order.paymentId,
-    order.status === 'review' ? 'Motivo: ' + (order.reviewReason || '') : 'Estoque: ' + (order.stockUpdated ? 'baixado automaticamente' : 'NÃO atualizado — ' + (order.stockError || 'verifique no painel'))
+    (order.status === 'awaiting' ? 'TOTAL: ' : 'TOTAL PAGO: ') + brl(order.total),
+    order.status === 'awaiting'
+      ? 'Estoque reservado. Confira o PIX e confirme ou cancele no painel → Pedidos.'
+      : 'Mercado Pago: #' + order.paymentId,
+    order.status === 'review' ? 'Motivo: ' + (order.reviewReason || '')
+      : order.status === 'awaiting' ? ''
+      : 'Estoque: ' + (order.stockUpdated ? 'baixado automaticamente' : 'NÃO atualizado — ' + (order.stockError || 'verifique no painel'))
   ].join('\n');
 }

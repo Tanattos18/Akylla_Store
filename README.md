@@ -139,6 +139,19 @@ node scripts/atualizar-precos.js
 
 ---
 
+## 4.0 Pedidos PIX manual com reserva de estoque (modo atual)
+
+1. O cliente escolhe retirada/entrega, paga o **PIX** (QR da chave da loja), informa **nome** e **WhatsApp** e toca em **Enviar comprovante**.
+2. O site registra o pedido no servidor (`POST /api/manual-orders`): preço, promoção e frete são **recalculados no servidor**, e o **estoque é baixado na hora** (commit “reserva: pedido AK-… aguardando confirmação do PIX”) — o item sai da vitrine. Se acabou o estoque, o pedido é recusado e o cliente é avisado.
+3. Abre o **WhatsApp da loja** com o alerta: pedido, data, cliente, produtos com código, endereço/retirada, frete e total. O cliente envia o comprovante nessa conversa.
+4. Você confere o PIX no banco e, no painel → **Pedidos** (“Aguardando confirmação do PIX”):
+   - **✓ Confirmar pagamento** → o produto continua fora do estoque;
+   - **Cancelar e devolver ao estoque** → o item volta para a vitrine (commit “estoque devolvido: …”).
+5. Sem resposta em **48 h** (`AUTO_CANCEL_HOURS`), o servidor cancela sozinho e devolve o estoque (verificação de hora em hora).
+6. Proteções: máximo de **5 pedidos por hora por aparelho** (`MANUAL_ORDERS_PER_HOUR`); se o servidor estiver fora do ar, o pedido segue pelo WhatsApp sem reserva (ajuste o estoque no painel).
+
+Requisito: o servidor (`worker/`) publicado com o segredo **`GITHUB_TOKEN`** e o endereço do servidor preenchido no painel → Loja. Para cadastrar a chave: `cd worker` → `& .definir-chaves.ps1` (PowerShell) e cole a chave quando pedir.
+
 ## 4.1 Pagamento automático (Mercado Pago) e baixa de estoque
 
 Com o pagamento automático ligado, a compra funciona assim:
@@ -376,6 +389,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 21/10/2026 | PIX manual com reserva de estoque: pedido registrado ao enviar o comprovante, alerta no WhatsApp da loja, confirmar/cancelar no painel, cancelamento automático em 48 h. |
 | 20/10/2026 | Servidor de pagamentos (Mercado Pago): PIX automático, reserva e baixa de estoque, aviso de vendas no WhatsApp, aba Pedidos (aguardando publicação do servidor). |
 | 20/10/2026 | Frete no checkout (tabela por distância, cidades, retirada grátis) e aba Frete no painel. |
 | 20/10/2026 | Marca renomeada de **Akylla Store** para **Akylla Shop** (site, painel, documentação e arte da vitrine). |

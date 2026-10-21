@@ -191,3 +191,60 @@ test('servidor: pagamento com valor diferente vai para revisão e não baixa est
     global.fetch = realFetch;
   }
 });
+
+test('PIX manual: reserva baixa o estoque, painel confirma ou cancela (devolve), automático em 48 h', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  var stockOf = function (id) { return F.parseProducts(s.files['assets/js/products.js'].text).products.find(function (p) { return p.id === id; }).stock; };
+  try {
+    var mod = await import('../worker/src/index.js');
+    var worker = mod.default;
+    var cust = { name: 'Joana Cliente', phone: '62988887777' };
+
+    // 1) pedido registrado ao enviar o comprovante: estoque baixa na hora (2 → 1)
+    var a = await call(worker, s.env, 'POST', '/api/manual-orders', { orderId: 'AK-MANUAL001', items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: cust });
+    assert.equal(a.status, 201, JSON.stringify(a.data));
+    assert.equal(a.data.id, 'AK-MANUAL001', 'usa o número do PIX do cliente');
+    assert.equal(a.data.status, 'awaiting');
+    assert.equal(stockOf('w34-plus'), 1);
+    assert.match(s.commits[0], /^reserva: pedido AK-MANUAL001/);
+    assert.ok(s.notices[0].indexOf('PIX A CONFERIR') >= 0 && s.notices[0].indexOf('Joana Cliente') >= 0, 'alerta para a loja');
+
+    // 2) pedido acima do estoque é recusado
+    var tooMuch = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 2 }], delivery: { mode: 'pickup' }, customer: cust });
+    assert.equal(tooMuch.status, 409);
+
+    // 3) só o dono (chave do GitHub com permissão) confirma/cancela
+    assert.equal((await call(worker, s.env, 'POST', '/api/admin/orders/AK-MANUAL001/confirm')).status, 401);
+    var ok = await call(worker, s.env, 'POST', '/api/admin/orders/AK-MANUAL001/confirm', null, { Authorization: 'Bearer gh-admin' });
+    assert.equal(ok.data.status, 'paid');
+    assert.equal(stockOf('w34-plus'), 1, 'confirmado: a baixa continua');
+    var again = await call(worker, s.env, 'POST', '/api/admin/orders/AK-MANUAL001/cancel', null, { Authorization: 'Bearer gh-admin' });
+    assert.equal(again.status, 409, 'pedido confirmado não pode ser cancelado por engano');
+
+    // 4) cancelado no painel: estoque volta
+    var b = (await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'hw8-pro-max', qty: 2 }], delivery: { mode: 'pickup' }, customer: cust })).data;
+    assert.equal(stockOf('hw8-pro-max'), 0);
+    var canceled = await call(worker, s.env, 'POST', '/api/admin/orders/' + b.id + '/cancel', null, { Authorization: 'Bearer gh-admin' });
+    assert.equal(canceled.data.status, 'canceled');
+    assert.equal(stockOf('hw8-pro-max'), 2, 'cancelado: estoque devolvido');
+    assert.ok(s.commits.some(function (m) { return /^estoque devolvido: pedido /.test(m); }));
+
+    // 5) sem confirmação em 48 h: cancela sozinho e devolve
+    var c = (await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w69-ultra', qty: 1 }], delivery: { mode: 'pickup' }, customer: cust })).data;
+    assert.equal(stockOf('w69-ultra'), 1);
+    var entry = s.env.ORDERS.store.get('order:' + c.id);
+    entry.metadata.createdAt -= 49 * 3600 * 1000;
+    assert.equal(await mod.autoCancel(s.env), 1);
+    assert.equal(stockOf('w69-ultra'), 2);
+    assert.equal((await s.env.ORDERS.get('order:' + c.id, 'json')).status, 'canceled');
+
+    // 6) limite de pedidos por aparelho (5 por hora)
+    var last;
+    for (var i = 0; i < 3; i += 1) last = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w31-pro-max', qty: 1 }], delivery: { mode: 'pickup' }, customer: cust });
+    assert.equal(last.status, 429);
+  } finally {
+    global.fetch = realFetch;
+  }
+});

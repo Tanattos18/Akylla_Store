@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-15">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-1">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -874,6 +874,16 @@
           </div>
         </div>
 
+        <section class="manual-customer" id="manualCustomer" hidden aria-labelledby="manualCustomerTitle">
+          <h3 class="checkout-step-title" id="manualCustomerTitle"><span>3</span> Seus dados para o pedido</h3>
+          <div class="mp-customer">
+            <label>Nome completo <input id="manualName" autocomplete="name" placeholder="Como você se chama?" maxlength="80"></label>
+            <label>WhatsApp <input id="manualPhone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(62) 90000-0000" maxlength="16"></label>
+          </div>
+          <p class="manual-error" id="manualError" role="alert" hidden></p>
+          <p class="mp-note">Depois de pagar, toque em <strong>Enviar comprovante</strong>: seu pedido é registrado, o produto fica separado para você e a conversa abre no WhatsApp da loja para enviar o comprovante.</p>
+        </section>
+
         <ol class="checkout-steps" id="checkoutSteps">
           <li><span>1</span> Pague o PIX com o valor exato do pedido.</li>
           <li><span>2</span> Envie o comprovante pelo WhatsApp.</li>
@@ -917,12 +927,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261020-15" defer></script>
-  <script src="assets/js/config.js?v=20261020-15" defer></script>
-  <script src="assets/js/products.js?v=20261020-15" defer></script>
-  <script src="assets/js/pix.js?v=20261020-15" defer></script>
-  <script src="assets/js/promo.js?v=20261020-15" defer></script>
-  <script src="assets/js/frete.js?v=20261020-15" defer></script>
-  <script src="assets/js/app.js?v=20261020-15" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261021-1" defer></script>
+  <script src="assets/js/config.js?v=20261021-1" defer></script>
+  <script src="assets/js/products.js?v=20261021-1" defer></script>
+  <script src="assets/js/pix.js?v=20261021-1" defer></script>
+  <script src="assets/js/promo.js?v=20261021-1" defer></script>
+  <script src="assets/js/frete.js?v=20261021-1" defer></script>
+  <script src="assets/js/app.js?v=20261021-1" defer></script>
 </body>
 </html>
