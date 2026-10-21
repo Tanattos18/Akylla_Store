@@ -979,9 +979,11 @@
     }
     if (Notification.permission === 'denied') {
       status.className = 'badge out'; status.textContent = 'Bloqueado';
-      text.textContent = 'As notificações estão bloqueadas para este site. Libere em: cadeado ao lado do endereço → Notificações → Permitir. Depois recarregue o painel.';
-      show(false, false, false); return;
+      text.textContent = blockedHelp();
+      $('#alertsEnable').textContent = 'Já liberei, tentar de novo';
+      show(true, false, false); return;
     }
+    $('#alertsEnable').textContent = 'Ativar avisos neste aparelho';
     currentSubscription().then(function (sub) {
       alerts.pushOn = !!sub;
       if (sub) {
@@ -996,21 +998,55 @@
     });
   }
 
+  /* Onde liberar as notificações, conforme o aparelho/navegador. */
+  function blockedHelp() {
+    var ua = navigator.userAgent;
+    if (/android/i.test(ua)) {
+      return 'As notificações estão bloqueadas neste celular. 1) Toque no ícone à esquerda do endereço (akyllashop.com) → Permissões → Notificações → Permitir. ' +
+        '2) Se já estiver permitido: Configurações do Android → Apps → Chrome (ou o navegador que você usa) → Notificações → ativar. Depois toque em “Já liberei, tentar de novo”.';
+    }
+    if (isIOS()) return 'Notificações bloqueadas: Ajustes do iPhone → Notificações → Painel Akylla → Permitir. Depois toque em “Já liberei, tentar de novo”.';
+    if (/edg\//i.test(ua)) return 'Notificações bloqueadas no Edge: clique no cadeado à esquerda do endereço → Permissões deste site → Notificações → Permitir. Depois clique em “Já liberei, tentar de novo”.';
+    return 'Notificações bloqueadas: clique no ícone à esquerda do endereço → Configurações do site → Notificações → Permitir. Depois clique em “Já liberei, tentar de novo”.';
+  }
+
+  /* Promessa com prazo: nada fica preso em "carregando". */
+  function withTimeout(promise, ms, message) {
+    return Promise.race([promise, new Promise(function (resolve, reject) { setTimeout(function () { reject(new Error(message)); }, ms); })]);
+  }
+
+  function askPermission() {
+    if (Notification.permission === 'granted') return Promise.resolve('granted');
+    /* O Edge (e às vezes o Chrome) não abre janela: mostra um sininho na barra de endereço. */
+    var text = $('#alertsText');
+    text.textContent = 'Clique em PERMITIR na janela do navegador. Se nenhuma janela aparecer, procure um sininho 🔔 ou um aviso na barra de endereço (lá em cima) e clique em Permitir.';
+    $('#alertsStatus').className = 'badge low'; $('#alertsStatus').textContent = 'Aguardando você permitir';
+    return new Promise(function (resolve) {
+      var done = false;
+      var finish = function (p) { if (!done) { done = true; resolve(p); } };
+      var r = Notification.requestPermission(finish);
+      if (r && r.then) r.then(finish);
+    });
+  }
+
   function enablePush() {
     unlockAudio();
-    busy('Ativando os avisos…');
-    Notification.requestPermission().then(function (perm) {
-      if (perm !== 'granted') throw new Error('Permissão de notificação negada.');
-      return Promise.all([navigator.serviceWorker.ready, fetch(apiBase() + '/api/push/key', { cache: 'no-store' }).then(function (r) { return r.json(); })]);
+    askPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error(perm === 'denied' ? 'as notificações estão bloqueadas. Veja o passo a passo no quadro.' : 'a permissão não foi dada.');
+      busy('Ativando os avisos…');
+      return Promise.all([
+        withTimeout(navigator.serviceWorker.ready, 15000, 'o navegador não preparou as notificações. Recarregue o painel e tente de novo.'),
+        withTimeout(fetch(apiBase() + '/api/push/key', { cache: 'no-store' }).then(function (r) { return r.json(); }), 15000, 'o servidor não respondeu.')
+      ]);
     }).then(function (res) {
       var reg = res[0];
       var options = { userVisibleOnly: true, applicationServerKey: keyBytes(res[1].publicKey) };
-      return reg.pushManager.subscribe(options).catch(function () {
+      return withTimeout(reg.pushManager.subscribe(options).catch(function () {
         /* assinatura antiga com outra chave: refaz */
         return reg.pushManager.getSubscription().then(function (old) { return old ? old.unsubscribe() : null; }).then(function () { return reg.pushManager.subscribe(options); });
-      });
+      }), 20000, 'o serviço de notificações do navegador não respondeu. Confira a internet e tente de novo.');
     }).then(function (sub) {
-      return adminPost('/api/admin/push/subscribe', { subscription: sub.toJSON(), label: deviceLabel() });
+      return withTimeout(adminPost('/api/admin/push/subscribe', { subscription: sub.toJSON(), label: deviceLabel() }), 20000, 'o servidor não respondeu.');
     }).then(function () {
       toast('Avisos ativados neste aparelho. Use “Enviar aviso de teste” para conferir.', 6000);
     }).catch(function (err) {
@@ -1060,6 +1096,11 @@
     });
     window.addEventListener('focus', function () { if (!$('[data-panel="pedidos"]').hidden) setUnread(0); });
     $('#alertsEnable').addEventListener('click', enablePush);
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'notifications' }).then(function (p) {
+        p.onchange = function () { if (state.token) renderAlerts(); };
+      }).catch(function () {});
+    }
     $('#alertsDisable').addEventListener('click', disablePush);
     $('#alertsTest').addEventListener('click', testPush);
     $('#alertsSoundTest').addEventListener('click', function () { unlockAudio(); var was = soundOn(); try { localStorage.setItem(SOUND_KEY, '1'); } catch (e) {} chime(); if (!was) try { localStorage.setItem(SOUND_KEY, '0'); } catch (e) {} });
