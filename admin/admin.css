@@ -572,3 +572,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .band-list li { grid-template-columns: auto 80px auto 1fr 1fr 40px; }
 .band-promo { border-style: dashed; }
 @media (max-width: 520px) { .band-list li { grid-template-columns: 70px auto 1fr 1fr 40px; } }
+
+/* Caixa de informações (Loja → cartão) */
+.info-box { margin: 0; padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); font-size: 0.85rem; line-height: 1.5; }
+.info-box summary { cursor: pointer; font-weight: 800; color: var(--strong); }
+.info-box ul { margin: 0.5rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; }
