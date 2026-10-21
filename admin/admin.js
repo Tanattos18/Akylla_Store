@@ -40,6 +40,7 @@
       if (value == null || value === false) return;
       if (key === 'class') node.className = value;
       else if (key === 'text') node.textContent = value;
+      else if (key === 'style') node.style.cssText = value;
       else if (key.indexOf('on') === 0) node.addEventListener(key.slice(2), value);
       else if (value === true) node.setAttribute(key, '');
       else node.setAttribute(key, value);
@@ -194,7 +195,9 @@
       $('#loginView').hidden = true;
       $('#appView').hidden = false;
       $('#topActions').hidden = false;
-      $('#whoami').textContent = 'Conectado como ' + state.login;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-whoami]'), function (n) { n.textContent = 'Conectado como ' + state.login; });
+      document.body.classList.add('is-app');
+      $('#pageTitle').hidden = false;
       renderAll();
       startAlerts();
     }).finally(function () { busy(''); });
@@ -368,15 +371,19 @@
     return input.value.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   }
 
+  var stockFilter = 'all';
   function renderStock() {
     var list = $('#stockList');
     var query = normQuery($('#stockSearch'));
     list.innerHTML = '';
-    var units = 0, out = 0;
+    var units = 0, out = 0, low = 0;
     state.products.forEach(function (p, index) {
       units += p.stock > 0 ? p.stock : 0;
       if (!(p.stock > 0)) out += 1;
+      else if (p.stock <= 1) low += 1;
       if (!matches(p, query)) return;
+      if (stockFilter === 'low' && !(p.stock > 0 && p.stock <= 1)) return;
+      if (stockFilter === 'out' && p.stock > 0) return;
 
       var qty = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', value: String(p.stock || 0), 'aria-label': 'Estoque de ' + p.shortName });
       qty.addEventListener('change', function () { setStock(index, parseInt(qty.value, 10)); });
@@ -406,6 +413,8 @@
       ]));
     });
     $('#stockSummary').textContent = state.products.length + ' produtos · ' + units + ' unidades · ' + out + ' esgotado(s)';
+    var lowN = document.querySelector('[data-scount="low"]'); if (lowN) lowN.textContent = low ? String(low) : '';
+    var outN = document.querySelector('[data-scount="out"]'); if (outN) outN.textContent = out ? String(out) : '';
   }
 
   /* " · na promo R$ 68,00" quando o produto está com desconto hoje. */
@@ -744,12 +753,14 @@
       .finally(function () { busy(''); });
   }
 
+  var ordersCache = [];
+  var orderFilter = 'all';
+
   function loadOrders() {
     var api = String(state.config.paymentApiUrl || '').replace(/\/+$/, '');
-    var list = $('#ordersList');
     if (!api) {
       $('#ordersHint').hidden = false;
-      list.innerHTML = '';
+      $('#ordersList').innerHTML = '';
       $('#ordersSummary').textContent = '';
       return;
     }
@@ -757,44 +768,123 @@
     $('#ordersSummary').textContent = 'Carregando…';
     fetch(api + '/api/admin/orders', { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' })
       .then(function (res) { return res.json().then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
-      .then(function (data) {
-        list.innerHTML = '';
-        var paid = data.orders.filter(function (o) { return o.status === 'paid'; });
-        var waiting = data.orders.filter(function (o) { return o.status === 'awaiting'; }).length;
-        var sum = paid.reduce(function (t, o) { return t + o.total; }, 0);
-        $('#ordersSummary').textContent = (waiting ? waiting + ' aguardando confirmação · ' : '') + paid.length + ' pago(s) · ' + brl(sum) + ' · ' + data.orders.length + ' no total';
-        if (!data.orders.length) list.appendChild(el('li', { class: 'muted', text: 'Nenhum pedido ainda.' }));
-        data.orders.forEach(function (o) {
-          var st = STATUS[o.status] || ['', o.status];
-          var d = o.delivery || {};
-          var a = d.address || {};
-          var when = new Date(o.createdAt || o.paidAt || o.expiresAt - 30 * 60000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-          var where = d.mode === 'pickup' ? 'Retirada na loja'
-            : [a.street, a.number].filter(Boolean).join(', ') + (d.complement ? ' — ' + d.complement : '') + ' · ' + a.district + ', ' + a.city + '/' + a.uf + ' · CEP ' + a.cep;
-          var c = o.customer || {};
-          list.appendChild(el('li', { class: 'order-item' }, [
-            el('div', { class: 'order-head' }, [
-              el('strong', { text: o.id }),
-              el('span', { class: 'badge ' + st[0], text: st[1] }),
-              el('span', { class: 'muted', text: when })
-            ]),
-            el('p', { text: (c.name || '—') + (c.phone ? ' · ' + c.phone : '') + (o.email ? ' · ' + o.email : '') }),
-            el('ul', { class: 'order-lines' }, o.lines.map(function (l) {
-              return el('li', { text: l.qty + 'x ' + l.name + ' (cód. ' + l.code + ') — ' + brl(l.unit * l.qty) });
-            })),
-            el('p', { text: 'Entrega: ' + where + ' · Frete: ' + (d.mode === 'pickup' ? 'grátis' : d.kind === 'carrier' ? 'transportadora (cotar)' : d.kind === 'negotiable' ? 'a combinar' : brl(o.shipping)) }),
-            el('p', { class: 'order-total', text: 'Total: ' + brl(o.total) + (o.paymentId ? ' · Mercado Pago #' + o.paymentId : '') }),
-            o.status === 'paid' ? el('p', { class: 'muted', text: (o.stockUpdated ? 'Estoque baixado automaticamente.' : 'ATENÇÃO: estoque não atualizado — ' + (o.stockError || '')) + (o.notified ? ' Aviso enviado no WhatsApp.' : '') }) : null,
-            o.reviewReason ? el('p', { class: 'warn', text: o.reviewReason }) : null,
-            o.cancelReason && o.status === 'canceled' ? el('p', { class: 'muted', text: 'Motivo: ' + o.cancelReason }) : null,
-            o.status === 'awaiting' ? el('div', { class: 'order-actions' }, [
-              el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: '✓ Confirmar pagamento', onclick: function () { orderAction(o.id, 'confirm'); } }),
-              el('button', { type: 'button', class: 'btn btn-danger btn-sm', text: 'Cancelar e devolver ao estoque', onclick: function () { orderAction(o.id, 'cancel'); } })
-            ]) : null
-          ]));
-        });
-      })
+      .then(function (data) { ordersCache = data.orders || []; renderOrders(); })
       .catch(function (err) { $('#ordersSummary').textContent = 'Não foi possível carregar: ' + err.message; });
+  }
+
+  function orderGroup(o) {
+    if (o.status === 'awaiting' || o.status === 'pending' || o.status === 'review') return 'awaiting';
+    if (o.status === 'paid') return 'paid';
+    return 'canceled';
+  }
+
+  function timeAgo(ms) {
+    var min = Math.round((Date.now() - ms) / 60000);
+    if (min < 1) return 'agora';
+    if (min < 60) return 'há ' + min + ' min';
+    var hrs = Math.round(min / 60);
+    if (hrs < 24) return 'há ' + hrs + ' h';
+    var days = Math.round(hrs / 24);
+    return days === 1 ? 'ontem' : 'há ' + days + ' dias';
+  }
+
+  function waLink(o) {
+    var c = o.customer || {};
+    var digits = String(c.phone || '').replace(/\D/g, '');
+    if (digits.length === 10 || digits.length === 11) digits = '55' + digits;
+    if (digits.length < 12) return '';
+    var first = String(c.name || '').trim().split(/\s+/)[0] || '';
+    var d = o.delivery || {};
+    var text = o.status === 'paid'
+      ? 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop. O pagamento do seu pedido ' + o.id + ' (' + brl(o.total) + ') foi confirmado ✅ Vamos combinar a ' + (d.mode === 'pickup' ? 'retirada' : 'entrega') + '?'
+      : o.status === 'canceled' || o.status === 'expired'
+        ? 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop, sobre o pedido ' + o.id + '.'
+        : 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop. Recebemos o seu pedido ' + o.id + ' (' + brl(o.total) + '). Estamos conferindo o PIX e já te aviso. 😊';
+    return 'https://wa.me/' + digits + '?text=' + encodeURIComponent(text);
+  }
+
+  function mapLink(d) {
+    var a = (d && d.address) || {};
+    if (!a.street && !a.cep) return '';
+    var q = [[a.street, a.number].filter(Boolean).join(', '), a.district, (a.city || '') + (a.uf ? '/' + a.uf : ''), a.cep].filter(Boolean).join(' - ');
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+  }
+
+  function svgIcon(name) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', 'ico');
+    svg.setAttribute('aria-hidden', 'true');
+    var use = document.createElementNS(ns, 'use');
+    use.setAttribute('href', '#i-' + name);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  function renderOrders() {
+    var list = $('#ordersList');
+    list.innerHTML = '';
+    var counts = { all: ordersCache.length, awaiting: 0, paid: 0, canceled: 0 };
+    ordersCache.forEach(function (o) { counts[orderGroup(o)] += 1; });
+    Object.keys(counts).forEach(function (k) {
+      var n = document.querySelector('[data-ocount="' + k + '"]');
+      if (n) n.textContent = counts[k] ? String(counts[k]) : '';
+    });
+    var paid = ordersCache.filter(function (o) { return o.status === 'paid'; });
+    var sum = paid.reduce(function (t, o) { return t + o.total; }, 0);
+    $('#ordersSummary').textContent = paid.length + ' pago(s) · ' + brl(sum) + ' recebidos · ' + ordersCache.length + ' pedido(s) no total';
+    var shown = ordersCache.filter(function (o) { return orderFilter === 'all' || orderGroup(o) === orderFilter; });
+    if (!shown.length) list.appendChild(el('li', { class: 'empty', text: orderFilter === 'awaiting' ? 'Nenhum pedido aguardando. Tudo em dia! 🎉' : 'Nenhum pedido aqui.' }));
+    shown.forEach(function (o) {
+      var st = STATUS[o.status] || ['', o.status];
+      var d = o.delivery || {};
+      var a = d.address || {};
+      var c = o.customer || {};
+      var when = o.createdAt || o.paidAt || (o.expiresAt ? o.expiresAt - 30 * 60000 : Date.now());
+      var where = d.mode === 'pickup' ? 'Retirada na loja'
+        : [a.street, a.number].filter(Boolean).join(', ') + (d.complement ? ' — ' + d.complement : '') + ' · ' + [a.district, (a.city || '') + (a.uf ? '/' + a.uf : '')].filter(Boolean).join(', ') + (a.cep ? ' · CEP ' + a.cep : '');
+      var freight = d.mode === 'pickup' ? 'grátis' : d.kind === 'carrier' ? 'transportadora (cotar)' : d.kind === 'negotiable' ? 'a combinar' : brl(o.shipping);
+      var wa = waLink(o);
+      var map = d.mode !== 'pickup' ? mapLink(d) : '';
+      list.appendChild(el('li', { class: 'order-card is-' + orderGroup(o) }, [
+        el('div', { class: 'order-top' }, [
+          el('strong', { class: 'order-id', text: o.id }),
+          el('span', { class: 'badge ' + st[0], text: st[1] }),
+          el('span', { class: 'order-when', title: new Date(when).toLocaleString('pt-BR'), text: timeAgo(when) + ' · ' + new Date(when).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) })
+        ]),
+        el('div', { class: 'order-customer' }, [
+          el('div', {}, [
+            el('strong', { text: c.name || 'Cliente sem nome' }),
+            el('span', { class: 'muted', text: [c.phone, o.email].filter(Boolean).join(' · ') || 'sem telefone' })
+          ]),
+          wa ? el('a', { class: 'btn btn-wa btn-sm', href: wa, target: '_blank', rel: 'noopener' }, [svgIcon('chat'), ' WhatsApp']) : null
+        ]),
+        el('ul', { class: 'order-lines' }, (o.lines || []).map(function (l) {
+          return el('li', {}, [
+            el('span', { class: 'qty', text: l.qty + '×' }),
+            el('span', { class: 'line-name', text: l.name + ' · cód. ' + l.code }),
+            el('span', { class: 'line-price', text: brl(l.unit * l.qty) })
+          ]);
+        })),
+        el('div', { class: 'order-delivery' }, [
+          el('span', { text: (d.mode === 'pickup' ? '🏪 ' : '🚚 ') + where + ' · frete ' + freight }),
+          map ? el('a', { class: 'link', href: map, target: '_blank', rel: 'noopener' }, [svgIcon('pin'), ' Ver no mapa']) : null
+        ]),
+        o.reviewReason ? el('p', { class: 'warn', text: o.reviewReason }) : null,
+        o.status === 'paid' && !o.stockUpdated && o.stockError ? el('p', { class: 'warn', text: 'Estoque não atualizado: ' + o.stockError }) : null,
+        o.cancelReason && o.status === 'canceled' ? el('p', { class: 'muted', text: 'Motivo: ' + o.cancelReason }) : null,
+        el('div', { class: 'order-foot' }, [
+          el('div', { class: 'order-total' }, [
+            el('span', { class: 'muted', text: o.paymentId ? 'Total · Mercado Pago' : 'Total · PIX' }),
+            el('strong', { text: brl(o.total) })
+          ]),
+          o.status === 'awaiting' ? el('div', { class: 'order-actions' }, [
+            el('button', { type: 'button', class: 'btn btn-danger btn-sm', text: 'Cancelar', title: 'Cancelar e devolver ao estoque', onclick: function () { if (confirm('Cancelar o pedido ' + o.id + ' e devolver os itens ao estoque?')) orderAction(o.id, 'cancel'); } }),
+            el('button', { type: 'button', class: 'btn btn-primary btn-sm', text: '✓ Confirmar pagamento', onclick: function () { orderAction(o.id, 'confirm'); } })
+          ]) : null
+        ])
+      ]));
+    });
   }
 
   /* --------------------------- avisos de pedido --------------------------- */
@@ -1213,8 +1303,58 @@
       .finally(function () { dash.loading = false; });
   }
 
+  function goTab(name, filter) {
+    var tab = document.querySelector('[data-tab="' + name + '"]');
+    if (tab) tab.click();
+    if (filter) {
+      var btn = document.querySelector('[data-' + (name === 'pedidos' ? 'ofilter' : 'sfilter') + '="' + filter + '"]');
+      if (btn) btn.click();
+    }
+  }
+
+  function renderTodo() {
+    var hour = new Date().getHours();
+    var name = state.login ? String(state.login) : '';
+    $('#greeting').textContent = (hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite') + (name ? ', ' + name : '') + '!';
+    $('#greetingSub').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · resumo da loja';
+    var items = [];
+    var orders = dash.orders || [];
+    var waiting = orders.filter(function (o) { return o.status === 'awaiting'; });
+    if (waiting.length) {
+      items.push(['urgent', '🧾', waiting.length + (waiting.length === 1 ? ' pedido aguardando' : ' pedidos aguardando') + ' confirmação do PIX',
+        brl(waiting.reduce(function (t, o) { return t + o.total; }, 0)) + ' reservado · confira no banco', 'Conferir', function () { goTab('pedidos', 'awaiting'); }]);
+    }
+    var active = state.products.filter(function (p) { return !p.hidden; });
+    var out = active.filter(function (p) { return !(p.stock > 0); });
+    var low = active.filter(function (p) { return p.stock === 1; });
+    if (out.length) items.push(['warn', '📦', out.length + (out.length === 1 ? ' produto esgotado' : ' produtos esgotados'), out.slice(0, 3).map(function (p) { return p.shortName; }).join(', ') + (out.length > 3 ? '…' : ''), 'Ver', function () { goTab('estoque', 'out'); }]);
+    if (low.length) items.push(['warn', '⚠️', low.length + (low.length === 1 ? ' produto na última unidade' : ' produtos na última unidade'), low.slice(0, 3).map(function (p) { return p.shortName; }).join(', ') + (low.length > 3 ? '…' : ''), 'Ver', function () { goTab('estoque', 'low'); }]);
+    var promo = state.config.promo || {};
+    if (promo.active && promo.until) {
+      var end = new Date(promo.until + 'T23:59:59');
+      var days = Math.ceil((end - Date.now()) / 864e5);
+      if (days >= 0 && days <= 7) items.push(['info', '🏷️', 'Promoção termina ' + (days === 0 ? 'hoje' : days === 1 ? 'amanhã' : 'em ' + days + ' dias'), (promo.text || 'Promoção') + ' · ' + promo.percent + '% · lembre de refazer os anúncios', 'Ajustar', function () { goTab('promocao'); }]);
+    }
+    var pending = changeList().length;
+    if (pending) items.push(['info', '⬆️', pending + (pending === 1 ? ' alteração não publicada' : ' alterações não publicadas'), 'Só vão para o site depois de publicar', 'Publicar', publish]);
+    var box = $('#todoList');
+    box.innerHTML = '';
+    if (!items.length) {
+      box.appendChild(el('div', { class: 'todo-item is-ok' }, [el('span', { class: 'todo-ico', text: '✅' }), el('div', {}, [el('strong', { text: 'Tudo em dia' }), el('span', { class: 'muted', text: 'Nenhum pedido aguardando e nenhum produto acabando.' })])]));
+      return;
+    }
+    items.forEach(function (it) {
+      box.appendChild(el('div', { class: 'todo-item is-' + it[0] }, [
+        el('span', { class: 'todo-ico', text: it[1] }),
+        el('div', {}, [el('strong', { text: it[2] }), el('span', { class: 'muted', text: it[3] })]),
+        el('button', { type: 'button', class: 'btn btn-sm ' + (it[0] === 'urgent' ? 'btn-primary' : 'btn-ghost'), text: it[4], onclick: it[5] })
+      ]));
+    });
+  }
+
   function renderDashboard() {
     if (!state.original) return;
+    renderTodo();
     var orders = dash.orders || [];
     var start = periodStart(dash.period);
     var when = function (o) { return o.paidAt || o.createdAt || 0; };
@@ -1702,12 +1842,43 @@
         Array.prototype.forEach.call(document.querySelectorAll('[data-panel]'), function (panel) {
           panel.hidden = panel.getAttribute('data-panel') !== tab.getAttribute('data-tab');
         });
+        $('#pageTitle').textContent = tab.getAttribute('data-title') || tab.textContent.trim();
+        window.scrollTo(0, 0);
       });
+    });
+  }
+
+  /* ------------------------------ tema ------------------------------ */
+  var THEME_KEY = 'akylla-admin-theme';
+  var THEMES = { auto: ['auto', 'automático (segue o aparelho)'], dark: ['moon', 'escuro'], light: ['sun', 'claro'] };
+  function applyTheme(mode) {
+    if (mode === 'dark' || mode === 'light') document.documentElement.setAttribute('data-theme', mode);
+    else document.documentElement.removeAttribute('data-theme');
+    var info = THEMES[mode] || THEMES.auto;
+    var btn = $('#themeBtn');
+    if (btn) {
+      btn.querySelector('use').setAttribute('href', '#i-' + info[0]);
+      btn.setAttribute('aria-label', 'Tema: ' + info[1]);
+      btn.title = 'Tema: ' + info[1] + ' — clique para trocar';
+    }
+    var dark = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0b0f19' : '#060913');
+  }
+  function currentTheme() { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) { return 'auto'; } }
+  function setupTheme() {
+    applyTheme(currentTheme());
+    $('#themeBtn').addEventListener('click', function () {
+      var next = { auto: 'dark', dark: 'light', light: 'auto' }[currentTheme()] || 'auto';
+      try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* sem armazenamento: vale só agora */ }
+      applyTheme(next);
+      toast('Tema ' + THEMES[next][1] + '.');
     });
   }
 
   function init() {
     setupTabs();
+    setupTheme();
     setupAlerts();
 
     $('#loginForm').addEventListener('submit', function (event) {
@@ -1724,11 +1895,13 @@
       });
     });
 
-    $('#logoutBtn').addEventListener('click', function () {
+    var logout = function () {
       if (changeList().length && !confirm('Há alterações não publicadas. Sair mesmo assim?')) return;
       clearToken();
       location.reload();
-    });
+    };
+    $('#logoutBtn').addEventListener('click', logout);
+    $('#logoutBtn2').addEventListener('click', logout);
 
     $('#publishBtn').addEventListener('click', publish);
     $('#discardBtn').addEventListener('click', discard);
@@ -1760,6 +1933,20 @@
     $('#promoSearch').addEventListener('input', renderPromoList);
     $('#ordersReload').addEventListener('click', loadOrders);
     $('#dashReload').addEventListener('click', loadDashboard);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ofilter]'), function (b) {
+      b.addEventListener('click', function () {
+        orderFilter = b.getAttribute('data-ofilter');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-ofilter]'), function (x) { x.classList.toggle('is-active', x === b); });
+        renderOrders();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sfilter]'), function (b) {
+      b.addEventListener('click', function () {
+        stockFilter = b.getAttribute('data-sfilter');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-sfilter]'), function (x) { x.classList.toggle('is-active', x === b); });
+        renderStock();
+      });
+    });
     $('#markBest').addEventListener('click', markBestsellers);
     document.querySelector('[data-tab="dashboard"]').addEventListener('click', loadDashboard);
     Array.prototype.forEach.call(document.querySelectorAll('[data-period]'), function (chip) {
