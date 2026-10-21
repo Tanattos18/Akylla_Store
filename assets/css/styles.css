@@ -4622,3 +4622,11 @@ dialog::backdrop {
     margin: 0 auto;
   }
 }
+
+.pix-locked.is-sent {
+  border-style: solid;
+  border-color: #b7e3c6;
+  background: #e7f6ec;
+  color: #17723a;
+  font-weight: 700;
+}

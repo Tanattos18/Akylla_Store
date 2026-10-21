@@ -1347,7 +1347,7 @@
   }
 
   function refreshOrderFromCart() {
-    if (state.mp.done) return;
+    if (state.mp.done || state.manualSent) return;
     var items = getCartItems();
     if (!items.length) {
       state.order = null;
@@ -1367,6 +1367,14 @@
   }
 
   function openCheckout() {
+    if (state.manualSent) {
+      state.manualSent = '';
+      if (els.pixLocked) {
+        els.pixLocked.classList.remove('is-sent');
+        els.pixLocked.textContent = 'Escolha a retirada ou calcule o frete acima para gerar o PIX com o valor certo.';
+      }
+      if (els.checkoutDialog) els.checkoutDialog.classList.remove('is-paying');
+    }
     if (state.mp.done) {
       state.mp = { order: null, signature: '', timer: null, countdown: null, busy: false, error: '', manual: false, done: false };
       state.delivery.quote = state.delivery.mode === 'delivery' ? state.delivery.quote : null;
@@ -1660,6 +1668,18 @@
     }
   }
 
+  function showManualSent(id) {
+    if (els.pixBox) els.pixBox.hidden = true;
+    if (els.pixLocked) {
+      els.pixLocked.hidden = false;
+      els.pixLocked.classList.add('is-sent');
+      els.pixLocked.textContent = 'Comprovante enviado! Seu pedido ' + id + ' foi registrado. Vamos conferir o pagamento e responder pelo WhatsApp para combinar a ' +
+        (state.delivery.mode === 'pickup' ? 'retirada.' : 'entrega.');
+    }
+    if (els.checkoutDialog) els.checkoutDialog.classList.add('is-paying');
+    if (els.sendProof) els.sendProof.hidden = true;
+  }
+
   function setupCheckout() {
     if (els.checkoutItems) {
       els.checkoutItems.addEventListener('click', function (event) {
@@ -1680,7 +1700,17 @@
         if (els.sendProof.getAttribute('aria-disabled') === 'true') {
           event.preventDefault();
           toast('Escolha a retirada ou calcule o frete para gerar o PIX primeiro.');
+          return;
         }
+        /* PIX manual: comprovante enviado → pedido registrado, sacola esvaziada. */
+        var sentId = state.order ? state.order.id : '';
+        setTimeout(function () {
+          state.manualSent = sentId;
+          state.cart = [];
+          saveCart();
+          renderCart();
+          showManualSent(sentId);
+        }, 300);
       });
     }
 
