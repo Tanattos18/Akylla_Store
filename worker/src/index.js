@@ -130,10 +130,22 @@ async function loadCatalog(env, fresh) {
  *   kind 'reserve' → baixa (pedido PIX manual aguardando confirmação); recusa se faltar estoque
  *   kind 'return'  → devolve (pedido cancelado)
  */
+/* Já existe commit desta mesma operação para este pedido? (evita baixar o estoque duas vezes quando
+   o aviso do Mercado Pago e a consulta do site chegam juntos — o GitHub é a fonte de verdade). */
+async function alreadyCommitted(env, r, prefix) {
+  const list = await gh(env, '/repos/' + r + '/commits?path=' + encodeURIComponent(PRODUCTS_PATH) + '&sha=' + encodeURIComponent(env.GITHUB_BRANCH || 'main') + '&per_page=20');
+  return (list || []).some((c) => String((c.commit && c.commit.message) || '').startsWith(prefix));
+}
+
 async function commitStock(env, order, kind) {
   const r = await repo(env);
+  const prefix = kind === 'reserve' ? 'reserva: pedido ' + order.id + ' aguardando'
+    : kind === 'return' ? 'estoque devolvido: pedido ' + order.id + ' cancelado'
+    : 'venda: pedido ' + order.id + ' (';
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const file = await readFile(env, PRODUCTS_PATH);
+    /* confere depois de ler o arquivo: se outra chamada gravou antes, a nossa gravação seria repetida */
+    if (await alreadyCommitted(env, r, prefix)) { catalogCache = null; return Object.assign([], { duplicate: true }); }
     const catalog = Formato.parseProducts(file.text);
     if (kind === 'reserve') {
       const missing = stockShortfall(catalog.products, order.lines);
@@ -508,8 +520,11 @@ async function syncPayment(env, order, payment) {
       order.stockUpdated = false;
       order.stockError = String(err.message || err);
     }
-    order.notified = await notifyStore(env, order);
-    order.pushed = await notifyAdmins(env, pushMessage(order));
+    /* outra chamada já registrou esta venda: não avisa de novo */
+    if (!(order.stockWarnings && order.stockWarnings.duplicate)) {
+      order.notified = await notifyStore(env, order);
+      order.pushed = await notifyAdmins(env, pushMessage(order));
+    }
     await saveOrder(env, order);
     await release(env, order.id);
   } else if (pay.state === 'paid') {

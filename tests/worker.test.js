@@ -16,7 +16,9 @@ function kvMock() {
   var store = new Map();
   return {
     store: store,
-    get: async function (k, type) { var v = store.get(k); if (!v) return null; return type === 'json' ? JSON.parse(v.value) : v.value; },
+    /* stale: imita a Cloudflare, onde outro servidor pode ler o pedido antigo por alguns segundos */
+    stale: null,
+    get: async function (k, type) { var v = (this.stale && this.stale.has(k)) ? this.stale.get(k) : store.get(k); if (!v) return null; return type === 'json' ? JSON.parse(v.value) : v.value; },
     put: async function (k, value, opts) { store.set(k, { value: value, metadata: opts && opts.metadata }); },
     delete: async function (k) { store.delete(k); },
     list: async function (opts) {
@@ -46,6 +48,7 @@ function scenario() {
     opts = opts || {};
     var u = new URL(url);
     if (u.host === 'api.github.com') {
+      if (/\/commits$/.test(u.pathname)) return res(commits.slice().reverse().map(function (m) { return { commit: { message: m } }; }));
       if (/^\/repos\/[^/]+\/[^/]+$/.test(u.pathname)) return res({ full_name: 'Tanattos18/Akylla_Store', permissions: { push: (opts.headers.Authorization || '') === 'Bearer gh-admin' || (opts.headers.Authorization || '') === 'Bearer gh-worker' } });
       var m = u.pathname.match(/\/contents\/(.+)$/);
       if (m && (!opts.method || opts.method === 'GET')) return res({ content: b64(files[m[1]].text), sha: files[m[1]].sha });
@@ -331,6 +334,37 @@ test('avisos push: aparelho cadastrado recebe o pedido novo, criptografado e ass
     var t = await call(worker, s.env, 'POST', '/api/admin/push/test', {}, { Authorization: 'Bearer gh-admin' });
     assert.equal(t.data.sent, 0);
     assert.equal((await s.env.ORDERS.list({ prefix: 'push:' })).keys.length, 0, 'assinatura removida');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('servidor: aviso do Mercado Pago repetido + consulta do site ao mesmo tempo baixam o estoque UMA vez só', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var created = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w69-ultra', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Teste Duplo', phone: '62999990000' } });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    var order = created.data;
+    s.payments[order.paymentId].status = 'processed';
+    s.payments[order.paymentId].status_detail = 'accredited';
+    var hook = { type: 'order', action: 'order.processed', data: { id: String(order.paymentId) } };
+    s.env.ORDERS.stale = new Map([['order:' + order.id, s.env.ORDERS.store.get('order:' + order.id)]]); // todos leem 'pendente'
+    // o Mercado Pago manda o aviso duas vezes e o site consulta junto — tudo ao mesmo tempo
+    var results = await Promise.all([
+      call(worker, s.env, 'POST', '/api/webhook', hook),
+      call(worker, s.env, 'POST', '/api/webhook', hook),
+      call(worker, s.env, 'GET', '/api/orders/' + order.id)
+    ]);
+    results.forEach(function (r) { assert.equal(r.status, 200, JSON.stringify(r.data)); });
+    var sales = s.commits.filter(function (m) { return m.indexOf('venda: pedido ' + order.id + ' (') === 0; });
+    assert.equal(sales.length, 1, 'um único commit de venda: ' + JSON.stringify(s.commits));
+    var stock = F.parseProducts(s.files['assets/js/products.js'].text).products.find(function (p) { return p.id === 'w69-ultra'; }).stock;
+    assert.equal(stock, 1, 'estoque 2 → 1 (não 0)');
+    var paidNotices = s.notices.filter(function (n) { return n.indexOf(order.id) >= 0; });
+    assert.equal(paidNotices.length, 1, 'um único aviso de venda no WhatsApp');
   } finally {
     global.fetch = realFetch;
   }
