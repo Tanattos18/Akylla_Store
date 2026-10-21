@@ -46,7 +46,7 @@
       throw new Error('Chave PIX não informada.');
     }
 
-    var merchantName = ascii(opts.merchantName || 'AKYLLA STORE', 25).toUpperCase();
+    var merchantName = ascii(opts.merchantName || 'AKYLLA SHOP', 25).toUpperCase();
     var merchantCity = ascii(opts.city || 'GOIANIA', 15).toUpperCase();
     var description = ascii(opts.description || '', 40);
     var txid = String(opts.txid || '***')

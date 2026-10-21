@@ -1,5 +1,5 @@
 /*
- * Akylla Store — interações da landing page
+ * Akylla Shop — interações da landing page
  * Catálogo, filtros, sacola local e checkout PIX.
  */
 (function () {
@@ -793,7 +793,7 @@
     });
 
     return [
-      'Olá! Fiz um pedido na Akylla Store.',
+      'Olá! Fiz um pedido na Akylla Shop.',
       '',
       'Pedido: ' + order.id,
       '',
@@ -823,7 +823,7 @@
         margin: 4,
         scalable: true,
         alt: { text: 'QR Code PIX do pedido ' + (state.order ? state.order.id : '') },
-        title: { text: 'PIX Akylla Store' }
+        title: { text: 'PIX Akylla Shop' }
       });
     } catch (error) {
       els.pixQr.innerHTML = '<p class="pix-qr-fallback">Não foi possível gerar o QR. Use o código copia e cola.</p>';

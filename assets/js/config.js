@@ -1,14 +1,14 @@
 /*
- * Configurações da Akylla Store — gerado pelo painel (admin/).
+ * Configurações da Akylla Shop — gerado pelo painel (admin/).
  * Contato, PIX e textos de atendimento.
  */
 window.AKYLLA_CONFIG = {
-  "storeName": "Akylla Store",
+  "storeName": "Akylla Shop",
   "tagline": "Eletrônicos e Acessórios de Informática",
   "city": "Goiânia/GO",
   "whatsapp": "556281517002",
   "whatsappDisplay": "(62) 8151-7002",
-  "whatsappMessage": "Olá! Vim pelo site da Akylla Store e gostaria de tirar uma dúvida.",
+  "whatsappMessage": "Olá! Vim pelo site da Akylla Shop e gostaria de tirar uma dúvida.",
   "pixKey": "7dda9a3c-400d-45de-906b-f22b2615f1d5",
   "pixHolder": "Joás Santana Nascimento",
   "pixMerchantName": "JOAS SANTANA NASCIMENTO",

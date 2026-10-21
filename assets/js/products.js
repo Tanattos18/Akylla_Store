@@ -1,5 +1,5 @@
 /*
- * Catálogo da Akylla Store — gerado pelo painel (admin/).
+ * Catálogo da Akylla Shop — gerado pelo painel (admin/).
  * Preços em centavos (7560 = R$ 75,60). `stock` = unidades disponíveis.
  * `gallery` = fotos extras; `illustrative` = foto representativa; `hidden` = fora do site.
  * Prefira editar pelo painel: alterações manuais aqui são mantidas, mas

@@ -1,8 +1,8 @@
-# Akylla Store
+# Akylla Shop
 
-Loja online da **Akylla Store** (eletrônicos e acessórios, Goiânia/GO): catálogo com fotos, estoque e promoções, sacola, checkout por **PIX** (QR Code + copia e cola) e confirmação pelo WhatsApp. Inclui um **painel administrativo** para gerir tudo pelo celular, sem servidor.
+Loja online da **Akylla Shop** (eletrônicos e acessórios, Goiânia/GO): catálogo com fotos, estoque e promoções, sacola, checkout por **PIX** (QR Code + copia e cola) e confirmação pelo WhatsApp. Inclui um **painel administrativo** para gerir tudo pelo celular, sem servidor.
 
-![Prévia da Akylla Store](assets/img/og-cover.jpg)
+![Prévia da Akylla Shop](assets/img/og-cover.jpg)
 
 ---
 
@@ -190,8 +190,8 @@ Akylla_Store/
 ├── scripts/atualizar-precos.js   # relatório site × planilha (não altera nada)
 ├── tests/site.test.js            # testes automáticos
 ├── .github/workflows/testes.yml  # roda os testes a cada push
-├── docs/PLANO_MELHORIAS_AKYLLA_STORE.md
-└── CHECKLIST_MELHORIAS_AKYLLA_STORE.md
+├── docs/PLANO_MELHORIAS_AKYLLA_SHOP.md
+└── CHECKLIST_MELHORIAS_AKYLLA_SHOP.md
 ```
 
 ---
@@ -262,7 +262,7 @@ O repositório é **público**. O `.gitignore` bloqueia:
 | `Planilha_Precificacao_Produtos*.xlsx` / `*.xlsx` | custos e margens |
 | `Comprovante_Cupom*.pdf` / `*.pdf` | cupom do fornecedor com CPF e endereço |
 | `Chave*PIX.txt`, `WhatsApp Image*.jpeg` | dados pessoais de referência |
-| `Logo_Vitrine.png`, `Banner vitrine da loja.png` | artes-fonte (as versões otimizadas estão em `assets/img/`) |
+| `Logo_Vitrine*.png`, `Banner vitrine da loja.png` | artes-fonte (as versões otimizadas estão em `assets/img/`) |
 | `fotos-candidatas/` | fotos baixadas para validação |
 
 - O site não coleta dados: a sacola fica no navegador do cliente (`localStorage`); contato e comprovante passam pelo WhatsApp.
@@ -283,6 +283,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 
 ## 11. Pendências
 
+- [ ] Renomear o repositório no GitHub para **Akylla_Shop** (Settings → General → Repository name). O GitHub redireciona o nome antigo; o painel já se ajusta sozinho. Depois, em cada computador: `git remote set-url origin https://github.com/Tanattos18/Akylla_Shop.git`.
 - [ ] Confirmar o WhatsApp **(62) 8151-7002**: celulares costumam ter 9 dígitos — se precisar, usar `5562981517002` (aba Loja do painel).
 - [ ] Marcar **Enforce HTTPS** em Settings → Pages assim que o certificado do `akyllashop.com` for emitido.
 - [ ] Verificar o domínio na conta do GitHub (Pages → Add a domain).
@@ -308,6 +309,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 20/10/2026 | Marca renomeada de **Akylla Store** para **Akylla Shop** (site, painel, documentação e arte da vitrine). |
 
 O histórico completo está nos commits: `git log --oneline`.
 
@@ -315,7 +317,7 @@ O histórico completo está nos commits: `git log --oneline`.
 
 ## 13. Créditos e licenças
 
-- **Foto da vitrine e logo:** arte fornecida pela loja.
+- **Foto da vitrine e logo:** arte fornecida pela loja. Em 20/10/2026 o texto “STORE” da arte foi trocado por “SHOP” (fonte Century Gothic Bold, mesmo laranja e espaçamento); a arte original ficou guardada localmente como `Logo_Vitrine_original_STORE.png` (não vai para o GitHub).
 - **Fotos dos produtos:** referências de fabricantes, distribuidores e lojas (Basike, Basike Inova, Inova e anúncios aprovados pelo responsável). Direitos dos respectivos titulares; itens sem foto exata têm o aviso “Imagem ilustrativa”. Se alguém pedir a remoção de uma foto, substitua pelo painel.
 - **QR Code:** [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) de Kazuhiko Arase (MIT).
 - **Fontes:** Sora e DM Sans (SIL Open Font License), servidas localmente.
@@ -325,4 +327,4 @@ O histórico completo está nos commits: `git log --oneline`.
 
 ## 14. Suporte
 
-Akylla Store — WhatsApp **(62) 8151-7002** · <https://akyllashop.com/>
+Akylla Shop — WhatsApp **(62) 8151-7002** · <https://akyllashop.com/>

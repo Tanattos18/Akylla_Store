@@ -1,7 +1,7 @@
-# Plano de melhorias — Akylla Store
+# Plano de melhorias — Akylla Shop
 
 Registro da auditoria e das melhorias aplicadas conforme o
-`CHECKLIST_MELHORIAS_AKYLLA_STORE.md`. Site: <https://akyllashop.com/>
+`CHECKLIST_MELHORIAS_AKYLLA_SHOP.md`. Site: <https://akyllashop.com/>
 
 **Data da execução:** 20/10/2026 · **Branch:** `main` · **Commit base:** `1b76b6d`
 

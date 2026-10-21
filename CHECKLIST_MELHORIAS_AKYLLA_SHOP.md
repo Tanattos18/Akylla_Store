@@ -1,4 +1,4 @@
-# Akylla Store — Checklist de melhorias e prompt de execução
+# Akylla Shop — Checklist de melhorias e prompt de execução
 
 **Repositório:** https://github.com/Tanattos18/Akylla_Store  
 **Site:** https://akyllashop.com/
@@ -27,7 +27,7 @@ Copie o texto abaixo para OpenCode, Claude Code ou outro agente com acesso ao re
 Você é um engenheiro de software sênior, especialista em e-commerce estático, UX/UI, acessibilidade, segurança front-end e conversão.
 
 PROJETO
-- Akylla Store
+- Akylla Shop
 - Repositório: https://github.com/Tanattos18/Akylla_Store
 - Site: https://akyllashop.com/
 - Stack documentada: HTML5, CSS3 e JavaScript, sem framework, build ou backend.
@@ -58,7 +58,7 @@ ETAPA 0 — AUDITORIA
 - Confirme a estrutura real e os caminhos dos assets.
 - Abra o site localmente e verifique erros no console, se houver navegador disponível.
 - Teste o catálogo: a leitura da página publicada exibiu “Nada encontrado por aqui”; confirme se os 22 produtos aparecem em navegador real.
-- Registre problemas reproduzíveis e crie/atualize docs/PLANO_MELHORIAS_AKYLLA_STORE.md.
+- Registre problemas reproduzíveis e crie/atualize docs/PLANO_MELHORIAS_AKYLLA_SHOP.md.
 - Não refatore nesta etapa.
 
 ETAPA 1 — IDENTIDADE VISUAL

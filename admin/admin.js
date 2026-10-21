@@ -114,7 +114,7 @@
   function photoUrl(path) {
     if (!path) return '';
     if (state.uploads[path]) return state.uploads[path].url;
-    return 'https://raw.githubusercontent.com/' + OWNER + '/' + REPO + '/' + (state.headSha || BRANCH) + '/' + path;
+    return 'https://raw.githubusercontent.com/' + repoFullName + '/' + (state.headSha || BRANCH) + '/' + path;
   }
 
   /* ------------------------------ GitHub API ------------------------------ */
@@ -142,7 +142,11 @@
     });
   }
 
-  function repoPath(rest) { return '/repos/' + OWNER + '/' + REPO + rest; }
+  /* Nome completo do repositório ("dono/nome"). Atualizado ao entrar: se o repositório
+     for renomeado no GitHub (ex.: Akylla_Store → Akylla_Shop), o painel segue funcionando. */
+  var repoFullName = OWNER + '/' + REPO;
+
+  function repoPath(rest) { return '/repos/' + repoFullName + rest; }
 
   function readFile(path, ref) {
     return gh(repoPath('/contents/' + path + '?ref=' + encodeURIComponent(ref || BRANCH))).then(function (data) {
@@ -153,7 +157,7 @@
   function friendlyError(error) {
     if (error.status === 401) return 'Chave inválida ou vencida. Gere outra no GitHub.';
     if (error.status === 403) return 'A chave não tem permissão de escrita (Contents: Read and write) neste repositório.';
-    if (error.status === 404) return 'Repositório não encontrado para esta chave. Confira se ela dá acesso ao Akylla_Store.';
+    if (error.status === 404) return 'Repositório não encontrado para esta chave. Confira se ela dá acesso ao repositório da loja.';
     if (error.status === 409 || error.status === 422) return 'O site mudou enquanto você editava. Recarregue o painel e tente de novo.';
     if (!navigator.onLine) return 'Sem internet. Suas alterações continuam aqui; tente publicar de novo.';
     return error.message || 'Erro inesperado.';
@@ -181,6 +185,7 @@
     state.token = token;
     busy('Conferindo a chave…');
     return gh(repoPath('')).then(function (repo) {
+      if (repo.full_name) repoFullName = repo.full_name;
       if (!repo.permissions || !repo.permissions.push) {
         var error = new Error('no-push'); error.status = 403; throw error;
       }
