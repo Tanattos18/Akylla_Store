@@ -41,3 +41,7 @@ fotos-candidatas/
 worker/node_modules/
 worker/.wrangler/
 worker/.dev.vars
+
+# Chaves e segredos (NUNCA versionar)
+CHAVES_PRIVADAS*
+*.secret.md

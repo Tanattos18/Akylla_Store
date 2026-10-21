@@ -165,6 +165,8 @@ npx wrangler kv namespace create ORDERS     # copie o "id" mostrado e cole em wr
 npx wrangler deploy                         # publica e mostra o endereço: https://akylla-shop-api.akyllashop.workers.dev
 ```
 
+> **Onde guardar as chaves:** no arquivo local `CHAVES_PRIVADAS.md` (fica só na pasta do computador — está no `.gitignore` e **nunca** vai para o GitHub, que é público) e/ou num gerenciador de senhas. Lá estão também os passos para trocar cada chave.
+
 **Segredos** — cadastre no painel da Cloudflare (*Workers & Pages → akylla-shop-api → Settings → Variables and Secrets → Add → Type: Secret*), nunca no código nem no chat:
 
 | Nome | Onde conseguir |
