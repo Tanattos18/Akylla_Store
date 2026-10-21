@@ -23,45 +23,7 @@ css = css.replace('</style>', `
 .card .combo img { max-width: 230px; max-height: 230px; margin: 0 10px; }
 </style>`);
 
-const I = {
-  camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/>',
-  shield: '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
-  wifi: '<path d="M5 12a10 10 0 0 1 14 0"/><path d="M8 15a6 6 0 0 1 8 0"/><circle cx="12" cy="18.5" r="1.2"/><path d="M2 9a14.5 14.5 0 0 1 20 0"/>',
-  fold: '<path d="M4 4l6 6M20 4l-6 6M4 20l6-6M20 20l-6-6"/><rect x="9" y="9" width="6" height="6" rx="1.5"/><path d="M2 4h4M18 4h4M2 20h4M18 20h4"/>',
-  arrows: '<path d="M3 12h18"/><path d="M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
-  battery: '<rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><path d="M11.5 9l-2.5 3.5h4L10.5 15"/>',
-  person: '<circle cx="12" cy="7" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/>',
-  plug: '<path d="M9 3v4M15 3v4"/><path d="M6 7h12v4a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
-  bluetooth: '<path d="M7 7l10 10-5 4V3l5 4L7 17"/>',
-  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M6 12h3l1.5-2.5 2 5 1.5-2.5h4"/>',
-  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
-  pin: '<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
-  nfc: '<path d="M8 7a7 7 0 0 1 0 10"/><path d="M12 4a11 11 0 0 1 0 16"/><path d="M16 2a14 14 0 0 1 0 20"/><path d="M4 10a3 3 0 0 1 0 4"/>',
-  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
-  run: '<circle cx="14" cy="4.5" r="1.8"/><path d="M7 21l3.5-6 3 2.5V22"/><path d="M5 11.5l3.5-3.5 5 1 3 4h3"/><path d="M10.5 15L9.5 9"/>',
-  cable: '<path d="M8 3v3M12 3v3"/><path d="M6 6h8v4a4 4 0 0 1-8 0z"/><path d="M10 14v2a4 4 0 0 0 8 0V9"/><path d="M16 6h4v3h-4z"/>',
-  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
-  ruler: '<path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/>',
-  usb: '<circle cx="12" cy="19" r="2"/><path d="M12 17V3"/><path d="M10 5.5L12 3l2 2.5"/><path d="M12 14l-4.5-2.5V8"/><path d="M12 12l4.5-2.5V7"/><rect x="6" y="6" width="3" height="2"/><circle cx="16.5" cy="6" r="1.2"/>',
-  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',
-  headphones: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  case: '<rect x="4" y="8" width="16" height="12" rx="4"/><path d="M4 12h16"/><circle cx="12" cy="16" r="1"/>',
-  voice: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9v3M11 8v5M14 9.5v2M17 9v3"/>',
-  watch: '<rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3"/><path d="M12 9.5V12l1.5 1"/>',
-  strap: '<rect x="5" y="3" width="4" height="18" rx="2"/><rect x="10" y="3" width="4" height="18" rx="2"/><rect x="15" y="3" width="4" height="18" rx="2"/>',
-  music: '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
-  bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
-  magnet: '<path d="M5 4h4v8a3 3 0 0 0 6 0V4h4v8a7 7 0 0 1-14 0z"/><path d="M5 8h4M15 8h4"/>',
-  chip: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/><path d="M10 10h4v4h-4z"/>',
-  ports: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 11h8M8 15h8"/>',
-  noise: '<path d="M3 12h2l2-5 3 10 3-14 3 12 2-3h3"/>',
-  display: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M9 21h6M12 17v4"/>',
-  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
-  smartphone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
-  sync: '<path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/>',
-  box: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>'
-};
+const I = require('./icones');
 const svg = (name) => `<svg viewBox="0 0 24 24">${I[name]}</svg>`;
 
 function money(cents) {

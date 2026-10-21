@@ -581,7 +581,8 @@ Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o pr
 
 1. **Pré-definido** (opcional): um clique preenche tudo, por exemplo "Promoção — Instagram completo" ou "Oferta relâmpago — Status/Stories".
 2. **Campanha:** Promoção, Novidade, Mais vendido, Últimas unidades (com produto) ou Inauguração, Cartão em 12x, Frete (sem produto, com colagem de vários itens).
-3. **Estilo:** Laranja forte, Neon escuro, Clean claro, Foto em destaque ou Surpresa.
+3. **Estilo:** **⭐ Anúncio** (padrão: o mesmo visual dos anúncios 9:16, com produto recortado, ficha com ícones e faixa de preço), Laranja forte, Neon escuro, Clean claro, Foto em destaque ou Surpresa.
+   - O estilo Anúncio usa os textos de `ferramentas/anuncios/anuncios.js` (os mesmos do gerador). Produto sem anúncio cadastrado é montado com a ficha técnica dele.
 4. **Composição:** Produto grande, Preço gigante, Dividido ou Surpresa.
 5. **Formatos:** ligue/desligue um por um:
 

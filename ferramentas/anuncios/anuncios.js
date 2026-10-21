@@ -1,5 +1,5 @@
 /* Textos de cada anúncio — só o que está na ficha do produto. hero/combo.img = índice da foto (0 = principal). */
-module.exports = [
+var AKYLLA_ADS = [
   { n: '01', id: 'drone-wrj12618', slug: 'Drone_WRJ-12618', hero: 1, title: ['DRONE', 'PRO'], model: 'Articulado WRJ-12618',
     sub: 'Câmera HD, sensor de obstáculos<br>e controle 2.4 GHz.', hand: 'Voe alto e registre tudo do seu jeito!',
     specs: [['camera', 'Câmera HD', 'fotos e vídeos do alto'], ['shield', 'Sensor de obstáculos', 'ajuda a evitar batidas'], ['wifi', 'Controle 2.4 GHz', 'conexão sem fio'], ['fold', 'Articulado', 'dobra e cabe na mochila'], ['battery', 'Bateria recarregável', 'carrega via USB'], ['person', 'A partir de 14 anos', 'diversão para a família']],
@@ -183,3 +183,4 @@ module.exports = [
     checks: ['Ideal para viagens', 'Para iPhone e Android'] }
 
 ];
+if (typeof module !== 'undefined') module.exports = AKYLLA_ADS; else window.AKYLLA_ADS = AKYLLA_ADS;
