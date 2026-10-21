@@ -1029,8 +1029,25 @@
     });
   }
 
+  var lastAlertError = null;
+
+  function showAlertError(err) {
+    var box = $('#alertsError');
+    var diag = $('#alertsDiag');
+    if (!err) { box.hidden = true; diag.hidden = true; return; }
+    var name = err && err.name && err.name !== 'Error' ? err.name + ': ' : '';
+    box.textContent = 'Erro ao ativar: ' + name + (err.message || String(err));
+    box.hidden = false;
+    var info = ['Aparelho: ' + deviceLabel(), 'Permissão: ' + (window.Notification ? Notification.permission : 'sem suporte'),
+      'Push: ' + ('PushManager' in window ? 'sim' : 'não'), 'App instalado: ' + (isStandalone() ? 'sim' : 'não'),
+      'Service worker: ' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'ativo' : 'inativo')];
+    diag.textContent = info.join(' · ') + ' · ' + navigator.userAgent;
+    diag.hidden = false;
+  }
+
   function enablePush() {
     unlockAudio();
+    showAlertError(null);
     askPermission().then(function (perm) {
       if (perm !== 'granted') throw new Error(perm === 'denied' ? 'as notificações estão bloqueadas. Veja o passo a passo no quadro.' : 'a permissão não foi dada.');
       busy('Ativando os avisos…');
@@ -1044,6 +1061,11 @@
       return withTimeout(reg.pushManager.subscribe(options).catch(function () {
         /* assinatura antiga com outra chave: refaz */
         return reg.pushManager.getSubscription().then(function (old) { return old ? old.unsubscribe() : null; }).then(function () { return reg.pushManager.subscribe(options); });
+      }).catch(function (err) {
+        if (/push service|registration failed|AbortError|NotAllowedError/i.test(String(err.name) + ' ' + String(err.message))) {
+          throw new Error('o serviço de notificações do aparelho recusou o cadastro (' + (err.message || err.name) + '). No Android isso costuma ser: notificações do navegador desligadas nas Configurações do Android, economia de bateria bloqueando o navegador, ou o navegador sem os serviços do Google. Teste pelo Google Chrome atualizado.');
+        }
+        throw err;
       }), 20000, 'o serviço de notificações do navegador não respondeu. Confira a internet e tente de novo.');
     }).then(function (sub) {
       return withTimeout(adminPost('/api/admin/push/subscribe', { subscription: sub.toJSON(), label: deviceLabel() }), 20000, 'o servidor não respondeu.');
@@ -1051,7 +1073,12 @@
       toast('Avisos ativados neste aparelho. Use “Enviar aviso de teste” para conferir.', 6000);
     }).catch(function (err) {
       toast('Não foi possível ativar: ' + err.message, 7000);
-    }).finally(function () { busy(''); renderAlerts(); });
+      lastAlertError = err;
+    }).finally(function () {
+      busy('');
+      renderAlerts();
+      if (lastAlertError) { showAlertError(lastAlertError); lastAlertError = null; }
+    });
   }
 
   function disablePush() {

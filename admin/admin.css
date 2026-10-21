@@ -354,3 +354,6 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
 .bell { position: relative; }
 .bell .bell-count { position: absolute; top: -6px; right: -6px; margin: 0; }
 .tab { white-space: nowrap; }
+
+.alerts-error { margin-top: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: #fde8e8; color: #b42318; font-size: 0.85rem; }
+.alerts-diag { margin-top: 0.4rem; color: var(--muted); font-size: 0.7rem; word-break: break-word; }

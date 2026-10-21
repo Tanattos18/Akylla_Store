@@ -15,7 +15,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Painel Akylla">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="stylesheet" href="admin.css?v=20261021-4">
+  <link rel="stylesheet" href="admin.css?v=20261021-7">
 </head>
 <body>
   <header class="topbar">
@@ -146,6 +146,8 @@
           <span class="badge" id="alertsStatus">…</span>
         </div>
         <p class="muted" id="alertsText"></p>
+        <p class="alerts-error" id="alertsError" hidden></p>
+        <p class="alerts-diag" id="alertsDiag" hidden></p>
         <div class="alerts-actions">
           <button class="btn btn-primary btn-sm" type="button" id="alertsEnable" hidden>Ativar avisos neste aparelho</button>
           <button class="btn btn-ghost btn-sm" type="button" id="alertsTest" hidden>Enviar aviso de teste</button>
@@ -375,6 +377,6 @@
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
   <script src="../assets/js/frete.js?v=20261020-13"></script>
-  <script src="admin.js?v=20261021-6"></script>
+  <script src="admin.js?v=20261021-7"></script>
 </body>
 </html>
