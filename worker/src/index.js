@@ -14,6 +14,7 @@
  *   POST /api/orders/:id/cancel   cancela um PIX não pago (libera a reserva)
  *   POST /api/webhook             aviso do Mercado Pago → confere o pagamento → baixa o estoque
  *   GET  /api/admin/orders        lista de pedidos (para o painel; exige a chave do GitHub)
+ *   GET  /api/admin/orders/changes  última mudança nos pedidos (o painel consulta a cada 20 s)
  *   GET  /api/health              teste rápido
  *
  * Rotas — avisos de pedido no painel (Web Push, celular e PC):
@@ -390,6 +391,8 @@ async function saveOrder(env, order) {
     ...(order.status === 'paid' ? {} : { expirationTtl: ORDER_TTL }),
     metadata: { status: order.status, total: order.total, createdAt: order.createdAt, manual: !!order.manual }
   });
+  /* marcador de "algo mudou": o painel consulta só isto a cada 20 s (leitura simples, barata no plano grátis) */
+  await env.ORDERS.put('meta:changed', JSON.stringify({ at: Date.now(), id: order.id, status: order.status }));
 }
 
 async function activeReservations(env) {
@@ -691,6 +694,10 @@ export default {
       else if (match && request.method === 'GET') response = await orderStatus(env, match[1]);
       else if (url.pathname === '/api/webhook' && request.method === 'POST') response = await webhook(request, env);
       else if (url.pathname === '/api/admin/orders' && request.method === 'GET') response = await adminOrders(request, env);
+      else if (url.pathname === '/api/admin/orders/changes' && request.method === 'GET') {
+        await requireAdmin(request, env);
+        response = json((await env.ORDERS.get('meta:changed', 'json')) || { at: 0 });
+      }
       else if (url.pathname === '/api/push/key' && request.method === 'GET') response = json({ publicKey: (await vapidKeys(env.ORDERS)).publicKey });
       else if (url.pathname === '/api/admin/push/subscribe' && request.method === 'POST') response = await pushSubscribe(request, env, false);
       else if (url.pathname === '/api/admin/push/unsubscribe' && request.method === 'POST') response = await pushSubscribe(request, env, true);

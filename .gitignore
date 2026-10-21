@@ -45,3 +45,7 @@ worker/.dev.vars
 # Chaves e segredos (NUNCA versionar)
 CHAVES_PRIVADAS*
 *.secret.md
+
+# Anúncios gerados (ferramentas/anuncios) e arquivos de trabalho
+Banner_Itens_Loja/
+ferramentas/anuncios/.trabalho/

@@ -805,7 +805,7 @@
    */
   var SEEN_KEY = 'akylla-seen-orders';
   var SOUND_KEY = 'akylla-alert-sound';
-  var alerts = { seen: null, timer: 0, ctx: null, unread: 0, title: document.title, pushOn: false };
+  var alerts = { seen: null, timer: 0, ctx: null, unread: 0, title: document.title, pushOn: false, lastAt: -1 };
 
   function apiBase() { return String(state.config.paymentApiUrl || '').replace(/\/+$/, ''); }
   function soundOn() { try { return localStorage.getItem(SOUND_KEY) !== '0'; } catch (e) { return true; } }
@@ -865,11 +865,18 @@
     return o.status === 'paid' || o.status === 'review' ? o.id + ':' + o.status : null;
   }
 
+  /* A cada ciclo só pergunta "mudou algo?" (barato); a lista completa vem apenas quando muda. */
   function checkOrders() {
     var api = apiBase();
     if (!api || !state.token) return Promise.resolve();
-    return fetch(api + '/api/admin/orders', { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' })
+    var auth = { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' };
+    return fetch(api + '/api/admin/orders/changes', auth)
       .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (mark) {
+        if (!mark || mark.at === alerts.lastAt) return null;
+        alerts.lastAt = mark.at;
+        return fetch(api + '/api/admin/orders', auth).then(function (res) { return res.ok ? res.json() : null; });
+      })
       .then(function (data) {
         if (!data) return;
         var orders = data.orders || [];

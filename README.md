@@ -1,218 +1,476 @@
 # Akylla Shop
 
-Loja online da **Akylla Shop** (eletrônicos e acessórios, Goiânia/GO): catálogo com fotos, estoque e promoções, sacola, checkout por **PIX** (QR Code + copia e cola) e confirmação pelo WhatsApp. Inclui um **painel administrativo** para gerir tudo pelo celular, sem servidor.
+Loja online da **Akylla Shop** (eletrônicos e acessórios, Goiânia/GO). O projeto tem:
+
+- catálogo com fotos, estoque e promoções;
+- sacola e checkout por **PIX** (QR Code e copia e cola), com retirada ou entrega e frete calculado pelo CEP;
+- **reserva automática de estoque** quando o cliente envia o comprovante;
+- **painel administrativo** que roda no celular ou no PC: estoque, produtos, fotos, promoções, frete, pedidos e dashboard de vendas;
+- **avisos de pedido novo** com som e notificação no celular e no PC;
+- gerador de **anúncios 9:16** para Instagram e Facebook.
+
+Custo mensal: **zero**. GitHub Pages e Cloudflare Workers são grátis nesse volume. O único gasto é o domínio, cerca de R$ 40 a R$ 60 por ano.
 
 ![Prévia da Akylla Shop](assets/img/og-cover.jpg)
+
+> **Vai montar a sua própria loja a partir desta?** Siga o [**Guia: criar uma loja nova a partir deste projeto**](#3-guia-criar-uma-loja-nova-a-partir-deste-projeto). Ele vai do zero até a primeira venda.
+
+---
+
+## Índice
+
+1. [Endereços](#1-endereços)
+2. [Como tudo funciona (visão geral)](#2-como-tudo-funciona-visão-geral)
+3. [Guia: criar uma loja nova a partir deste projeto](#3-guia-criar-uma-loja-nova-a-partir-deste-projeto)
+4. [Como a compra funciona (cliente e loja)](#4-como-a-compra-funciona-cliente-e-loja)
+5. [Painel administrativo](#5-painel-administrativo-admin)
+6. [Preços, promoções, estoque e frete](#6-preços-promoções-estoque-e-frete)
+7. [Servidor (Cloudflare Worker)](#7-servidor-cloudflare-worker)
+8. [Domínio, DNS e HTTPS](#8-domínio-dns-e-https)
+9. [Como atualizar o site](#9-como-atualizar-o-site)
+10. [Anúncios 9:16 para Instagram/Facebook](#10-anúncios-916-para-instagramfacebook)
+11. [Estrutura de arquivos](#11-estrutura-de-arquivos)
+12. [Formato dos dados](#12-formato-dos-dados)
+13. [PIX](#13-pix)
+14. [Testes automáticos](#14-testes-automáticos)
+15. [Segurança, chaves e privacidade](#15-segurança-chaves-e-privacidade)
+16. [Problemas comuns e soluções](#16-problemas-comuns-e-soluções)
+17. [Pendências](#17-pendências)
+18. [Histórico](#18-histórico)
+19. [Créditos e licenças](#19-créditos-e-licenças)
 
 ---
 
 ## 1. Endereços
 
-| O quê | Endereço atual | Endereço antigo |
+| O quê | Endereço |
+|---|---|
+| **Loja** | <https://akyllashop.com/> |
+| **Painel admin** | <https://akyllashop.com/admin/> |
+| **Servidor (API)** | <https://akylla-shop-api.akyllashop.workers.dev> (teste: `/api/health`) |
+| Política de privacidade | <https://akyllashop.com/privacidade.html> |
+| Termos de uso | <https://akyllashop.com/termos.html> |
+| Repositório (código) | <https://github.com/Tanattos18/Akylla_Store> |
+| Endereço antigo | `https://tanattos18.github.io/Akylla_Store/` (redireciona para o atual) |
+
+- **Branch publicada:** `main`, pasta raiz `/`. Cada commit na `main` publica o site em cerca de 1 minuto.
+- **Domínio** registrado na **Hostinger**.
+- **Tecnologia:** HTML, CSS e JavaScript puros, sem build e sem framework. O servidor é um Cloudflare Worker (JavaScript).
+
+---
+
+## 2. Como tudo funciona (visão geral)
+
+```
+┌──────────────────────────┐        ┌──────────────────────────────┐
+│  Cliente (navegador)     │        │  Você (painel /admin/)       │
+│  akyllashop.com          │        │  celular ou PC               │
+└───────┬──────────┬───────┘        └──────┬──────────────┬────────┘
+        │ lê o site│ envia o pedido        │ edita e      │ pedidos, confirmar/cancelar,
+        │          │ (PIX manual)          │ publica      │ dashboard, avisos push
+        ▼          ▼                       ▼              ▼
+┌──────────────┐ ┌───────────────────────────┐   ┌──────────────────────┐
+│ GitHub Pages │ │ Cloudflare Worker (API)   │──▶│ GitHub (repositório) │
+│ (site grátis)│ │ recalcula preço e frete,  │   │ products.js/config.js│
+└──────▲───────┘ │ reserva/devolve o estoque,│   │ = "banco de dados"   │
+       │         │ guarda pedidos (KV),      │   └──────────▲───────────┘
+       │         │ manda notificação push    │              │
+       │         └───────────────────────────┘              │
+       └──────────── o GitHub Pages publica cada commit ─────┘
+```
+
+- **O "banco de dados" do catálogo é o próprio repositório.** O arquivo `assets/js/products.js` guarda produtos, preços, estoque e fotos, e o `assets/js/config.js` guarda WhatsApp, PIX, promoção e frete. O painel e o servidor alteram esses arquivos por commits na API do GitHub, e o GitHub Pages publica o resultado.
+- **Os pedidos** ficam no **Cloudflare KV**, um banco simples do Worker. Pedidos confirmados ficam guardados para sempre. Os demais expiram em 120 dias.
+- **Os preços são sempre recalculados no servidor.** O navegador do cliente não decide valores.
+
+---
+
+## 3. Guia: criar uma loja nova a partir deste projeto
+
+Este guia cria uma loja **igual a esta**, com a sua marca, seus produtos e suas contas. Siga na ordem. Nenhuma senha passa por este documento: cada pessoa cria as suas próprias chaves.
+
+### 3.1 O que você vai precisar
+
+| Item | Para quê | Custo |
 |---|---|---|
-| **Loja** | **<https://akyllashop.com/>** | `https://tanattos18.github.io/Akylla_Store/` (redireciona para o atual) |
-| **Painel admin** | **<https://akyllashop.com/admin/>** | `https://tanattos18.github.io/Akylla_Store/admin/` (redireciona) |
-| Política de privacidade | <https://akyllashop.com/privacidade.html> | — |
-| Termos de uso | <https://akyllashop.com/termos.html> | — |
-| Repositório (código) | <https://github.com/Tanattos18/Akylla_Store> | — |
+| Conta no **GitHub** (github.com) | guardar o código e hospedar o site (GitHub Pages) | grátis |
+| Conta na **Cloudflare** (dash.cloudflare.com) | servidor de pedidos (Worker + KV) | grátis |
+| **Domínio** (ex.: Hostinger, Registro.br) | endereço próprio, ex.: `minhaloja.com` | ~R$ 40–60/ano (opcional) |
+| **Chave PIX** da loja | receber os pagamentos | grátis |
+| **WhatsApp** da loja | atendimento e comprovantes | — |
+| No computador: **Git**, **Node.js 18+** (nodejs.org), **Python 3** + `pip install pillow` (só para os anúncios), **VS Code** (opcional) | editar e publicar | grátis |
+| Logo e fotos dos produtos | identidade visual | — |
 
-- **Branch publicada:** `main` (pasta raiz `/`).
-- **Hospedagem:** GitHub Pages (grátis). **Domínio:** `akyllashop.com`, registrado na **Hostinger** (`akyllastore.com` já tinha dono).
-- O link antigo continua funcionando: o GitHub redireciona tudo para `akyllashop.com`.
-- **Stack:** HTML + CSS + JavaScript puro — sem build, sem framework, sem backend.
+### 3.2 Copiar o projeto para a sua conta
 
----
-
-## 2. Como atualizar a página
-
-Há três caminhos. Todos terminam num commit na `main`; o GitHub Pages publica sozinho em **~1 minuto**.
-
-### 2.1 Pelo painel (dia a dia — recomendado)
-
-Abra <https://akyllashop.com/admin/>, faça as alterações e clique em **Publicar**. Serve para estoque, preços, produtos, fotos, promoções, WhatsApp, PIX e foto da vitrine. Detalhes na [seção 3](#3-painel-administrativo-admin).
-
-### 2.2 Pelo computador (código, textos fixos, layout)
-
-Primeira vez num computador novo:
+1. No GitHub, crie um repositório **novo e vazio**, por exemplo `Minha_Loja`. Ele precisa ser **Public** para usar o GitHub Pages grátis. Não marque README nem .gitignore.
+2. No computador (PowerShell no Windows):
 
 ```bash
-git clone https://github.com/Tanattos18/Akylla_Store.git
-cd Akylla_Store
-git config user.name "Joás Santana"
-git config user.email "joas.s.nk1@gmail.com"
+git clone https://github.com/Tanattos18/Akylla_Store.git Minha_Loja
+cd Minha_Loja
 ```
 
-Toda vez que for mexer:
+```powershell
+Remove-Item -Recurse -Force .git        # começa um histórico novo, só seu
+```
 
 ```bash
-git pull                                  # 1) SEMPRE primeiro: traz o que foi publicado pelo painel ou por outra máquina
-python -m http.server 8000                # 2) (opcional) ver localmente em http://localhost:8000
-node --test "tests/*.test.js"             # 3) testes automáticos (precisa do Node 18+)
+git init -b main
+git config user.name "Seu Nome"
+git config user.email "seu-email@exemplo.com"
 git add -A
-git commit -m "descreva a alteração"      # 4) registrar
-git push                                  # 5) publicar (site atualiza em ~1 min)
+git commit -m "primeira versão da minha loja"
+git remote add origin https://github.com/SEU_USUARIO/Minha_Loja.git
+git push -u origin main
 ```
 
-> **Importante:** como o painel também publica, rode `git pull` antes de editar qualquer arquivo à mão. Se esquecer e o `git push` for recusado, rode `git pull` e depois `git push` de novo.
+### 3.3 Trocar a identidade da loja (o que editar e onde)
 
-> **Cache dos celulares:** CSS e JS são chamados com `?v=AAAAMMDD-N` em `index.html`, `privacidade.html` e `termos.html` (e no `admin/index.html`). Ao alterar `styles.css` ou algum `.js`, aumente esse número para os clientes receberem a versão nova na hora.
+Abra a pasta no VS Code e use **Localizar em arquivos** (`Ctrl+Shift+F`) para achar cada valor. Esta tabela lista **tudo** o que é específico da Akylla Shop:
 
-### 2.3 Em outra estação (casa × notebook da empresa)
+| O que trocar | Onde | Exemplo atual → seu valor |
+|---|---|---|
+| **Dono e nome do repositório** (o painel usa para publicar) | `admin/admin.js` → `var OWNER` e `var REPO` | `Tanattos18` / `Akylla_Store` → `SEU_USUARIO` / `Minha_Loja` |
+| **Domínio** | `CNAME`, `robots.txt`, `sitemap.xml`, `index.html`, `privacidade.html`, `termos.html` (links `canonical`, `og:url`, `og:image`, dados JSON-LD) | `akyllashop.com` → `minhaloja.com` |
+| **Nome da loja, textos e chamadas** | `index.html` (topo, sobre, como funciona, FAQ, rodapé), `<title>` e `description` das 3 páginas | "Akylla Shop", "Curadoria tech em Goiânia"… |
+| **Identificação do vendedor** (exigida pelo Decreto 7.962/2013) | rodapé de `index.html`, `privacidade.html` e `termos.html` (procure "Vendedor responsável") e o JSON-LD no topo do `index.html` | nome, **CPF ou CNPJ**, endereço e CEP |
+| **Recebedor do PIX mostrado no checkout** | `index.html` (procure `pix-holder`) e painel → Loja | nome do titular da chave |
+| **Telefone e WhatsApp fixos no HTML** | `index.html`, `privacidade.html`, `termos.html` (procure `wa.me/` e o número formatado) | `556281517002` / `(62) 8151-7002` |
+| **Logo, ícones e capa** | `assets/img/logo-mark.jpg` (ícone quadrado), `assets/img/favicon.png`, `assets/img/vitrine.jpg` (1000×1000) e `vitrine-640.jpg`, `assets/img/og-cover.jpg` (1200×630, aparece ao compartilhar o link), `admin/icon-192.png`, `admin/icon-512.png`, `admin/apple-touch-icon.png` | arte da sua marca |
+| **Cores** | `assets/css/styles.css` e `admin/admin.css` (variáveis `--brand` e afins no início do arquivo) | laranja `#ff8a00` |
+| **Nome do painel instalado como app** | `admin/manifest.webmanifest` e `admin/index.html` (`apple-mobile-web-app-title`) | "Painel Akylla" |
+| **Servidor (Worker)** | `worker/wrangler.toml` → `name`, `GITHUB_REPO`, `ALLOWED_ORIGINS`, `STORE_WHATSAPP` e o `id` do KV (passo 3.6); `worker/package.json` → `name`; `worker/definir-chaves.ps1` (endereço do `/api/health` no fim) | `akylla-shop-api` → `minhaloja-api` |
+| **Assinatura das notificações** | `worker/src/index.js` → `PUSH_SUBJECT` | `https://akyllashop.com` → `https://minhaloja.com` |
+| **Frete padrão** (vale só até você salvar a aba Frete do painel) | `assets/js/frete.js` → `DEFAULTS` (origem, cidades) e o `User-Agent` | endereço e coordenadas da loja |
+| **Catálogo** | `assets/js/products.js` (produtos e categorias) e as fotos em `assets/img/products/` | apague os produtos da Akylla e cadastre os seus **pelo painel** (passo 3.5) |
+| **Configuração da loja** | `assets/js/config.js` | edite **pelo painel → Loja / Frete / Promoção** (passo 3.5) |
+| **Testes** | `tests/worker.test.js` usa ids de produtos da Akylla (`w34-plus`, `w69-ultra`, `hw8-pro-max`, `w31-pro-max`) | troque por ids do seu catálogo (passo 3.9) |
+| **Documentos da Akylla** | `README.md`, `CHECKLIST_MELHORIAS_AKYLLA_SHOP.md`, `docs/` | reescreva ou apague |
+| **Anúncios** | `ferramentas/anuncios/anuncios.js` (textos por produto) | seus produtos (seção 10) |
 
-O projeto existe em mais de um computador. Antes de começar em qualquer um deles: `git pull`. Ao terminar: `git push`. Arquivos privados (planilha, comprovantes, artes) **não vão para o GitHub** — copie-os à mão se precisar deles na outra máquina (ver [seção 9](#9-privacidade-e-arquivos-que-não-vão-para-o-github)).
+Para ver o site no seu computador, rode `python -m http.server 8000` e abra <http://localhost:8000>. Depois publique:
+
+```bash
+git add -A
+git commit -m "identidade da minha loja"
+git push
+```
+
+### 3.4 Ligar o site (GitHub Pages) e o domínio
+
+1. No repositório: **Settings → Pages → Build and deployment → Deploy from a branch** → `main` / `(root)` → **Save**.
+2. Sem domínio, o site fica em `https://SEU_USUARIO.github.io/Minha_Loja/`. Nesse caso **apague o arquivo `CNAME`**.
+3. Com domínio:
+   - no seu registrador, crie os registros DNS da [seção 8](#8-domínio-dns-e-https), trocando `tanattos18.github.io` por `SEU_USUARIO.github.io`;
+   - em Settings → Pages → **Custom domain**, coloque `minhaloja.com` e salve;
+   - quando o certificado sair (de minutos até cerca de 1 hora), marque **Enforce HTTPS**.
+
+### 3.5 Entrar no painel e cadastrar a loja
+
+1. Crie a **chave do painel** no GitHub:
+   - abra **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**;
+   - em *Repository access*, escolha **Only select repositories** → `Minha_Loja`;
+   - em *Permissions → Repository permissions*, dê **Contents: Read and write**. Mais nada;
+   - copie a chave (começa com `github_pat_`). **Não mande essa chave para ninguém.**
+2. Abra `https://minhaloja.com/admin/`, cole a chave e entre.
+3. Na aba **Loja**, preencha:
+   - nome, cidade, WhatsApp (só dígitos, com 55 e DDD), mensagem inicial;
+   - **chave PIX**, recebedor, nome e cidade do QR (sem acento, até 25 e 15 letras);
+   - textos de entrega, garantia, trocas e pagamento;
+   - foto da vitrine.
+4. Na aba **Frete**, configure o endereço da loja (latitude e longitude: no Google Maps, clique com o botão direito no local e copie), as faixas de distância, as cidades, a retirada e a transportadora. Use o simulador de CEP.
+5. Na aba **Produtos**, apague os produtos da Akylla e cadastre os seus com fotos. O painel converte as fotos para o tamanho certo. Use a calculadora de preço (custo e margem).
+6. Na aba **Promoção**, ligue ou desligue o desconto.
+7. Clique em **Publicar**. O site atualiza em cerca de 1 minuto.
+8. **Teste o PIX:** compre algo barato no próprio site e pague com o app do banco. O QR precisa abrir com o valor certo e o nome do recebedor.
+
+### 3.6 Publicar o servidor de pedidos (Cloudflare Worker)
+
+Sem o servidor, a loja funciona, mas o pedido só chega pelo WhatsApp e o estoque é baixado à mão. Com o servidor, há reserva automática de estoque, aba Pedidos, dashboard e avisos.
+
+No computador, dentro da pasta do projeto:
+
+```bash
+cd worker
+npx wrangler@3 login                         # abre o navegador: autorize a sua conta Cloudflare
+npx wrangler@3 kv namespace create ORDERS    # mostra um "id": copie
+```
+
+1. Cole o `id` em `worker/wrangler.toml`, no campo `[[kv_namespaces]] → id`, no lugar do id atual.
+2. Confira o resto do `wrangler.toml`:
+   - `name`: nome do servidor, vira o endereço `https://NOME.SUBDOMINIO.workers.dev`;
+   - `GITHUB_REPO = "SEU_USUARIO/Minha_Loja"`;
+   - `ALLOWED_ORIGINS`: os endereços do seu site, separados por vírgula, por exemplo `https://minhaloja.com,https://www.minhaloja.com`. Sem domínio, use `https://SEU_USUARIO.github.io`;
+   - `STORE_WHATSAPP`: WhatsApp da loja, só dígitos.
+3. Publique:
+
+```bash
+npx wrangler@3 deploy                        # mostra o endereço do servidor
+```
+
+   Na primeira vez, a Cloudflare pede para escolher o **subdomínio workers.dev** da conta. Escolha um nome, por exemplo `minhaloja`.
+4. Crie a **chave do servidor** no GitHub:
+   - é uma chave fine-grained igual à do painel (Contents: Read and write, só no repositório da loja);
+   - dê um nome diferente, por exemplo "Servidor", e validade de 1 ano;
+   - **anote a data** para renovar.
+5. Cadastre essa chave como **segredo** no servidor. O comando pede para colar a chave e ela não aparece na tela:
+
+```powershell
+& .\definir-chaves.ps1
+```
+
+   Sem PowerShell, use `npx wrangler@3 secret put GITHUB_TOKEN`.
+6. Abra `https://SEU-SERVIDOR.workers.dev/api/health`. Deve mostrar `"configured": true`.
+7. No painel → **Loja** → *Endereço do servidor*, cole `https://SEU-SERVIDOR.workers.dev`. Em *Forma de pagamento*, deixe **PIX manual** e clique em **Publicar**.
+8. **Teste completo:**
+   - faça um pedido no site e toque em *Enviar comprovante*;
+   - o estoque do produto deve cair (aparece um commit "reserva: pedido …");
+   - o pedido aparece no painel → **Pedidos**;
+   - cancele o pedido: o estoque deve voltar.
+
+### 3.7 Ativar os avisos de pedido (celular e PC)
+
+No painel → **Pedidos** → **Ativar avisos neste aparelho** → permita as notificações → **Enviar aviso de teste**. Repita em cada aparelho.
+
+- **iPhone:** antes de ativar, instale o painel. No Safari, toque em Compartilhar → **Adicionar à Tela de Início** e abra pelo ícone.
+- Não há chave para configurar: o servidor cria as próprias chaves das notificações.
+
+### 3.8 Opcionais
+
+- **Aviso de venda no WhatsApp da loja (CallMeBot):** o robô gratuito às vezes fica sem vagas. Siga o site callmebot.com e cadastre a chave com `definir-chaves.ps1` (segundo item).
+- **PIX automático pelo Mercado Pago:** veja a [seção 7.4](#74-mercado-pago-pix-automático--opcional).
+- **Anúncios 9:16:** veja a [seção 10](#10-anúncios-916-para-instagramfacebook).
+
+### 3.9 Ajustar os testes ao seu catálogo
+
+```bash
+node --test "tests/*.test.js"
+```
+
+- Se aparecer falha citando `w34-plus` ou outro id, abra `tests/worker.test.js` e troque esses ids por ids de produtos **seus** (veja na aba Produtos ou em `products.js`).
+- O teste de identificação procura `CPF 000.000.000-00` e `CEP 00000-000` no rodapé. Com **CNPJ**, ajuste a expressão em `tests/site.test.js` (procure "identificam o vendedor").
+- Os testes rodam sozinhos no GitHub a cada `git push` (aba **Actions**).
+
+### 3.10 Checklist final antes de divulgar
+
+- [ ] Nome, CPF/CNPJ e endereço corretos no rodapé, na privacidade e nos termos.
+- [ ] QR do PIX testado num app de banco, com valor e recebedor certos.
+- [ ] WhatsApp do botão abre a conversa certa.
+- [ ] Frete testado com 2 ou 3 CEPs conhecidos.
+- [ ] Pedido de teste: reserva → aparece no painel → confirmar ou cancelar → estoque correto.
+- [ ] Aviso de teste recebido no celular e no PC.
+- [ ] HTTPS ativo (cadeado no navegador).
+- [ ] Ao compartilhar o link no WhatsApp, a capa (`og-cover.jpg`) e o nome aparecem certos. O WhatsApp guarda a prévia em cache: teste com `?v=2` no fim do link.
 
 ---
 
-## 3. Painel administrativo (`/admin/`)
+## 4. Como a compra funciona (cliente e loja)
 
-O painel edita os arquivos do site e publica **num único commit** pela API do GitHub. Não precisa de servidor. Funciona no celular. Não aparece no site nem nos buscadores (`robots.txt` + `noindex`).
+**Modo atual: PIX manual com reserva de estoque.**
 
-### Abas
+1. O cliente monta a sacola. No celular, uma **barra fixa** mostra os itens, o total e o botão **Finalizar**.
+2. No checkout, escolhe **retirar na loja** (grátis) ou **entregar**. Para entrega, informa CEP e número, e o frete é calculado na hora ([6.4](#64-frete-e-entrega)).
+3. Aparecem o **QR do PIX** e o código copia e cola com o valor exato (produtos com desconto mais frete).
+4. O cliente paga, informa **nome** e **WhatsApp** e toca em **Enviar comprovante**.
+5. O site manda o pedido ao servidor (`POST /api/manual-orders`), que:
+   - **recalcula** preço, promoção e frete com o catálogo publicado;
+   - confere o estoque e **reserva**, ou seja, já baixa no `products.js`. Aparece um commit "reserva: pedido AK-… aguardando confirmação do PIX" e o item sai da vitrine;
+   - guarda o pedido como *Aguardando confirmação do PIX*;
+   - manda **notificação push** para os aparelhos da loja (e o aviso no WhatsApp, se o CallMeBot estiver ativo).
+6. Abre o **WhatsApp da loja** com o pedido completo (número, data, cliente, itens com código, entrega e total), e o cliente envia o comprovante nessa conversa.
+7. Você confere o PIX no banco e, no painel → **Pedidos**:
+   - **✓ Confirmar pagamento**: a venda fica confirmada, entra no dashboard e o item continua fora do estoque;
+   - **Cancelar e devolver ao estoque**: o item volta para a vitrine (commit "estoque devolvido: …").
+8. **Sem confirmação em 48 h**, o servidor cancela sozinho e devolve o estoque. Ele verifica de hora em hora.
 
-- **Dashboard (abre primeiro):** vendas **confirmadas** (pedidos com status *pago* na aba Pedidos) por período — Hoje, 7 dias, 30 dias, Este mês, Tudo: faturamento (produtos + frete), pedidos, ticket médio, itens vendidos, aguardando confirmação, cancelados; gráfico de faturamento por dia; **total vendido por categoria**; **produtos vendidos e quantidade** (com estoque atual); retirada × entrega; e a situação da loja agora (produtos ativos, unidades e valor em estoque, esgotados, última unidade, promoção, forma de pagamento). Pedidos confirmados ficam guardados para sempre no servidor; os demais somem após 120 dias.
-- **Estoque:** −1 (vendi) / +1 (repus), quantidade e preço de cada produto numa lista só. Mostra o preço da promoção quando houver.
-- **Promoção:** promoção geral (liga/desliga, texto da faixa, desconto %, data final e **margem usada na planilha**) e, para cada produto, **“segue a geral”**, **“promoção própria”** (% e data dele) ou **“fora”**. Mostra o lucro estimado e avisa se o desconto vender abaixo do custo. Ações em massa: todos na geral / tirar todos.
-- **Produtos:** criar, editar, duplicar, **ocultar** (rascunho, some do site sem apagar) e excluir. Campos: nome, nome curto, código, marca, modelo, categoria, ícone, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e **fotos** (enviar do celular/PC, escolher a principal, ordenar, remover). As fotos são convertidas no próprio navegador para **WebP 700×700 com fundo branco**; fotos removidas são apagadas do repositório ao publicar. **Calculadora de preço**: custo ÷ (1 − margem), arredondado para cima em R$ 0,10 — o **custo não é salvo** (o repositório é público).
-- **Loja:** nome, cidade, WhatsApp, mensagem inicial, **chave PIX**, recebedor, nome/cidade do QR, textos de entrega/garantia/trocas/pagamento e **foto da vitrine** (gera 1000 e 640 px). Trocar a chave PIX pede confirmação.
+Proteções:
+- no máximo **5 pedidos por hora por aparelho**;
+- se acabou o estoque, o pedido é recusado e o cliente é avisado;
+- se o servidor estiver fora do ar, o pedido segue só pelo WhatsApp, sem reserva. Nesse caso, ajuste o estoque no painel.
 
-### Avisos de pedido (som e notificação no celular e no PC)
+---
 
-- **Painel aberto:** a cada 20 s o painel confere se chegou pedido novo. Quando chega, **toca um som**, vibra (celular), mostra o aviso na tela, o número no sino 🔔 e na aba **Pedidos**, e o título da aba vira “(1) 🛒 Novo pedido”.
-- **Painel fechado:** aba **Pedidos** → **Ativar avisos neste aparelho** → permitir notificações. O servidor manda uma **notificação push** (como a de um app) para cada aparelho ativado. Faça isso no celular **e** no PC. Use **Enviar aviso de teste** para conferir.
-- **iPhone:** só recebe com o painel fechado se o painel for instalado: Safari → Compartilhar → **Adicionar à Tela de Início**, abrir pelo ícone e ativar lá (iOS 16.4 ou mais novo).
-- **Android:** no Chrome, também dá para instalar o painel como app (menu ⋮ → Instalar app / Adicionar à tela inicial).
-- As chaves de assinatura das notificações (VAPID) são criadas pelo próprio servidor e ficam guardadas nele: não há nada para configurar.
+## 5. Painel administrativo (`/admin/`)
 
-### Acesso (chave do GitHub)
+O painel edita os arquivos do site e publica **num único commit** pela API do GitHub. Funciona no celular, pode ser **instalado como app** e não aparece nos buscadores (`noindex`).
 
-1. GitHub → **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token** (<https://github.com/settings/personal-access-tokens/new>).
-2. Nome: *Painel Akylla* · Validade: 90 dias.
-3. **Repository access:** *Only select repositories* → **Akylla_Store**.
-4. **Permissions → Repository permissions → Contents: Read and write** (nada mais).
+### 5.1 Abas
+
+- **Dashboard (abre primeiro):** mostra só as vendas **confirmadas**, com filtro de período (Hoje, 7 dias, 30 dias, Este mês, Tudo).
+  - Números: faturamento (produtos e frete), pedidos, ticket médio, itens vendidos, pedidos aguardando confirmação (com o valor reservado) e cancelados.
+  - Gráfico de faturamento por dia e **total vendido por categoria**.
+  - Tabela de **produtos vendidos**: quantidade, receita e estoque atual. O botão **"Marcar os 3 mais vendidos com selo"** aplica o selo *Mais vendido* no site (depois clique em Publicar).
+  - Retirada × entrega e a situação da loja agora: produtos ativos, unidades e valor em estoque, esgotados, última unidade, promoção e forma de pagamento.
+- **Estoque:** botões −1 (vendi) e +1 (repus), quantidade e preço de cada produto numa lista só.
+- **Pedidos:** cartão **Avisos de pedido** ([5.2](#52-avisos-de-pedido-som-e-notificação)) e lista de pedidos com status, cliente, itens, entrega e total. Nos pedidos aguardando, há os botões **Confirmar pagamento** e **Cancelar e devolver ao estoque**.
+- **Promoção:** promoção geral (liga/desliga, texto da faixa, % e data final, margem da planilha). Cada produto pode **seguir a geral**, ter **promoção própria** ou ficar **fora**. Mostra o lucro estimado e avisa se o desconto vender abaixo do custo.
+- **Produtos:** criar, editar, duplicar, **ocultar** (rascunho) e excluir.
+  - Campos: nome, nome curto, código, marca, modelo, categoria, ícone, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e selo **Mais vendido**.
+  - **Fotos:** enviar, escolher a principal, ordenar e remover. Viram WebP 700×700 com fundo branco, convertidas no próprio navegador.
+  - **Calculadora de preço:** custo ÷ (1 − margem). O custo **não é salvo**, porque o repositório é público.
+- **Frete:** faixas por distância, cidades com valor fixo ou "a combinar", transportadora (com o % da taxa), retirada, ponto de partida e simulador de CEP. Inclui uma calculadora de transportadora com a mensagem pronta para o cliente.
+- **Loja:** nome, cidade, WhatsApp, mensagem inicial, **chave PIX** (trocar pede confirmação), recebedor, nome e cidade do QR, textos, foto da vitrine, **forma de pagamento** (PIX manual ou Mercado Pago) e **endereço do servidor**.
+
+### 5.2 Avisos de pedido (som e notificação)
+
+- **Painel aberto:**
+  - a cada 20 segundos o painel pergunta ao servidor se algo mudou (uma consulta leve, que não gasta o limite grátis);
+  - quando chega pedido novo, **toca um som**, o celular **vibra**, aparece o aviso na tela e o número no sino 🔔 e na aba **Pedidos**;
+  - o título da aba vira "(1) 🛒 Novo pedido";
+  - o som só toca depois de você tocar ou clicar uma vez no painel (regra dos navegadores). O botão **Ouvir o som** testa o som.
+- **Painel fechado (notificação push):**
+  - aba Pedidos → **Ativar avisos neste aparelho**. Faça isso no celular **e** no PC;
+  - **Enviar aviso de teste** confere se está funcionando;
+  - tocar na notificação abre o painel na aba Pedidos.
+- **iPhone:** só recebe com o painel instalado. No Safari, toque em Compartilhar → **Adicionar à Tela de Início**, abra pelo ícone e ative lá. Precisa do iOS 16.4 ou mais novo.
+- **Android:** no Chrome, menu ⋮ → **Instalar app** (opcional, mas deixa o painel como um app).
+- **Windows:** com "Não perturbe" ou "Assistente de foco" ligado, a notificação chega sem som.
+- **Técnica:** padrão Web Push (VAPID + aes128gcm). As chaves são criadas pelo próprio servidor e guardadas no KV. Cada aparelho fica cadastrado por 1 ano e o cadastro é renovado sempre que você abre o painel. Aparelhos desinstalados são removidos sozinhos.
+
+### 5.3 Acesso (chave do GitHub)
+
+1. Abra <https://github.com/settings/personal-access-tokens/new> → **Fine-grained token**.
+2. Nome: *Painel*. Validade: 90 dias.
+3. **Repository access:** *Only select repositories* → o repositório da loja.
+4. **Permissions → Repository permissions → Contents: Read and write**. Mais nada.
 5. Copie a chave (`github_pat_…`) e cole na tela de entrada do painel.
 
-- A chave fica só no navegador (na aba aberta, ou no aparelho se marcar **“Lembrar neste aparelho”** — use só em aparelho pessoal).
-- **Vencida ou perdida?** Apague em <https://github.com/settings/personal-access-tokens> e gere outra.
-- Ao trocar de endereço (ex.: do antigo para `akyllashop.com`) o navegador pede a chave de novo — é a mesma chave.
-- Use o painel sempre por **https://** (cadeado no navegador).
+Para saber:
+- A chave fica **só no navegador**: na aba aberta, ou no aparelho se você marcar **"Lembrar neste aparelho"**. Use essa opção só em aparelho pessoal.
+- Venceu ou perdeu a chave? Apague em <https://github.com/settings/personal-access-tokens> e gere outra.
+- O servidor só aceita ações do painel (pedidos, avisos) de quem tem essa chave com permissão de escrita no repositório.
 
-### Proteções
+### 5.4 Proteções do painel
 
-- **Conflito:** se o site for alterado por outro lugar (ex.: `git push` do PC) enquanto o painel está aberto, ele **não sobrescreve** — mantém suas alterações pendentes e pede para recarregar.
-- Aviso ao sair com alterações não publicadas; botão **Descartar**.
-- Política de segurança (CSP) restrita: o painel só conversa com `api.github.com`.
+- **Conflito:** se o site mudar por outro lugar (um `git push` do PC ou o servidor reservando estoque) enquanto o painel está aberto, o painel **não sobrescreve**. Ele mantém suas alterações e pede para recarregar.
+- Aviso ao sair com alterações não publicadas. Há o botão **Descartar**.
+- Política de segurança (CSP) restrita: o painel só conversa com o GitHub, com o servidor e com os serviços de mapa do frete.
 
 ---
 
-## 4. Preços, margem e promoções
+## 6. Preços, promoções, estoque e frete
 
-### Preços
+### 6.1 Preços
 
-- O **painel manda** no preço e no estoque (`price` e `stock` em `assets/js/products.js`). Preços em **centavos** (`10580` = R$ 105,80).
-- A planilha local `Planilha_Precificacao_Produtos.xlsx` (não vai para o GitHub — tem custos) calcula o preço: **(custo + custo extra) ÷ (1 − margem − taxas)**, arredondado para cima em R$ 0,10. Margem na célula **B4**.
-- **Histórico:** em 20/10/2026 os preços foram aplicados com margem de **30%** (custo ÷ 0,7) e, no mesmo dia, passaram para margem de **50%** (custo × 2), que é a configuração atual.
-- Relatório site × planilha (não altera nada):
+- O **painel manda** no preço e no estoque (`price` e `stock` em `assets/js/products.js`). Os preços ficam em **centavos**: `10580` = R$ 105,80.
+- A planilha local `Planilha_Precificacao_Produtos.xlsx` calcula o preço. Ela **não vai para o GitHub**, porque tem custos.
+  - Fórmula: **(custo + custo extra) ÷ (1 − margem − taxas)**, arredondado para cima em R$ 0,10. A margem fica na célula **B4**.
+  - A planilha usa referências absolutas, então pode ordenar e filtrar sem quebrar.
+- A margem atual é **50%** (preço = custo × 2).
+- Relatório que compara o site com a planilha (não altera nada):
 
 ```bash
 node scripts/atualizar-precos.js
 ```
 
-- A planilha usa referências absolutas (`$B$4`, `$B$5`…): pode ordenar e filtrar sem quebrar. Ela tem uma linha de conferência com o total do cupom (R$ 2.544,95, pedido 16511 de 19/10/2026).
+### 6.2 Promoções
 
-### Promoções
+- O desconto é **real**: sai do preço cadastrado, que aparece **riscado** no cartão. O cliente paga o valor com desconto em tudo: cartão, detalhes, sacola, checkout, **QR do PIX** e mensagem do WhatsApp.
+- O preço com desconto é arredondado **para baixo** em R$ 0,10, a favor do cliente.
+- Vale até o fim do dia da data final. No dia seguinte, o site volta sozinho ao preço normal.
+- Com margem de 50%, **28,5% de desconto** leva o preço ao equivalente a uma margem de cerca de 30%.
+- A faixa da promoção aparece no topo do site e some quando não há promoção ativa.
+- **Atenção legal:** o preço riscado precisa ser um preço realmente praticado antes. Um "De" inventado é propaganda enganosa (CDC art. 37).
+- O cálculo fica em `assets/js/promo.js` e é usado pelo site, pelo painel, pelo servidor e pelos testes.
 
-- O desconto é **real**: sai do preço cadastrado, que aparece **riscado**. O cliente paga o valor com desconto em tudo — card, detalhes, sacola, checkout, **QR do PIX** e mensagem do WhatsApp (que mostra a economia).
-- Preço com desconto arredondado **para baixo** em R$ 0,10 (a favor do cliente). Vale até o fim do dia da data final; no dia seguinte o site volta sozinho ao preço normal.
-- Com margem de 50% na planilha, **28,5% de desconto** leva o preço de volta ao equivalente à margem de ~30%.
-- Faixa da promoção no topo do site e no catálogo (somem quando não há promoção ativa).
-- Cálculo único em `assets/js/promo.js` (usado pelo site, pelo painel e pelos testes).
-- **Atenção legal:** preço riscado deve ser um preço realmente praticado antes. “De” inventado é propaganda enganosa (CDC art. 37) e pode gerar multa do Procon.
+### 6.3 Estoque
 
-### Estoque
+- O site limita a quantidade na sacola ao estoque e bloqueia itens esgotados.
+- Os cartões mostram só **Última unidade**, **Esgotado** e o selo **Mais vendido**. Os detalhes do produto mostram o estoque completo.
+- Com o servidor ligado, o estoque **baixa sozinho** quando o cliente envia o comprovante (reserva) e **volta** se o pedido for cancelado. Vendas feitas fora do site (no balcão, por exemplo) você ajusta com **−1** na aba Estoque.
 
-- Campo `stock` de cada produto. O site mostra **Em estoque / Restam N unidades / Última unidade / Esgotado**, limita a quantidade na sacola e bloqueia itens esgotados.
-- O checkout **não baixa o estoque sozinho**: ao confirmar uma venda, use **−1** na aba Estoque do painel.
+### 6.4 Frete e entrega
+
+- No checkout, o cliente escolhe **Retirar na loja** (grátis) ou **Entregar**. O QR do PIX só aparece depois dessa escolha.
+- **Entrega na cidade da loja:**
+  - o cliente digita **CEP e número**;
+  - o site busca o endereço (ViaCEP), as coordenadas (OpenStreetMap/Nominatim) e a distância da **rota de ida** a partir da loja (OSRM). São serviços gratuitos e sem chave;
+  - o valor sai das **faixas de distância** configuradas na aba Frete. Acima da última faixa, cobra um valor extra a cada X km.
+- **Outras cidades:** valor fixo ou **a combinar**, conforme a lista da aba Frete. Com "a combinar", o PIX cobre só os produtos.
+- **Interior e outras regiões:** envio por **transportadora**. O PIX cobre os produtos. Você cota o frete e cobra **frete + taxa administrativa** (hoje 30%). Exemplo: R$ 40,00 + 30% = **R$ 52,00**.
+- O frete entra no **total e no QR do PIX**. O pedido mostra endereço, km e precisão ("aproximado pelo bairro" quando a rua não está no mapa). Confira no Google Maps se a distância estiver perto do limite de uma faixa.
+- A **tabela de frete** do site é gerada da configuração e aparece recolhida na seção *Transparência* ("Tabela de frete por distância e cidade").
+- O cálculo fica em `assets/js/frete.js` (usado pelo site, pelo painel e pelo servidor).
 
 ---
 
-### Frete e entrega
+## 7. Servidor (Cloudflare Worker)
 
-- No checkout o cliente escolhe **Retirar na loja (grátis)** ou **Entregar**. O QR do PIX só aparece depois dessa escolha.
-- **Entrega:** o cliente digita **CEP + número**. O site busca o endereço (ViaCEP), as coordenadas (OpenStreetMap/Nominatim, da mais precisa para a mais aproximada: endereço → rua → bairro) e a distância da **rota de ida** a partir da loja (OSRM). Serviços gratuitos, sem chave.
-- **Tabela (Goiânia):** até 15 km R$ 25,00 · até 20 km R$ 28,00 · até 25 km R$ 31,00 · até 30 km R$ 34,00 · até 35 km R$ 37,00 · até 40 km R$ 40,00 · acima de 40 km, + R$ 3,00 a cada 5 km (ou fração).
-- **Outras cidades:** Senador Canedo R$ 25,00 fixo; Aparecida de Goiânia, Goianira e Trindade **a combinar** (o PIX cobre só os produtos e o frete é combinado no WhatsApp). **Interior e outras regiões** (qualquer cidade fora da lista): **envio por transportadora** — o PIX cobre só os produtos; você cota o frete na transportadora e cobra **frete × 1,30** (taxa administrativa de 30%), informando o total ao cliente antes do envio. Exemplo: frete R$ 40,00 + taxa R$ 12,00 = **R$ 52,00**. A aba Frete do painel tem uma **calculadora de transportadora** que monta esse valor e a mensagem pronta para o cliente.
-- O frete entra no **total e no QR do PIX**; a mensagem do WhatsApp leva o endereço, a distância em km e a precisão ("aproximado pelo bairro" quando a rua não está no mapa) — **confira no Google Maps** se a distância estiver perto do limite de uma faixa.
-- **Ponto de partida:** centro do Conj. Res. Aruanã III (a Rua Capauam ainda não existe no OpenStreetMap). Para mais precisão, coloque a latitude/longitude exata da loja na aba Frete do painel.
-- Tudo editável na aba **Frete** do painel (faixas, valores, cidades, transportadora e % da taxa, retirada, ponto de partida) com **simulador** de CEP. A tabela da seção "Envio e entrega" do site é gerada dessa configuração. Cálculo em `assets/js/frete.js`.
-- O servidor público do OSRM é para uso leve (ok para o volume da loja). Se um dia ficar lento, dá para trocar por OpenRouteService (grátis com chave) ou Google Maps.
+Pasta `worker/`. Ele recalcula valores, reserva e devolve o estoque (por commits no GitHub), guarda os pedidos e envia os avisos.
 
----
+### 7.1 Rotas
 
-## 4.0 Pedidos PIX manual com reserva de estoque (modo atual)
+| Rota | Quem usa | O que faz |
+|---|---|---|
+| `GET /api/health` | qualquer um | teste rápido (`configured: true` = chave do GitHub cadastrada) |
+| `POST /api/manual-orders` | site | registra o pedido do PIX manual e **reserva** o estoque |
+| `GET /api/admin/orders` (`?all=1`) | painel | lista de pedidos (60 mais recentes, ou todos para o dashboard) |
+| `GET /api/admin/orders/changes` | painel | última mudança nos pedidos (consulta leve a cada 20 s) |
+| `POST /api/admin/orders/:id/confirm` · `/cancel` | painel | confirma o pagamento ou cancela e devolve o estoque |
+| `GET /api/push/key` | painel | chave pública das notificações |
+| `POST /api/admin/push/subscribe` · `/unsubscribe` · `/test` | painel | cadastra ou remove o aparelho e envia aviso de teste |
+| `POST /api/orders`, `GET /api/orders/:id`, `POST /api/orders/:id/cancel`, `POST /api/webhook` | site / Mercado Pago | PIX automático (opcional, [7.4](#74-mercado-pago-pix-automático--opcional)) |
+| tarefa agendada (minuto 17 de cada hora) | Cloudflare | cancela pedidos sem confirmação há 48 h e devolve o estoque |
 
-1. O cliente escolhe retirada/entrega, paga o **PIX** (QR da chave da loja), informa **nome** e **WhatsApp** e toca em **Enviar comprovante**.
-2. O site registra o pedido no servidor (`POST /api/manual-orders`): preço, promoção e frete são **recalculados no servidor**, e o **estoque é baixado na hora** (commit “reserva: pedido AK-… aguardando confirmação do PIX”) — o item sai da vitrine. Se acabou o estoque, o pedido é recusado e o cliente é avisado.
-3. Abre o **WhatsApp da loja** com o alerta: pedido, data, cliente, produtos com código, endereço/retirada, frete e total. O cliente envia o comprovante nessa conversa.
-4. Você confere o PIX no banco e, no painel → **Pedidos** (“Aguardando confirmação do PIX”):
-   - **✓ Confirmar pagamento** → o produto continua fora do estoque;
-   - **Cancelar e devolver ao estoque** → o item volta para a vitrine (commit “estoque devolvido: …”).
-5. Sem resposta em **48 h** (`AUTO_CANCEL_HOURS`), o servidor cancela sozinho e devolve o estoque (verificação de hora em hora).
-6. Proteções: máximo de **5 pedidos por hora por aparelho** (`MANUAL_ORDERS_PER_HOUR`); se o servidor estiver fora do ar, o pedido segue pelo WhatsApp sem reserva (ajuste o estoque no painel).
+As rotas `/api/admin/*` exigem a chave do GitHub do painel com permissão de escrita no repositório.
 
-Requisito: o servidor (`worker/`) publicado com o segredo **`GITHUB_TOKEN`** e o endereço do servidor preenchido no painel → Loja. Para cadastrar a chave: `cd worker` → `& .definir-chaves.ps1` (PowerShell) e cole a chave quando pedir.
+### 7.2 Configuração (`worker/wrangler.toml`)
 
-## 4.1 Pagamento automático (Mercado Pago) e baixa de estoque
+| Variável | Valor atual | Para quê |
+|---|---|---|
+| `GITHUB_REPO` | `Tanattos18/Akylla_Store` | repositório onde o estoque é baixado |
+| `GITHUB_BRANCH` | `main` | branch publicada |
+| `ALLOWED_ORIGINS` | `https://akyllashop.com,https://www.akyllashop.com,…` | sites que podem chamar o servidor (CORS) |
+| `AUTO_CANCEL_HOURS` | `48` | prazo para confirmar o PIX manual |
+| `MANUAL_ORDERS_PER_HOUR` | `5` | limite de pedidos por aparelho (IP) por hora |
+| `STORE_WHATSAPP` | WhatsApp da loja | destino do aviso do CallMeBot |
+| `PAYMENT_MINUTES`, `MP_API` | `30`, `orders` | só para o Mercado Pago |
+| `[[kv_namespaces]] ORDERS` | id do KV | banco de pedidos, reservas e avisos |
+| `[triggers] crons` | `17 * * * *` | cancelamento automático |
 
-Com o pagamento automático ligado, a compra funciona assim:
+**Segredos.** São cadastrados na Cloudflare, **nunca** no código. A tabela mostra só os nomes:
 
-1. O cliente escolhe retirada/entrega, informa **nome** (obrigatório), WhatsApp e e-mail (opcionais) e clica em **Gerar PIX**.
-2. O **servidor** (`worker/`, Cloudflare Worker) recalcula preço, promoção e frete com os mesmos arquivos do site (o navegador não decide valores), confere o estoque, **reserva** os itens por 30 minutos e cria o PIX no **Mercado Pago**.
-3. O cliente paga; o Mercado Pago avisa o servidor (webhook) e o site também consulta a cada 4 segundos.
-4. O servidor confere no Mercado Pago: **aprovado + valor exato + número do pedido**. Só então:
-   - **baixa o estoque** no `assets/js/products.js` (commit “venda: pedido AK-…”; o site atualiza em ~1 min);
-   - envia o **aviso da venda no WhatsApp da loja** (produto, código, nome do comprador, data, endereço, frete e total);
-   - mostra “Pagamento confirmado” ao cliente, com botão para enviar o pedido no WhatsApp.
-5. PIX não pago em 30 minutos expira e a reserva é liberada. Pagamento com valor diferente vai para **“Conferir pagamento”** (não baixa estoque e avisa no WhatsApp).
+| Nome | Obrigatório? | Como conseguir |
+|---|---|---|
+| `GITHUB_TOKEN` | **sim** | chave fine-grained do GitHub, separada da do painel: **Contents: Read and write**, só no repositório da loja, validade de 1 ano (anote para renovar) |
+| `CALLMEBOT_APIKEY` | não | aviso de venda no WhatsApp pelo robô do callmebot.com |
+| `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` | não | só para o PIX automático do Mercado Pago |
 
-O painel tem a aba **Pedidos** (lista, status, cliente, itens, entrega, total, estoque/aviso). Enquanto o servidor não estiver publicado, o site usa o **PIX manual** (padrão) — nada quebra.
+Para cadastrar ou trocar um segredo, use `cd worker` → `& .\definir-chaves.ps1` (PowerShell) ou `npx wrangler@3 secret put NOME`. Também dá pelo site da Cloudflare: *Workers & Pages → (seu worker) → Settings → Variables and Secrets → Add → **Type: Secret***. Se cadastrar como *Text*, a chave fica visível.
 
-### Publicar o servidor (uma vez)
-
-Requisitos: Node 18+ no computador e conta Cloudflare (grátis).
+### 7.3 Publicar ou atualizar o servidor
 
 ```bash
 cd worker
-npx wrangler login                          # abre o navegador para autorizar a sua conta Cloudflare
-npx wrangler kv namespace create ORDERS     # copie o "id" mostrado e cole em wrangler.toml (kv_namespaces → id)
-npx wrangler deploy                         # publica e mostra o endereço: https://akylla-shop-api.akyllashop.workers.dev
+npx wrangler@3 login      # só na primeira vez em cada computador
+npx wrangler@3 deploy     # publica a versão nova (cerca de 10 s)
 ```
 
-> **Onde guardar as chaves:** no arquivo local `CHAVES_PRIVADAS.md` (fica só na pasta do computador — está no `.gitignore` e **nunca** vai para o GitHub, que é público) e/ou num gerenciador de senhas. Lá estão também os passos para trocar cada chave.
+Depois de mudar qualquer arquivo em `worker/src/` ou em `assets/js/promo.js`, `frete.js` ou `admin/formato.js` (o servidor também usa esses arquivos), rode os testes e faça o `deploy`.
 
-**Segredos** — cadastre no painel da Cloudflare (*Workers & Pages → akylla-shop-api → Settings → Variables and Secrets → Add → Type: Secret*), nunca no código nem no chat:
+**Limites do plano grátis da Cloudflare** (sobram muito para este volume):
+- 100 mil requisições por dia;
+- KV: 100 mil leituras, 1.000 gravações e 1.000 listagens por dia.
 
-| Nome | Onde conseguir |
-|---|---|
-| `MP_ACCESS_TOKEN` | Mercado Pago → *Seu negócio → Configurações → Credenciais* (ou developers.mercadopago.com → *Suas integrações* → **Criar aplicação** → *Checkout Transparente* → **API de Orders** → **Credenciais de produção** → *Access Token*, começa com `APP_USR-`). |
-| `MP_WEBHOOK_SECRET` | developers.mercadopago.com → sua aplicação → **Webhooks** → *Configurar notificações*: URL `https://akylla-shop-api.akyllashop.workers.dev/api/webhook`, evento **Order (Mercado Pago)** (aplicação criada como *Checkout Transparente → API de Orders*), modo produção → copie a **assinatura secreta**. |
-| `GITHUB_TOKEN` | github.com/settings/personal-access-tokens/new → *Fine-grained* → repositório **Akylla_Store** → **Contents: Read and write**. Use uma chave separada da do painel (nome: “Servidor Akylla”, validade 1 ano — anote para renovar). |
-| `CALLMEBOT_APIKEY` | Aviso de vendas no WhatsApp: siga as instruções do site oficial **callmebot.com** (salvar o número do robô e enviar a frase de autorização pelo WhatsApp da loja) e copie a *apikey* que ele responde. O número que recebe fica em `STORE_WHATSAPP` no `wrangler.toml`. |
+O painel foi feito para gastar pouco: consulta leve a cada 20 s e a lista completa só quando muda algo.
 
-Depois:
+### 7.4 Mercado Pago (PIX automático) — opcional
 
-1. Abra `https://akylla-shop-api.akyllashop.workers.dev/api/health` → deve mostrar `"configured": true`.
-2. Painel → **Loja** → *Forma de pagamento*: **Mercado Pago automático** e *Endereço do servidor*: `https://akylla-shop-api.akyllashop.workers.dev` → **Publicar**.
-3. Faça uma compra real de um item barato (ex.: um cabo) para testar; depois devolva o valor pelo app do Mercado Pago.
+Já está implementado, mas **desligado**: o modo atual é o PIX manual. Com ele ligado, o servidor gera o PIX no Mercado Pago, e a confirmação e a baixa do estoque ficam automáticas (webhook). Para ligar:
 
-Para voltar ao PIX manual a qualquer momento: painel → Loja → *PIX manual* → Publicar.
+1. Em developers.mercadopago.com → **Criar aplicação** → *Checkout Transparente* → **API de Orders** → copie o **Access Token de produção** (`APP_USR-…`).
+2. Na aplicação → **Webhooks**: URL `https://SEU-SERVIDOR/api/webhook`, evento **Order**, modo produção. Copie a **assinatura secreta**.
+3. Cadastre os segredos `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` (seção 7.2).
+4. No painel → Loja → *Forma de pagamento*: **Mercado Pago automático** → Publicar. Faça uma compra real barata para testar e depois estorne.
 
-> Atualizar o servidor depois de mudanças no código: `cd worker` → `npx wrangler deploy`. Testes do servidor: `node --test "tests/*.test.js"` (simulam Mercado Pago, GitHub e o banco de pedidos).
+Para voltar ao PIX manual: painel → Loja → *PIX manual* → Publicar.
 
 ---
 
-## 5. Domínio, DNS e HTTPS
+## 8. Domínio, DNS e HTTPS
 
-### Registros DNS (Hostinger → Domínios → akyllashop.com → DNS / Nameservers)
+**Registros DNS** (Hostinger → Domínios → akyllashop.com → DNS):
 
 | Tipo | Nome | Valor |
 |---|---|---|
@@ -222,72 +480,110 @@ Para voltar ao PIX manual a qualquer momento: painel → Loja → *PIX manual* �
 | A | @ | 185.199.111.153 |
 | CNAME | www | tanattos18.github.io |
 
-- Nameservers da Hostinger: `aurora.dns-parking.com` e `nebula.dns-parking.com`.
-- Não apague registros **MX/TXT** se for usar e-mail `@akyllashop.com`.
+- Não apague registros **MX/TXT** se for usar e-mail com o domínio.
+- **GitHub → Settings → Pages:** *Deploy from a branch* `main` / `(root)` · *Custom domain* `akyllashop.com` · **Enforce HTTPS** marcado.
+- O arquivo **`CNAME`** na raiz liga o domínio. **Não apague.**
+- Os endereços fixos que dependem do domínio estão em `index.html`, `privacidade.html` e `termos.html` (`canonical`, `og:url`, `og:image`, JSON-LD), `sitemap.xml`, `robots.txt` e `worker/wrangler.toml` (`ALLOWED_ORIGINS`).
 
-### GitHub Pages
-
-- **Settings → Pages:** *Deploy from a branch* → `main` / `(root)` · *Custom domain*: `akyllashop.com` · **Enforce HTTPS** marcado (o certificado é gerado pelo GitHub depois que o DNS aponta certo; pode levar até ~1 hora).
-- O arquivo **`CNAME`** na raiz (conteúdo: `akyllashop.com`) liga o domínio. **Não apague.**
-- Recomendado: verificar o domínio em **Settings da conta → Pages → Add a domain**, para ninguém usá-lo em outro repositório.
-- `www.akyllashop.com` redireciona para `akyllashop.com`.
-
-### Se o site sair do ar
-
-1. Confira o DNS: `nslookup akyllashop.com 8.8.8.8` deve mostrar os 4 IPs `185.199.10x.153`.
-2. Confira se o arquivo `CNAME` existe no repositório.
-3. Em **Settings → Pages**, remova e salve de novo o *Custom domain* para forçar nova verificação.
-
-### Endereços fixos que dependem do domínio
-
-`index.html`, `privacidade.html` e `termos.html` (`canonical`, `og:url`, `og:image`, JSON-LD), `sitemap.xml` e `robots.txt` usam `https://akyllashop.com/`. Ao trocar de domínio, troque nesses arquivos e no `CNAME`.
+**Se o site sair do ar:**
+1. `nslookup akyllashop.com 8.8.8.8` deve mostrar os 4 IPs `185.199.10x.153`.
+2. O arquivo `CNAME` precisa existir no repositório.
+3. Em Settings → Pages, remova e salve de novo o *Custom domain* para forçar uma nova verificação.
 
 ---
 
-## 6. Estrutura de arquivos
+## 9. Como atualizar o site
+
+São três caminhos, e todos terminam num commit na `main`. O GitHub Pages publica em cerca de 1 minuto.
+
+### 9.1 Pelo painel (dia a dia)
+
+Estoque, preços, produtos, fotos, promoções, frete, WhatsApp, PIX e vitrine: faça as alterações e clique em **Publicar**.
+
+### 9.2 Pelo computador (código, textos fixos, layout)
+
+```bash
+git pull                                  # 1) SEMPRE primeiro: o painel e o servidor também fazem commits
+python -m http.server 8000                # 2) (opcional) ver em http://localhost:8000
+node --test "tests/*.test.js"             # 3) testes
+git add -A
+git commit -m "descreva a alteração"
+git push                                  # 4) publica
+```
+
+- Se o `git push` for recusado, rode `git pull` e depois `git push` de novo. Acontece porque o painel ou o servidor publicaram algo nesse meio-tempo.
+- **Cache dos celulares:** CSS e JS são chamados com `?v=AAAAMMDD-N` em `index.html`, `privacidade.html`, `termos.html` e `admin/index.html`. Ao alterar um `.css` ou `.js`, aumente esse número para todo mundo receber a versão nova na hora.
+- Mudou algo em `worker/`? Faça também o `deploy` ([7.3](#73-publicar-ou-atualizar-o-servidor)).
+
+### 9.3 Em mais de um computador
+
+Antes de começar: `git pull`. Ao terminar: `git push`. Os arquivos privados (planilha, comprovantes, artes, anúncios, chaves) **não vão para o GitHub**. Copie à mão se precisar deles em outra máquina.
+
+---
+
+## 10. Anúncios 9:16 para Instagram/Facebook
+
+A pasta `ferramentas/anuncios/` gera um anúncio **1080×1920 (PNG)** por produto, no padrão da marca: logo, título, foto recortada, ficha técnica com ícones, preço com promoção, chamada "Compre agora" e site/WhatsApp.
+
+```bash
+node ferramentas/anuncios/gerar.js           # todos
+node ferramentas/anuncios/gerar.js 03 07     # só os números escolhidos
+```
+
+- **Precisa de:** Node 18+, Python 3 com Pillow (`pip install pillow`) e Microsoft Edge ou Google Chrome.
+- **Saída:** pasta `Banner_Itens_Loja/` na raiz, com arquivos `01 -Anuncio_….png`, `02 -…`. Essa pasta fica **fora do GitHub**.
+- **Textos:** ficam em `ferramentas/anuncios/anuncios.js`, um bloco por anúncio:
+  - título, subtítulo, frase em letra de mão, 4 a 6 especificações (ícone + texto), destaque, 4 selos e 2 vantagens;
+  - `hero` e `combo.img` escolhem as fotos (0 = principal, 1 em diante = galeria);
+  - `card: true` mostra a foto num cartão branco. Use para produtos brancos ou fotos com medidas desenhadas;
+  - `holes: true` tira os brancos internos de produtos escuros.
+- **Visual:** cores e posições em `estilo.css.txt`. Os ícones disponíveis estão na lista `I` de `modelo.js`.
+- **Preço e promoção** vêm do catálogo. **Gere de novo** quando o preço mudar ou a promoção acabar (o anúncio mostra "Oferta válida até DD/MM").
+- **Regra:** escreva só o que está na ficha do produto. Não invente característica.
+- **Stories e Reels:** o Instagram cobre o topo e o rodapé com a interface (perfil, botão de link). Confira se nada importante ficou escondido. Para o feed, o formato que mais aparece é 4:5 (1080×1350).
+
+---
+
+## 11. Estrutura de arquivos
 
 ```
-Akylla_Store/
 ├── index.html              # loja (catálogo, sacola, checkout PIX)
 ├── privacidade.html        # Política de Privacidade (LGPD)
 ├── termos.html             # Termos de Uso (CDC)
-├── CNAME                   # domínio do GitHub Pages: akyllashop.com
-├── robots.txt / sitemap.xml
-├── admin/                  # painel administrativo
+├── CNAME                   # domínio do GitHub Pages
+├── robots.txt · sitemap.xml
+├── admin/                  # painel administrativo (instalável como app)
 │   ├── index.html · admin.css · admin.js
-│   └── formato.js          # lê/escreve products.js e config.js (usado também pelos testes)
+│   ├── formato.js          # lê/escreve products.js e config.js (usado também pelo servidor e pelos testes)
+│   ├── sw.js               # service worker: recebe as notificações push
+│   └── manifest.webmanifest · icon-192.png · icon-512.png · apple-touch-icon.png
 ├── assets/
 │   ├── css/styles.css
 │   ├── fonts/              # DM Sans e Sora (woff2 locais, licença OFL)
-│   ├── img/
-│   │   ├── favicon.png · logo-mark.jpg   # ícone da marca (o "A" da logo)
-│   │   ├── vitrine.jpg · vitrine-640.jpg # foto da vitrine (topo)
-│   │   ├── og-cover.jpg                  # capa de compartilhamento
-│   │   └── products/                     # fotos WebP 700×700 (principal + galerias)
+│   ├── img/                # logo-mark.jpg, favicon.png, vitrine*.jpg, og-cover.jpg, products/ (WebP 700×700)
 │   ├── js/
-│   │   ├── app.js          # catálogo, filtros, sacola, checkout, diálogos
-│   │   ├── config.js       # WhatsApp, PIX, textos, promoção, margem  (editado pelo painel)
-│   │   ├── products.js     # catálogo, preços, estoque, fotos           (editado pelo painel)
-│   │   ├── promo.js        # cálculo de promoções
+│   │   ├── app.js          # catálogo, filtros, sacola, checkout, envio do pedido
+│   │   ├── config.js       # WhatsApp, PIX, textos, promoção, frete, servidor  (editado pelo painel)
+│   │   ├── products.js     # catálogo, preços, estoque, fotos                  (painel e servidor)
+│   │   ├── promo.js        # cálculo das promoções
 │   │   ├── frete.js        # cálculo do frete (CEP → endereço → rota → tabela)
-│   │   (também usados pelo servidor: worker/)
 │   │   └── pix.js          # gerador do BR Code PIX + CRC16
 │   └── vendor/qrcode.js    # qrcode-generator 2.0.4 (MIT)
-├── worker/                 # servidor de pagamentos (Cloudflare Worker): Mercado Pago, reservas, baixa de estoque, aviso no WhatsApp
-│   ├── wrangler.toml · package.json
-│   └── src/index.js · src/logic.js
-├── scripts/atualizar-precos.js   # relatório site × planilha (não altera nada)
-├── tests/site.test.js            # testes automáticos
+├── worker/                 # servidor (Cloudflare Worker)
+│   ├── wrangler.toml · package.json · definir-chaves.ps1
+│   └── src/index.js (rotas) · src/logic.js (regras de pedido) · src/push.js (notificações)
+├── ferramentas/anuncios/   # gerador de anúncios 9:16
+├── scripts/atualizar-precos.js   # relatório site × planilha
+├── tests/site.test.js · tests/worker.test.js
 ├── .github/workflows/testes.yml  # roda os testes a cada push
-├── docs/PLANO_MELHORIAS_AKYLLA_SHOP.md
-└── CHECKLIST_MELHORIAS_AKYLLA_SHOP.md
+└── docs/ · CHECKLIST_MELHORIAS_AKYLLA_SHOP.md   # planejamento original
 ```
 
 ---
 
-## 7. Formato dos dados
+## 12. Formato dos dados
 
-`assets/js/products.js` e `assets/js/config.js` são **JSON atribuído a `window.*`** (o site carrega com `<script>`; o painel lê com `JSON.parse`, sem executar código). Dá para editar à mão, mas o painel reescreve a formatação.
+`assets/js/products.js` e `assets/js/config.js` são **JSON atribuído a `window.*`**. O site carrega com `<script>`, e o painel e o servidor leem com `JSON.parse`, sem executar código.
 
 ### Produto
 
@@ -303,38 +599,54 @@ Akylla_Store/
   "visual": "watch",
   "price": 26380,
   "stock": 3,
-  "summary": "Texto curto do card",
+  "summary": "Texto curto do cartão",
   "description": "Texto completo dos detalhes",
-  "image": "assets/img/products/w31-pro-max.webp",
+  "image": "assets/img/products/w31-pro-max-5.webp",
   "imageAlt": "Descrição da foto",
   "gallery": ["assets/img/products/w31-pro-max-1.webp"],
   "illustrative": true,
   "hidden": true,
+  "bestseller": true,
   "promo": { "percent": 15, "until": "2026-11-15" },
   "specs": [{ "label": "Tela", "value": "Alta definição" }]
 }
 ```
 
-- `code`: código do fornecedor (o mesmo do cupom e da planilha). `category`: `smartwatches`, `audio`, `drones`, `carregadores`, `cabos`, `acessorios`. `visual` (ícone sem foto): `watch`, `earbuds`, `headphones`, `drone`, `cable`, `charger`, `powerbank`, `mic`.
-- Opcionais: `gallery` (fotos extras), `illustrative` (aviso “Imagem ilustrativa”), `hidden` (fora do site), `promo` (sem o campo = segue a promoção geral; `{ "percent": 0 }` = fora da promoção).
+- `code`: código do fornecedor.
+- `category`: um dos ids de `AKYLLA_CATEGORIES` (`smartwatches`, `audio`, `drones`, `carregadores`, `cabos`, `acessorios`).
+- `visual`: ícone usado quando não há foto (`watch`, `earbuds`, `headphones`, `drone`, `cable`, `charger`, `powerbank`, `mic`).
+- Opcionais:
+  - `gallery`: fotos extras;
+  - `illustrative`: mostra o aviso "Imagem ilustrativa";
+  - `hidden`: tira o produto do site;
+  - `bestseller`: selo "Mais vendido";
+  - `promo`: sem o campo, segue a promoção geral. `{ "percent": 0 }` deixa o produto fora da promoção.
 
 ### Configuração (`window.AKYLLA_CONFIG`)
 
-Campos principais: `storeName`, `city`, `whatsapp` (só dígitos, com 55 e DDD), `whatsappDisplay`, `whatsappMessage`, `pixKey`, `pixHolder`, `pixMerchantName` (máx. 25), `pixCity` (máx. 15), textos de atendimento, `year`, `marginPercent` (margem da planilha) e `promo`:
+- **Identidade e contato:** `storeName`, `tagline`, `city`, `whatsapp` (só dígitos, com 55 e DDD), `whatsappDisplay`, `whatsappMessage`.
+- **PIX:** `pixKey`, `pixHolder`, `pixMerchantName` (até 25 letras), `pixCity` (até 15).
+- **Textos:** `deliveryNote`, `warrantyNote`, `returnNote`, `paymentNote`, `year`.
+- **Preços:** `marginPercent` (margem da planilha) e `promo` (`active`, `text`, `percent`, `until`).
+- **Frete:** `shipping`: `enabled`, `pickup`, `pickupNote`, `originLabel`, `origin` {lat, lon}, `bands` [{upToKm, price}], `extraStepKm`, `extraStepPrice`, `homeCity`, `cities` [{name, price ou null}], `carrier` {enabled, feePercent}.
+- **Pagamento:** `paymentProvider` (`manual` ou `mercadopago`) e `paymentApiUrl` (endereço do servidor).
 
-```json
-"promo": { "active": true, "text": "Descontos de inauguração", "percent": 10, "until": "2026-10-31" }
-```
-
-> Telefone, endereço e CPF que aparecem **fixos** no rodapé e nas páginas legais ficam no HTML (não mudam pelo painel).
+Nome, CPF e endereço do **rodapé e das páginas legais** ficam fixos no HTML e não mudam pelo painel.
 
 ---
 
-## 8. PIX
+## 13. PIX
 
-`assets/js/pix.js` monta o **BR Code estático** (EMV® QRCPS-MPM): chave, valor exato do pedido (já com desconto), nome e cidade do recebedor, txid do pedido e CRC16-CCITT. O QR é gerado no navegador e pode ser baixado em PNG. A confirmação é **manual**, pelo comprovante enviado no WhatsApp — confira o valor recebido no banco antes de liberar o pedido.
+`assets/js/pix.js` monta o **BR Code estático** (padrão EMV do Banco Central), com:
+- chave;
+- valor exato do pedido (já com desconto e frete);
+- nome e cidade do recebedor;
+- número do pedido (txid);
+- CRC16.
 
-Validar um payload no console do navegador:
+O QR é gerado no navegador e pode ser baixado em PNG. A confirmação é **manual**: confira o valor recebido no banco antes de confirmar no painel.
+
+Para validar um código no console do navegador:
 
 ```js
 window.AkyllaPix.validatePixPayload(document.getElementById('pixPayloadPreview').textContent);
@@ -342,84 +654,115 @@ window.AkyllaPix.validatePixPayload(document.getElementById('pixPayloadPreview')
 
 ---
 
-## 9. Privacidade e arquivos que não vão para o GitHub
-
-O repositório é **público**. O `.gitignore` bloqueia:
-
-| Arquivo | Por quê |
-|---|---|
-| `Planilha_Precificacao_Produtos*.xlsx` / `*.xlsx` | custos e margens |
-| `Comprovante_Cupom*.pdf` / `*.pdf` | cupom do fornecedor com CPF e endereço |
-| `Chave*PIX.txt`, `WhatsApp Image*.jpeg` | dados pessoais de referência |
-| `Logo_Vitrine*.png`, `Banner vitrine da loja.png` | artes-fonte (as versões otimizadas estão em `assets/img/`) |
-| `fotos-candidatas/` | fotos baixadas para validação |
-
-- O site não coleta dados: a sacola fica no navegador do cliente (`localStorage`); contato e comprovante passam pelo WhatsApp.
-- O rodapé e as páginas legais identificam o vendedor (nome, CPF e endereço), como exige o Decreto 7.962/2013.
-- Nunca coloque senhas, tokens ou chaves de API em arquivos do site.
-
----
-
-## 10. Testes
+## 14. Testes automáticos
 
 ```bash
 node --test "tests/*.test.js"
 ```
 
-Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos únicos, fotos e galerias existentes, estoque válido), formato dos arquivos do painel, PIX (CRC e valor com desconto), promoções (desconto, data final, regras por produto), identificação do vendedor, fontes locais, arquivos referenciados e segurança do painel.
+Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
+
+- **site:** catálogo (ids e códigos únicos, fotos existentes, estoque válido), formato dos arquivos do painel, PIX (CRC e valor com desconto), promoções, frete (tabela e cotação simulada), checkout, identificação do vendedor, fontes locais e segurança do painel;
+- **servidor**, com GitHub, Mercado Pago, CallMeBot e KV simulados: compra completa, reserva, confirmação e cancelamento, cancelamento automático em 48 h, limite por hora, e **notificação push**. Neste último, um "navegador" de teste descriptografa o aviso e confere a assinatura.
 
 ---
 
-## 11. Pendências
+## 15. Segurança, chaves e privacidade
 
-- [ ] Renomear o repositório no GitHub para **Akylla_Shop** (Settings → General → Repository name). O GitHub redireciona o nome antigo; o painel já se ajusta sozinho. Depois, em cada computador: `git remote set-url origin https://github.com/Tanattos18/Akylla_Shop.git`.
-- [ ] Confirmar o WhatsApp **(62) 8151-7002**: celulares costumam ter 9 dígitos — se precisar, usar `5562981517002` (aba Loja do painel).
-- [ ] Marcar **Enforce HTTPS** em Settings → Pages assim que o certificado do `akyllashop.com` for emitido.
-- [ ] Verificar o domínio na conta do GitHub (Pages → Add a domain).
-- [ ] Fotos reais do estoque para os 4 produtos com foto ilustrativa (Carregador 35W, CAR-12728C, Fonte EL-4051, Cabo 30207B).
-- [ ] Logo oficial em SVG/PNG transparente (o ícone atual foi recortado da arte da vitrine).
-- [ ] Redes sociais e Perfil da Empresa no Google (links no rodapé).
-- [ ] Revisar garantia, entrega e trocas com contador/advogado (referências gerais ao CDC).
-- [x] Teste do QR PIX em app bancário — feito.
-- [x] Identificação do vendedor (nome, CPF, endereço) — feito.
-- [x] Domínio próprio `akyllashop.com` — feito em 20/10/2026.
+- **O repositório é público.** Nunca coloque senhas, tokens ou chaves de API em arquivos do projeto, no README, em print ou em conversa. A chave PIX e o WhatsApp aparecem no site de propósito, porque o cliente precisa deles.
+- **Onde guardar as chaves:** num gerenciador de senhas e/ou no arquivo local `CHAVES_PRIVADAS.md`. Esse arquivo fica só no computador (está no `.gitignore`) e tem os passos para trocar cada chave.
+- **Chaves em uso** (só os nomes):
+
+| Chave | Onde fica | Validade |
+|---|---|---|
+| Chave do **painel** (GitHub fine-grained, Contents RW) | só no navegador de quem usa o painel | 90 dias |
+| Chave do **servidor** (`GITHUB_TOKEN`, outra chave fine-grained) | segredo na Cloudflare | 1 ano |
+| `CALLMEBOT_APIKEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` (opcionais) | segredos na Cloudflare | até trocar |
+| Chaves das notificações (VAPID) | geradas e guardadas pelo próprio servidor (KV) | — |
+
+- **Vazou uma chave** (foi colada em chat, print ou e-mail)? Apague no site de origem (GitHub → Settings → Personal access tokens; Mercado Pago → Credenciais → renovar), gere outra e cadastre de novo (`definir-chaves.ps1` ou o painel).
+- **Arquivos que não vão para o GitHub** (`.gitignore`):
+
+| Arquivo | Por quê |
+|---|---|
+| `*.xlsx` (planilha de precificação) | custos e margens |
+| `*.pdf` (cupons e comprovantes) | CPF, endereço e dados do fornecedor |
+| `Chave*PIX.txt`, `WhatsApp Image*.jpeg` | dados pessoais de referência |
+| `Logo_Vitrine*.png`, `Banner vitrine da loja.png` | artes-fonte (as versões otimizadas estão em `assets/img/`) |
+| `Banner_Itens_Loja/`, `ferramentas/anuncios/.trabalho/` | anúncios gerados e arquivos de trabalho |
+| `CHAVES_PRIVADAS*`, `.env*`, `worker/.dev.vars` | chaves |
+| `fotos-candidatas/`, `worker/node_modules/`, `worker/.wrangler/` | temporários |
+
+- O site não coleta dados de cartão. A sacola fica no navegador do cliente (`localStorage`). Nome e WhatsApp do pedido ficam no servidor (KV) para a loja atender.
+- O rodapé e as páginas legais identificam o vendedor, como exige o Decreto 7.962/2013.
 
 ---
 
-## 12. Histórico resumido
+## 16. Problemas comuns e soluções
+
+| Sintoma | O que fazer |
+|---|---|
+| O site não mudou depois de publicar | Espere 1 a 2 minutos e recarregue com `Ctrl+F5`. No celular, feche e abra a aba. Mudou CSS ou JS? Aumente o `?v=` ([9.2](#92-pelo-computador-código-textos-fixos-layout)). |
+| Painel: "Chave inválida ou vencida" | Gere outra chave fine-grained ([5.3](#53-acesso-chave-do-github)). |
+| Painel: "A chave não tem permissão de escrita" | Na chave, confira *Only select repositories* → o repositório certo, e **Contents: Read and write**. |
+| Painel: "O site mudou enquanto você editava" | O servidor ou outro aparelho publicou algo. Recarregue o painel e refaça a alteração. |
+| `/api/health` mostra `"configured": false` | Falta o segredo `GITHUB_TOKEN` no servidor ([7.2](#72-configuração-workerwranglertoml)). |
+| Pedido não reserva o estoque ("erro no servidor") | A chave do servidor venceu ou não tem permissão. Gere outra e rode `definir-chaves.ps1`. |
+| Pedidos não aparecem no painel | Confira o *Endereço do servidor* no painel → Loja, e se `ALLOWED_ORIGINS` no `wrangler.toml` tem o endereço do site. |
+| Aviso de teste não chega | Confira se as notificações do site estão permitidas (cadeado → Notificações) e se o "Não perturbe" está desligado. No iPhone, o painel precisa estar instalado na Tela de Início. Desative e ative de novo no aparelho. |
+| Som não toca com o painel aberto | Toque ou clique uma vez no painel (o navegador exige) e confira "Som com o painel aberto". Teste com **Ouvir o som**. |
+| QR do PIX recusado pelo banco | Confira a chave PIX e o nome/cidade do QR (sem acento, dentro do limite de letras) no painel → Loja. |
+| Frete estranho para um CEP | Use o simulador na aba Frete e confira a distância no Google Maps. Coordenadas exatas da loja melhoram o cálculo. |
+| Site fora do ar | Veja a [seção 8](#8-domínio-dns-e-https). |
+
+---
+
+## 17. Pendências
+
+- [ ] Renomear o repositório para **Akylla_Shop** (Settings → General → Repository name). O painel e o servidor se ajustam ao redirecionamento. Depois, em cada computador: `git remote set-url origin https://github.com/Tanattos18/Akylla_Shop.git`, e atualize `GITHUB_REPO` no `wrangler.toml` e `REPO` no `admin/admin.js`.
+- [ ] Trocar as chaves que já foram expostas em conversa (GitHub, Mercado Pago) e cadastrar de novo.
+- [ ] CallMeBot: cadastrar a apikey quando o robô liberar vaga (opcional, porque os avisos push já cobrem isso).
+- [ ] Criar o Instagram e o Facebook da loja e colocar os links no topo e no rodapé do site.
+- [ ] Fotos reais dos produtos que só têm foto ilustrativa ou com medidas desenhadas (W96, cabos, carregadores).
+- [ ] Logo oficial em SVG/PNG transparente.
+- [ ] Revisar garantia, entrega e trocas com contador ou advogado.
+- [x] Domínio `akyllashop.com` e HTTPS.
+- [x] PIX manual com reserva de estoque e confirmação no painel.
+- [x] Dashboard, avisos de pedido e anúncios 9:16.
+
+---
+
+## 18. Histórico
 
 | Data | O que mudou |
 |---|---|
 | 19/10/2026 | Primeira versão: landing page, catálogo de 22 produtos, sacola e checkout PIX. |
-| 20/10/2026 | Códigos reais do fornecedor; identificação do vendedor; fontes locais; testes automáticos. |
-| 20/10/2026 | Nova arte da vitrine, paleta laranja da marca, ícone da logo. |
-| 20/10/2026 | Estoque nos produtos; planilha refeita a partir do cupom (fórmulas absolutas). |
-| 20/10/2026 | Galerias de fotos (43 fotos extras em 12 produtos); correção do modal no celular. |
-| 20/10/2026 | Painel administrativo (`/admin/`). |
-| 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
-| 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
-| 21/10/2026 | Avisos de pedido no painel: som, vibração, contador e notificação push no celular e no PC (painel instalável como app). |
-| 21/10/2026 | Layout: 2 produtos por linha no celular, barra fixa da sacola, 12 produtos por página, tabela de frete recolhível, selo “Mais vendido” (painel), faixa de categorias clicável, foto principal do W31. |
-| 21/10/2026 | Dashboard no painel: vendas confirmadas, total por categoria, produtos vendidos e situação da loja. |
-| 21/10/2026 | PIX manual com reserva de estoque: pedido registrado ao enviar o comprovante, alerta no WhatsApp da loja, confirmar/cancelar no painel, cancelamento automático em 48 h. |
-| 20/10/2026 | Servidor de pagamentos (Mercado Pago): PIX automático, reserva e baixa de estoque, aviso de vendas no WhatsApp, aba Pedidos (aguardando publicação do servidor). |
-| 20/10/2026 | Frete no checkout (tabela por distância, cidades, retirada grátis) e aba Frete no painel. |
-| 20/10/2026 | Marca renomeada de **Akylla Store** para **Akylla Shop** (site, painel, documentação e arte da vitrine). |
+| 20/10/2026 | Códigos reais do fornecedor, identificação do vendedor, fontes locais, testes automáticos. |
+| 20/10/2026 | Nova arte da vitrine, paleta laranja, ícone da logo, estoque nos produtos, galerias de fotos. |
+| 20/10/2026 | Painel administrativo; promoções com desconto real; preços com margem de 50%. |
+| 20/10/2026 | Domínio `akyllashop.com`; marca renomeada de Akylla Store para **Akylla Shop**. |
+| 20/10/2026 | Frete no checkout (distância, cidades, transportadora, retirada) e aba Frete. |
+| 20/10/2026 | Servidor de pagamentos (Cloudflare Worker) com Mercado Pago (deixado desligado). |
+| 21/10/2026 | PIX manual com reserva de estoque, confirmar/cancelar no painel, cancelamento automático em 48 h. |
+| 21/10/2026 | Dashboard de vendas no painel. |
+| 21/10/2026 | Anúncios 9:16 dos 22 produtos (gerador em `ferramentas/anuncios/`). |
+| 21/10/2026 | Layout: 2 produtos por linha no celular, barra fixa da sacola, 12 por página, tabela de frete recolhível, selo "Mais vendido", faixa de categorias clicável. |
+| 21/10/2026 | Avisos de pedido: som, vibração, contador e notificação push no celular e no PC; painel instalável como app. |
+| 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.
 
 ---
 
-## 13. Créditos e licenças
+## 19. Créditos e licenças
 
-- **Foto da vitrine e logo:** arte fornecida pela loja. Em 20/10/2026 o texto “STORE” da arte foi trocado por “SHOP” (fonte Century Gothic Bold, mesmo laranja e espaçamento); a arte original ficou guardada localmente como `Logo_Vitrine_original_STORE.png` (não vai para o GitHub).
-- **Fotos dos produtos:** referências de fabricantes, distribuidores e lojas (Basike, Basike Inova, Inova e anúncios aprovados pelo responsável). Direitos dos respectivos titulares; itens sem foto exata têm o aviso “Imagem ilustrativa”. Se alguém pedir a remoção de uma foto, substitua pelo painel.
-- **QR Code:** [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) de Kazuhiko Arase (MIT).
-- **Fontes:** Sora e DM Sans (SIL Open Font License), servidas localmente.
+- **Foto da vitrine e logo:** arte da loja. Em 20/10/2026 o texto "STORE" da arte virou "SHOP".
+- **Fotos dos produtos:** referências de fabricantes e distribuidores (Basike, Inova e outros). Os direitos são dos respectivos titulares. Itens sem foto exata têm o aviso "Imagem ilustrativa". Se alguém pedir a remoção de uma foto, troque pelo painel.
+- **QR Code:** [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator), de Kazuhiko Arase (MIT).
+- **Fontes:** Sora e DM Sans (SIL Open Font License), servidas localmente. O anúncio usa também a Kalam (Google Fonts, OFL).
+- **Mapas e endereços:** ViaCEP, OpenStreetMap/Nominatim e OSRM (serviços públicos gratuitos).
 - **Ícones:** SVGs originais do projeto.
 
 > As informações jurídicas do site são referências gerais ao CDC e à LGPD e não substituem a orientação de um advogado ou contador.
 
-## 14. Suporte
-
-Akylla Shop — WhatsApp **(62) 8151-7002** · <https://akyllashop.com/>
+**Akylla Shop**: WhatsApp (62) 8151-7002 · <https://akyllashop.com/>

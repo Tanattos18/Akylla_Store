@@ -307,6 +307,9 @@ test('avisos push: aparelho cadastrado recebe o pedido novo, criptografado e ass
     var created = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Ana Push', phone: '62999990000' } });
     assert.equal(created.status, 201, JSON.stringify(created.data));
     assert.equal(delivered.length, 1, 'aviso enviado ao aparelho');
+    var changes = await call(worker, s.env, 'GET', '/api/admin/orders/changes', null, { Authorization: 'Bearer gh-admin' });
+    assert.equal(changes.data.id, created.data.id, 'marcador de mudança aponta o pedido novo');
+    assert.equal((await call(worker, s.env, 'GET', '/api/admin/orders/changes', null, { Authorization: 'Bearer outro' })).status, 403);
 
     var h = delivered[0].opts.headers;
     assert.equal(h['Content-Encoding'], 'aes128gcm');
