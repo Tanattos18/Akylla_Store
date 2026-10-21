@@ -32,6 +32,7 @@ function scenario() {
   var catalog = F.parseProducts(fs.readFileSync(path.join(ROOT, 'assets/js/products.js'), 'utf8'));
   var config = F.parseConfig(fs.readFileSync(path.join(ROOT, 'assets/js/config.js'), 'utf8'));
   config.promo = { active: true, text: 'Teste', percent: 10, until: '2099-12-31' };
+  config.card = { enabled: true, maxInstallments: 12, feePercent: 5 };
   catalog.products.forEach(function (p) { p.stock = 2; });
   var files = {
     'assets/js/products.js': { text: F.serializeProducts(catalog.categories, catalog.products), sha: 'p1' },
@@ -41,6 +42,8 @@ function scenario() {
   var commits = [];
   var nextPay = 1000;
   var notices = [];
+  var prefs = [];
+  var cardPays = [];
   var b64 = function (t) { return Buffer.from(t, 'utf8').toString('base64'); };
   var res = function (data, status) { return Promise.resolve(new Response(JSON.stringify(data), { status: status || 200, headers: { 'Content-Type': 'application/json' } })); };
 
@@ -77,6 +80,10 @@ function scenario() {
         payments[id] = { id: id, status: 'pending', transaction_amount: b.transaction_amount, external_reference: b.external_reference, request: b };
         return res({ id: id, status: 'pending', point_of_interaction: { transaction_data: { qr_code: '000201PIXMP' + id, qr_code_base64: 'iVBOR', ticket_url: 'https://mp/t/' + id } } }, 201);
       }
+      if (u.pathname === '/checkout/preferences' && opts.method === 'POST') { var pb = JSON.parse(opts.body); prefs.push(pb); return res({ id: 'PREF' + prefs.length, init_point: 'https://mp.test/checkout/PREF' + prefs.length }, 201); }
+      if (u.pathname === '/v1/payments/search') { var ref = u.searchParams.get('external_reference'); return res({ results: cardPays.filter(function (p) { return p.external_reference === ref; }).slice().reverse() }); }
+      var cp = u.pathname.match(/^\/v1\/payments\/(9\d{3})$/);
+      if (cp) return res(cardPays.find(function (p) { return String(p.id) === cp[1]; }));
       var pm = u.pathname.match(/^\/v1\/payments\/(\d+)$/);
       if (pm && opts.method === 'PUT') { payments[pm[1]].status = JSON.parse(opts.body).status; return res(payments[pm[1]]); }
       if (pm) return res(payments[pm[1]]);
@@ -88,7 +95,7 @@ function scenario() {
     ALLOWED_ORIGINS: 'https://akyllashop.com', PAYMENT_MINUTES: '30', ORDERS: kvMock(),
     CALLMEBOT_APIKEY: 'cmb-test', STORE_WHATSAPP: '556281517002'
   };
-  return { env: env, fetch: fakeFetch, files: files, payments: payments, commits: commits, catalog: catalog, notices: notices };
+  return { env: env, fetch: fakeFetch, files: files, payments: payments, commits: commits, catalog: catalog, notices: notices, prefs: prefs, cardPays: cardPays };
 }
 
 async function call(worker, env, method, pathname, body, headers) {
@@ -365,6 +372,75 @@ test('servidor: aviso do Mercado Pago repetido + consulta do site ao mesmo tempo
     assert.equal(stock, 1, 'estoque 2 → 1 (não 0)');
     var paidNotices = s.notices.filter(function (n) { return n.indexOf(order.id) >= 0; });
     assert.equal(paidNotices.length, 1, 'um único aviso de venda no WhatsApp');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('cartão: pedido com acréscimo, recusa, aprovação em 6x, estoque, acompanhamento e etapas no painel', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var w34 = s.catalog.products.find(function (p) { return p.id === 'w34-plus'; });
+    var created = await call(worker, s.env, 'POST', '/api/card-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Carla Cartão', phone: '(62) 98888-7777' } });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    var order = created.data;
+    var unit = Math.floor(Math.round(w34.price * 90) / 100 / 10) * 10;
+    assert.equal(order.baseTotal, unit, 'preço do PIX');
+    assert.equal(order.total, Math.ceil(unit / 0.95), 'cartão = PIX ÷ (1 − 5%)');
+    assert.ok(Math.floor(order.total * 0.95) >= unit - 1, 'depois da taxa, a loja recebe o preço do PIX');
+    assert.match(order.checkoutUrl, /^https:\/\/mp\.test\/checkout\//);
+    var pref = s.prefs[0];
+    assert.equal(pref.payment_methods.installments, 12);
+    assert.ok(pref.payment_methods.excluded_payment_types.some(function (t) { return t.id === 'bank_transfer'; }), 'PIX fora da página do cartão');
+    assert.equal(pref.items[0].unit_price, Number((order.total / 100).toFixed(2)));
+    assert.match(pref.back_urls.success, /\/pedido\.html\?id=AK-/);
+    assert.match(pref.notification_url, /\/api\/webhook/);
+
+    // acompanhamento: telefone errado não mostra nada
+    var wrong = await call(worker, s.env, 'GET', '/api/track?id=' + order.id + '&phone=62911112222');
+    assert.equal(wrong.status, 404);
+    var track = await call(worker, s.env, 'GET', '/api/track?id=' + order.id.toLowerCase() + '&phone=62988887777');
+    assert.equal(track.status, 200, JSON.stringify(track.data));
+    assert.equal(track.data.status, 'pending');
+    assert.equal(track.data.firstName, 'Carla');
+    assert.equal(track.data.phone, undefined, 'não devolve o telefone');
+
+    // cartão recusado: continua aguardando (o cliente pode tentar outro cartão), estoque intacto
+    s.cardPays.push({ id: 9001, status: 'rejected', transaction_amount: order.total / 100, external_reference: order.id, installments: 3 });
+    await call(worker, s.env, 'POST', '/api/webhook?data.id=9001&type=payment', { type: 'payment', data: { id: '9001' } });
+    var still = await call(worker, s.env, 'GET', '/api/orders/' + order.id);
+    assert.equal(still.data.status, 'pending');
+    assert.equal(s.commits.filter(function (m) { return m.indexOf('venda: pedido ' + order.id) === 0; }).length, 0);
+
+    // aprovado em 6x
+    s.cardPays.push({ id: 9002, status: 'approved', transaction_amount: order.total / 100, external_reference: order.id, installments: 6 });
+    var hook = await call(worker, s.env, 'POST', '/api/webhook?data.id=9002&type=payment', { type: 'payment', data: { id: '9002' } });
+    assert.equal(hook.data.status, 'paid', JSON.stringify(hook.data));
+    var paid = await call(worker, s.env, 'GET', '/api/orders/' + order.id);
+    assert.equal(paid.data.status, 'paid');
+    assert.equal(paid.data.installments, 6);
+    assert.equal(s.commits.filter(function (m) { return m.indexOf('venda: pedido ' + order.id + ' (') === 0; }).length, 1, 'baixa única');
+    var stock = F.parseProducts(s.files['assets/js/products.js'].text).products.find(function (p) { return p.id === 'w34-plus'; }).stock;
+    assert.equal(stock, 1);
+
+    // etapas pelo painel
+    assert.equal((await call(worker, s.env, 'POST', '/api/admin/orders/' + order.id + '/stage', { stage: 'pronto' }, { Authorization: 'Bearer outro' })).status, 403);
+    assert.equal((await call(worker, s.env, 'POST', '/api/admin/orders/' + order.id + '/stage', { stage: 'voando' }, { Authorization: 'Bearer gh-admin' })).status, 400);
+    var st = await call(worker, s.env, 'POST', '/api/admin/orders/' + order.id + '/stage', { stage: 'pronto' }, { Authorization: 'Bearer gh-admin' });
+    assert.equal(st.status, 200, JSON.stringify(st.data));
+    var track2 = await call(worker, s.env, 'GET', '/api/track?id=' + order.id + '&phone=62988887777');
+    assert.equal(track2.data.stage, 'pronto');
+    assert.ok(track2.data.stageAt.pronto > 0);
+
+    // cartão desligado no painel → recusa
+    var cfg = F.parseConfig(s.files['assets/js/config.js'].text);
+    cfg.card.enabled = false;
+    s.files['assets/js/config.js'] = { text: F.serializeConfig(cfg), sha: 'c2' };
+    var off = await call(worker, s.env, 'POST', '/api/card-orders', { items: [{ id: 'w69-ultra', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Outro Cliente' } });
+    assert.equal(off.status, 409, 'cartão desligado no painel');
   } finally {
     global.fetch = realFetch;
   }

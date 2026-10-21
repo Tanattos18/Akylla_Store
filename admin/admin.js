@@ -453,9 +453,14 @@
   function renderConfig() {
     var form = $('#configForm');
     Array.prototype.forEach.call(form.elements, function (input) {
-      if (!input.name) return;
+      if (!input.name || input.name.indexOf('card_') === 0) return;
       input.value = state.config[input.name] == null ? '' : state.config[input.name];
     });
+    var card = cardCfg();
+    form.elements.card_enabled.checked = card.enabled;
+    form.elements.card_maxInstallments.value = String(card.maxInstallments);
+    form.elements.card_feePercent.value = card.feePercent ? String(card.feePercent).replace('.', ',') : '';
+    renderCardExample();
     $('#vitrinePreview').src = photoUrl(VITRINE.big);
   }
 
@@ -728,7 +733,7 @@
 
   var STATUS = {
     paid: ['ok', 'Pago'],
-    pending: ['low', 'Aguardando PIX'],
+    pending: ['low', 'Aguardando pagamento'],
     expired: ['', 'Expirado/cancelado'],
     review: ['out', 'Conferir pagamento'],
     awaiting: ['low', 'Aguardando confirmação do PIX'],
@@ -772,6 +777,37 @@
       .catch(function (err) { $('#ordersSummary').textContent = 'Não foi possível carregar: ' + err.message; });
   }
 
+  function toDeliver(o) { return o.status === 'paid' && o.stage !== 'entregue'; }
+
+  function payLabel(o) {
+    if (o.kind === 'card') return 'Cartão' + (o.installments > 1 ? ' ' + o.installments + 'x' : '') + ' · Mercado Pago';
+    if (o.kind === 'manual' || o.manual) return 'PIX manual';
+    return 'PIX · Mercado Pago';
+  }
+
+  var STAGES = [['separando', 'Separando'], ['pronto', 'Pronto p/ retirada'], ['enviado', 'Saiu p/ entrega'], ['entregue', 'Entregue']];
+
+  function stageControls(o) {
+    var pickup = (o.delivery || {}).mode === 'pickup';
+    var list = STAGES.filter(function (s) { return pickup ? s[0] !== 'enviado' : s[0] !== 'pronto'; });
+    return el('div', { class: 'stage-row' }, [
+      el('span', { class: 'stage-label', text: 'Etapa' }),
+      el('div', { class: 'seg seg-sm' }, list.map(function (s) {
+        return el('button', { type: 'button', class: 'seg-btn' + (o.stage === s[0] ? ' is-active' : ''), text: s[1], onclick: function () { setStage(o, s[0]); } });
+      }))
+    ]);
+  }
+
+  function setStage(o, stage) {
+    adminPost('/api/admin/orders/' + o.id + '/stage', { stage: stage }).then(function (saved) {
+      o.stage = saved.stage; o.stageAt = saved.stageAt;
+      renderOrders();
+      var link = waLink(o);
+      toast('Etapa: ' + STAGES.filter(function (s) { return s[0] === stage; })[0][1] + '.' + (link ? ' Use o botão WhatsApp para avisar o cliente.' : ''), 5000);
+      if (dash.orders) { var d = dash.orders.find(function (x) { return x.id === o.id; }); if (d) { d.stage = saved.stage; d.stageAt = saved.stageAt; } renderTodo(); }
+    }).catch(function (err) { toast('Erro: ' + err.message); });
+  }
+
   function orderGroup(o) {
     if (o.status === 'awaiting' || o.status === 'pending' || o.status === 'review') return 'awaiting';
     if (o.status === 'paid') return 'paid';
@@ -795,8 +831,13 @@
     if (digits.length < 12) return '';
     var first = String(c.name || '').trim().split(/\s+/)[0] || '';
     var d = o.delivery || {};
-    var text = o.status === 'paid'
-      ? 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop. O pagamento do seu pedido ' + o.id + ' (' + brl(o.total) + ') foi confirmado ✅ Vamos combinar a ' + (d.mode === 'pickup' ? 'retirada' : 'entrega') + '?'
+    var hi = 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop. ';
+    var track = '\nAcompanhe: https://akyllashop.com/pedido.html?id=' + o.id;
+    var text = o.status === 'paid' && o.stage === 'pronto' ? hi + 'Seu pedido ' + o.id + ' está pronto para retirada 🏪 Qual o melhor horário para você?' + track
+      : o.status === 'paid' && o.stage === 'enviado' ? hi + 'Seu pedido ' + o.id + ' saiu para entrega 🚚' + track
+      : o.status === 'paid' && o.stage === 'entregue' ? hi + 'Obrigado pela compra! Qualquer dúvida sobre o pedido ' + o.id + ', é só chamar. 😊'
+      : o.status === 'paid'
+      ? hi + 'O pagamento do seu pedido ' + o.id + ' (' + brl(o.total) + ') foi confirmado ✅ Vamos combinar a ' + (d.mode === 'pickup' ? 'retirada' : 'entrega') + '?' + track
       : o.status === 'canceled' || o.status === 'expired'
         ? 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop, sobre o pedido ' + o.id + '.'
         : 'Olá' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop. Recebemos o seu pedido ' + o.id + ' (' + brl(o.total) + '). Estamos conferindo o PIX e já te aviso. 😊';
@@ -824,8 +865,8 @@
   function renderOrders() {
     var list = $('#ordersList');
     list.innerHTML = '';
-    var counts = { all: ordersCache.length, awaiting: 0, paid: 0, canceled: 0 };
-    ordersCache.forEach(function (o) { counts[orderGroup(o)] += 1; });
+    var counts = { all: ordersCache.length, awaiting: 0, paid: 0, canceled: 0, todeliver: 0 };
+    ordersCache.forEach(function (o) { counts[orderGroup(o)] += 1; if (toDeliver(o)) counts.todeliver += 1; });
     Object.keys(counts).forEach(function (k) {
       var n = document.querySelector('[data-ocount="' + k + '"]');
       if (n) n.textContent = counts[k] ? String(counts[k]) : '';
@@ -833,7 +874,7 @@
     var paid = ordersCache.filter(function (o) { return o.status === 'paid'; });
     var sum = paid.reduce(function (t, o) { return t + o.total; }, 0);
     $('#ordersSummary').textContent = paid.length + ' pago(s) · ' + brl(sum) + ' recebidos · ' + ordersCache.length + ' pedido(s) no total';
-    var shown = ordersCache.filter(function (o) { return orderFilter === 'all' || orderGroup(o) === orderFilter; });
+    var shown = ordersCache.filter(function (o) { return orderFilter === 'all' || (orderFilter === 'todeliver' ? toDeliver(o) : orderGroup(o) === orderFilter); });
     if (!shown.length) list.appendChild(el('li', { class: 'empty', text: orderFilter === 'awaiting' ? 'Nenhum pedido aguardando. Tudo em dia! 🎉' : 'Nenhum pedido aqui.' }));
     shown.forEach(function (o) {
       var st = STATUS[o.status] || ['', o.status];
@@ -873,9 +914,10 @@
         o.reviewReason ? el('p', { class: 'warn', text: o.reviewReason }) : null,
         o.status === 'paid' && !o.stockUpdated && o.stockError ? el('p', { class: 'warn', text: 'Estoque não atualizado: ' + o.stockError }) : null,
         o.cancelReason && o.status === 'canceled' ? el('p', { class: 'muted', text: 'Motivo: ' + o.cancelReason }) : null,
+        o.status === 'paid' ? stageControls(o) : null,
         el('div', { class: 'order-foot' }, [
           el('div', { class: 'order-total' }, [
-            el('span', { class: 'muted', text: o.paymentId ? 'Total · Mercado Pago' : 'Total · PIX' }),
+            el('span', { class: 'muted', text: 'Total · ' + payLabel(o) }),
             el('strong', { text: brl(o.total) })
           ]),
           o.status === 'awaiting' ? el('div', { class: 'order-actions' }, [
@@ -1312,6 +1354,107 @@
     }
   }
 
+  /* ------------------------------ clientes ------------------------------ */
+  var clientSort = 'recent';
+
+  function buildClients() {
+    var map = {};
+    (dash.orders || []).forEach(function (o) {
+      var c = o.customer || {};
+      var digits = String(c.phone || '').replace(/\D/g, '');
+      var name = String(c.name || o.customerName || '').trim();
+      if (!digits && !name) return;
+      var key = digits ? 'tel:' + digits.slice(-8) : 'nome:' + name.toLowerCase();
+      var k = map[key] || (map[key] = { name: name, phone: c.phone || '', email: o.email || '', orders: [], paid: 0, spent: 0, last: 0, first: Infinity });
+      if (name && (!k.name || name.length > k.name.length)) k.name = name;
+      if (!k.phone && c.phone) k.phone = c.phone;
+      if (!k.email && o.email) k.email = o.email;
+      var when = o.createdAt || o.paidAt || 0;
+      k.orders.push(o);
+      if (o.status === 'paid') { k.paid += 1; k.spent += o.total; }
+      k.last = Math.max(k.last, when);
+      k.first = Math.min(k.first, when);
+    });
+    return Object.keys(map).map(function (k) { return map[k]; });
+  }
+
+  function renderClients() {
+    var list = $('#clientList');
+    if (!dash.orders) { list.innerHTML = ''; list.appendChild(el('li', { class: 'empty', text: 'Carregando os pedidos…' })); loadDashboard(); return; }
+    var all = buildClients();
+    var buyers = all.filter(function (c) { return c.paid > 0; });
+    var repeat = buyers.filter(function (c) { return c.paid > 1; });
+    var spent = buyers.reduce(function (t, c) { return t + c.spent; }, 0);
+    fill('#kpiClients', [
+      kpi('Clientes', String(all.length), buyers.length + ' já compraram'),
+      kpi('Voltaram a comprar', String(repeat.length), buyers.length ? Math.round(repeat.length / buyers.length * 100) + '% dos que compraram' : ''),
+      kpi('Gasto médio por cliente', buyers.length ? brl(Math.round(spent / buyers.length)) : '—', 'só pedidos pagos')
+    ]);
+    var q = normQuery($('#clientSearch'));
+    var qd = q.replace(/\D/g, '');
+    var shown = all.filter(function (c) {
+      if (!q) return true;
+      var name = c.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return name.indexOf(q) >= 0 || (qd && String(c.phone).replace(/\D/g, '').indexOf(qd) >= 0);
+    }).sort(function (a, b) {
+      if (clientSort === 'spent') return b.spent - a.spent || b.last - a.last;
+      if (clientSort === 'orders') return b.paid - a.paid || b.last - a.last;
+      return b.last - a.last;
+    });
+    list.innerHTML = '';
+    if (!shown.length) { list.appendChild(el('li', { class: 'empty', text: q ? 'Nenhum cliente encontrado.' : 'Os clientes aparecem aqui depois dos primeiros pedidos.' })); return; }
+    shown.forEach(function (c) {
+      var lastOrder = c.orders.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); })[0];
+      var wa = waLink({ customer: { name: c.name, phone: c.phone }, id: lastOrder.id, total: lastOrder.total, status: 'canceled', delivery: {} });
+      var initials = c.name.split(/\s+/).filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('') || '?';
+      var details = el('details', { class: 'client-orders' }, [
+        el('summary', { text: 'Ver ' + c.orders.length + (c.orders.length === 1 ? ' pedido' : ' pedidos') }),
+        el('ul', {}, c.orders.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }).map(function (o) {
+          var st = STATUS[o.status] || ['', o.status];
+          return el('li', {}, [
+            el('strong', { text: o.id }),
+            el('span', { class: 'badge ' + st[0], text: st[1] }),
+            el('span', { class: 'muted', text: new Date(o.createdAt || o.paidAt || 0).toLocaleDateString('pt-BR') + ' · ' + (o.lines || []).map(function (l) { return l.qty + 'x ' + l.name; }).join(', ') }),
+            el('span', { class: 'client-order-total', text: brl(o.total) })
+          ]);
+        }))
+      ]);
+      list.appendChild(el('li', { class: 'client-card' }, [
+        el('div', { class: 'client-top' }, [
+          el('span', { class: 'avatar', text: initials }),
+          el('div', { class: 'client-main' }, [
+            el('strong', { text: c.name || 'Sem nome' }),
+            el('span', { class: 'muted', text: [c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato' })
+          ]),
+          c.paid > 1 ? el('span', { class: 'badge ok', text: 'Cliente fiel' }) : c.paid === 0 ? el('span', { class: 'badge', text: 'Ainda não comprou' }) : null,
+          wa ? el('a', { class: 'btn btn-wa btn-sm', href: wa, target: '_blank', rel: 'noopener' }, [svgIcon('chat'), ' WhatsApp']) : null
+        ]),
+        el('div', { class: 'client-stats' }, [
+          el('div', {}, [el('span', { class: 'muted', text: 'Gastou' }), el('strong', { text: brl(c.spent) })]),
+          el('div', {}, [el('span', { class: 'muted', text: 'Pedidos pagos' }), el('strong', { text: String(c.paid) })]),
+          el('div', {}, [el('span', { class: 'muted', text: 'Última compra' }), el('strong', { text: timeAgo(c.last) })]),
+          el('div', {}, [el('span', { class: 'muted', text: 'Cliente desde' }), el('strong', { text: new Date(c.first).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) })])
+        ]),
+        details
+      ]));
+    });
+  }
+
+  function exportClients() {
+    var rows = [['Nome', 'WhatsApp', 'E-mail', 'Pedidos pagos', 'Total gasto (R$)', 'Última compra', 'Primeira compra']];
+    buildClients().sort(function (a, b) { return b.spent - a.spent; }).forEach(function (c) {
+      rows.push([c.name, c.phone, c.email, c.paid, (c.spent / 100).toFixed(2).replace('.', ','), new Date(c.last).toLocaleDateString('pt-BR'), new Date(c.first).toLocaleDateString('pt-BR')]);
+    });
+    var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'clientes-akylla-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast('Planilha de clientes baixada (abre no Excel).');
+  }
+
   function renderTodo() {
     var hour = new Date().getHours();
     var name = state.login ? String(state.login) : '';
@@ -1323,6 +1466,11 @@
     if (waiting.length) {
       items.push(['urgent', '🧾', waiting.length + (waiting.length === 1 ? ' pedido aguardando' : ' pedidos aguardando') + ' confirmação do PIX',
         brl(waiting.reduce(function (t, o) { return t + o.total; }, 0)) + ' reservado · confira no banco', 'Conferir', function () { goTab('pedidos', 'awaiting'); }]);
+    }
+    var deliver = orders.filter(function (o) { return o.status === 'paid' && o.stage !== 'entregue'; });
+    if (deliver.length) {
+      items.push(['info', '🚚', deliver.length + (deliver.length === 1 ? ' pedido pago para entregar' : ' pedidos pagos para entregar'),
+        'Marque as etapas para o cliente acompanhar pelo site', 'Ver', function () { goTab('pedidos', 'todeliver'); }]);
     }
     var active = state.products.filter(function (p) { return !p.hidden; });
     var out = active.filter(function (p) { return !(p.stock > 0); });
@@ -1355,6 +1503,7 @@
   function renderDashboard() {
     if (!state.original) return;
     renderTodo();
+    if (!$('[data-panel="clientes"]').hidden) renderClients();
     var orders = dash.orders || [];
     var start = periodStart(dash.period);
     var when = function (o) { return o.paidAt || o.createdAt || 0; };
@@ -1729,9 +1878,38 @@
 
   /* ------------------------------ loja ------------------------------ */
 
+  function cardCfg() {
+    var c = state.config.card || {};
+    return { enabled: !!c.enabled, maxInstallments: Math.min(12, Math.max(1, Number(c.maxInstallments) || 12)), feePercent: Math.max(0, Number(c.feePercent) || 0) };
+  }
+
+  function renderCardExample() {
+    var c = cardCfg();
+    var base = 10000;
+    var withFee = Math.ceil(base / (1 - c.feePercent / 100));
+    var extra = Math.round((1 / (1 - c.feePercent / 100) - 1) * 10000) / 100;
+    $('#cardExample').textContent = (c.enabled ? '✅ Cartão LIGADO. ' : '⏸ Cartão desligado. ') +
+      'Com taxa de ' + String(c.feePercent).replace('.', ',') + '%, o cartão fica ' + String(extra).replace('.', ',') + '% acima do PIX: ' +
+      'produto de ' + brl(base) + ' no PIX sai ' + brl(withFee) + ' no cartão e você recebe ' + brl(Math.floor(withFee * (1 - c.feePercent / 100))) + ' (o mesmo do PIX), em até ' + c.maxInstallments + 'x. ' +
+      'Os juros das parcelas o Mercado Pago cobra do cliente. Use a taxa por venda do simulador do Mercado Pago com o meio de cobrança “Checkout”.' + (c.enabled && !c.feePercent ? ' Atenção: acréscimo 0% — a taxa sai do seu lucro.' : '');
+  }
+
   function handleConfigInput(event) {
     var input = event.target;
     if (!input.name) return;
+    if (input.name.indexOf('card_') === 0) {
+      var c = cardCfg();
+      if (input.name === 'card_enabled') c.enabled = input.checked;
+      if (input.name === 'card_maxInstallments') c.maxInstallments = parseInt(input.value, 10) || 12;
+      if (input.name === 'card_feePercent') {
+        var pct = parseFloat(String(input.value).replace(',', '.'));
+        c.feePercent = pct > 0 ? Math.min(20, Math.round(pct * 100) / 100) : 0;
+      }
+      state.config.card = c;
+      renderCardExample();
+      refreshPending();
+      return;
+    }
     var value = input.value;
     if (input.name === 'year') value = parseInt(value, 10) || new Date().getFullYear();
     if (input.name === 'pixMerchantName' || input.name === 'pixCity') {
@@ -1927,12 +2105,23 @@
       if (cents) $('#editorForm').elements.price.value = moneyInput(cents);
     });
     $('#configForm').addEventListener('input', handleConfigInput);
+    $('#configForm').addEventListener('change', function (e) { if (e.target.name === 'card_enabled' || e.target.name === 'card_maxInstallments') handleConfigInput(e); });
     $('#promoForm').addEventListener('change', handlePromoForm);
     $('#promoForm').addEventListener('input', function (event) { if (event.target.name === 'text') handlePromoForm(event); });
     $('#promoForm').addEventListener('submit', function (event) { event.preventDefault(); });
     $('#promoSearch').addEventListener('input', renderPromoList);
     $('#ordersReload').addEventListener('click', loadOrders);
     $('#dashReload').addEventListener('click', loadDashboard);
+    document.querySelector('[data-tab="clientes"]').addEventListener('click', renderClients);
+    $('#clientSearch').addEventListener('input', renderClients);
+    $('#clientExport').addEventListener('click', exportClients);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-csort]'), function (b) {
+      b.addEventListener('click', function () {
+        clientSort = b.getAttribute('data-csort');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-csort]'), function (x) { x.classList.toggle('is-active', x === b); });
+        renderClients();
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-ofilter]'), function (b) {
       b.addEventListener('click', function () {
         orderFilter = b.getAttribute('data-ofilter');

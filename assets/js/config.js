@@ -87,5 +87,10 @@ window.AKYLLA_CONFIG = {
     ]
   },
   "paymentProvider": "mercadopago",
-  "paymentApiUrl": "https://akylla-shop-api.akyllashop.workers.dev"
+  "paymentApiUrl": "https://akylla-shop-api.akyllashop.workers.dev",
+  "card": {
+    "enabled": false,
+    "maxInstallments": 12,
+    "feePercent": 0
+  }
 };

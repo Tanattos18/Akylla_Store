@@ -3,9 +3,10 @@
 Loja online da **Akylla Shop** (eletrônicos e acessórios, Goiânia/GO). O projeto tem:
 
 - catálogo com fotos, estoque e promoções;
-- sacola e checkout por **PIX** (QR Code e copia e cola), com retirada ou entrega e frete calculado pelo CEP;
+- sacola e checkout por **PIX** (automático pelo Mercado Pago ou manual) e **cartão de crédito em até 12x** (página segura do Mercado Pago), com retirada ou entrega e frete calculado pelo CEP;
+- página **Acompanhar pedido** para o cliente (situação, etapas e itens) e o site lembrando nome e WhatsApp;
 - **reserva automática de estoque** quando o cliente envia o comprovante;
-- **painel administrativo** que roda no celular ou no PC: estoque, produtos, fotos, promoções, frete, pedidos e dashboard de vendas;
+- **painel administrativo** que roda no celular ou no PC: estoque, produtos, fotos, promoções, frete, pedidos (com etapas de entrega), **clientes** e dashboard de vendas;
 - **avisos de pedido novo** com som e notificação no celular e no PC;
 - gerador de **anúncios 9:16** para Instagram e Facebook.
 
@@ -239,7 +240,7 @@ No painel → **Pedidos** → **Ativar avisos neste aparelho** → permita as no
 ### 3.8 Opcionais
 
 - **Aviso de venda no WhatsApp da loja (CallMeBot):** o robô gratuito às vezes fica sem vagas. Siga o site callmebot.com e cadastre a chave com `definir-chaves.ps1` (segundo item).
-- **PIX automático pelo Mercado Pago:** veja a [seção 7.4](#74-mercado-pago-pix-automático--opcional).
+- **PIX automático pelo Mercado Pago:** veja a [seção 7.4](#74-mercado-pago-pix-automático).
 - **Anúncios 9:16:** veja a [seção 10](#10-anúncios-916-para-instagramfacebook).
 
 ### 3.9 Ajustar os testes ao seu catálogo
@@ -267,7 +268,7 @@ node --test "tests/*.test.js"
 
 ## 4. Como a compra funciona (cliente e loja)
 
-**Modo atual: PIX manual com reserva de estoque.**
+**Modo atual da Akylla Shop: PIX automático pelo Mercado Pago** (seção 7.4) + **cartão em até 12x** (seção 4.1), com o PIX manual abaixo como alternativa (painel → Loja → *Forma de pagamento*). Fluxo do PIX manual com reserva de estoque:
 
 1. O cliente monta a sacola. No celular, uma **barra fixa** mostra os itens, o total e o botão **Finalizar**.
 2. No checkout, escolhe **retirar na loja** (grátis) ou **entregar**. Para entrega, informa CEP e número, e o frete é calculado na hora ([6.4](#64-frete-e-entrega)).
@@ -291,6 +292,22 @@ Proteções:
 
 ---
 
+## 4.1 Cartão de crédito (até 12x)
+
+- **Como liga:** painel → **Loja** → *Cartão de crédito*: marque **Aceitar cartão**, escolha **parcelar em até** (1x a 12x) e informe a **taxa por venda do Mercado Pago** (a do simulador do app, meio de cobrança **Checkout**, na opção de recebimento que você escolheu — ex.: 4,98%) → **Publicar**.
+- **Preço no cartão:** preço do PIX ÷ (1 − taxa). Com 4,98%, o cartão fica 5,24% acima do PIX (R$ 130,00 → R$ 136,82) e você recebe o mesmo valor do PIX. A diferença aparece clara para o cliente no checkout (a lei permite preço diferente por forma de pagamento, desde que informado).
+- **Juros das parcelas:** o Mercado Pago cobra do cliente e mostra antes de ele confirmar. Você recebe o valor sem desconto de parcelas.
+- **Fluxo:** no checkout, bloco **"Prefere cartão de crédito?"** → o servidor recalcula tudo, **reserva o estoque por 1 h** e abre a página do Mercado Pago (o cartão é digitado só lá; PIX e boleto ficam fora dessa página) → aprovado, o Mercado Pago avisa o servidor (webhook *Pagamentos*), o estoque baixa (uma vez só), chega a notificação "✅ Venda paga" e o cliente volta para a página **Acompanhar pedido**, que confirma sozinha e esvazia a sacola.
+- **Cartão recusado:** o cliente pode tentar outro cartão na mesma página. Sem pagamento em 1 h, a reserva cai e o pedido é encerrado (verificação de hora em hora).
+- **Prazo para receber:** é configurado na sua conta do Mercado Pago (*Seu negócio → Custos*). Quanto mais rápido, maior a taxa — use essa taxa no painel.
+- No Mercado Pago, a aplicação precisa ter o webhook com os eventos **Order** (PIX) **e Pagamentos** (cartão), mesma URL e mesma assinatura.
+
+## 4.2 Acompanhar pedido e etapas
+
+- **Cliente:** <https://akyllashop.com/pedido.html> (link no rodapé, no menu e nas mensagens do WhatsApp). Digita o número do pedido e o WhatsApp da compra e vê: situação do pagamento, etapas (Recebido → Pago → Separando → Pronto para retirada / Saiu para entrega → Entregue), itens, total e forma de pagamento. Não mostra endereço nem telefone. O aparelho lembra os pedidos feitos nele.
+- **Loja:** painel → **Pedidos** → filtro **Para entregar** → em cada pedido pago, botões de **Etapa**. Depois de mudar a etapa, o botão **WhatsApp** já traz a mensagem certa ("pronto para retirada", "saiu para entrega"…) com o link de acompanhamento.
+- O site também **lembra nome, WhatsApp e e-mail** do cliente no próprio aparelho para a próxima compra.
+
 ## 5. Painel administrativo (`/admin/`)
 
 O painel edita os arquivos do site e publica **num único commit** pela API do GitHub. Funciona no celular, pode ser **instalado como app** e não aparece nos buscadores (`noindex`).
@@ -303,7 +320,8 @@ O painel edita os arquivos do site e publica **num único commit** pela API do G
   - Tabela de **produtos vendidos**: quantidade, receita e estoque atual. O botão **"Marcar os 3 mais vendidos com selo"** aplica o selo *Mais vendido* no site (depois clique em Publicar).
   - Retirada × entrega e a situação da loja agora: produtos ativos, unidades e valor em estoque, esgotados, última unidade, promoção e forma de pagamento.
 - **Estoque:** botões −1 (vendi) e +1 (repus), quantidade e preço de cada produto numa lista só.
-- **Pedidos:** cartão **Avisos de pedido** ([5.2](#52-avisos-de-pedido-som-e-notificação)) e lista de pedidos com status, cliente, itens, entrega e total. Nos pedidos aguardando, há os botões **Confirmar pagamento** e **Cancelar e devolver ao estoque**.
+- **Clientes:** lista montada a partir dos pedidos (mesmo WhatsApp = mesmo cliente): total gasto, pedidos pagos, última compra, cliente desde, selo **Cliente fiel** (2+ compras), histórico de pedidos, botão WhatsApp, busca, ordenar (recentes / mais gastaram / mais pedidos) e **Exportar planilha** (CSV que abre no Excel).
+- **Pedidos:** filtros Todos / Aguardando / **Para entregar** / Pagos / Cancelados, forma de pagamento em cada pedido (PIX manual, PIX Mercado Pago, Cartão Nx), **etapas** dos pedidos pagos e cartão **Avisos de pedido** ([5.2](#52-avisos-de-pedido-som-e-notificação)) e lista de pedidos com status, cliente, itens, entrega e total. Nos pedidos aguardando, há os botões **Confirmar pagamento** e **Cancelar e devolver ao estoque**.
 - **Promoção:** promoção geral (liga/desliga, texto da faixa, % e data final, margem da planilha). Cada produto pode **seguir a geral**, ter **promoção própria** ou ficar **fora**. Mostra o lucro estimado e avisa se o desconto vender abaixo do custo.
 - **Produtos:** criar, editar, duplicar, **ocultar** (rascunho) e excluir.
   - Campos: nome, nome curto, código, marca, modelo, categoria, ícone, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e selo **Mais vendido**.
@@ -410,7 +428,10 @@ Pasta `worker/`. Ele recalcula valores, reserva e devolve o estoque (por commits
 | `POST /api/admin/orders/:id/confirm` · `/cancel` | painel | confirma o pagamento ou cancela e devolve o estoque |
 | `GET /api/push/key` | painel | chave pública das notificações |
 | `POST /api/admin/push/subscribe` · `/unsubscribe` · `/test` | painel | cadastra ou remove o aparelho e envia aviso de teste |
-| `POST /api/orders`, `GET /api/orders/:id`, `POST /api/orders/:id/cancel`, `POST /api/webhook` | site / Mercado Pago | PIX automático (opcional, [7.4](#74-mercado-pago-pix-automático--opcional)) |
+| `POST /api/card-orders` | site | pedido no cartão: reserva 1 h e devolve o link da página do Mercado Pago |
+| `GET /api/track?id=…&phone=…` | página Acompanhar pedido | situação, etapas, itens e total (confere o WhatsApp) |
+| `POST /api/admin/orders/:id/stage` | painel | etapa do pedido pago (separando, pronto, enviado, entregue) |
+| `POST /api/orders`, `GET /api/orders/:id`, `POST /api/orders/:id/cancel`, `POST /api/webhook` | site / Mercado Pago | PIX automático (opcional, [7.4](#74-mercado-pago-pix-automático)) |
 | tarefa agendada (minuto 17 de cada hora) | Cloudflare | cancela pedidos sem confirmação há 48 h e devolve o estoque |
 
 As rotas `/api/admin/*` exigem a chave do GitHub do painel com permissão de escrita no repositório.
@@ -455,12 +476,12 @@ Depois de mudar qualquer arquivo em `worker/src/` ou em `assets/js/promo.js`, `f
 
 O painel foi feito para gastar pouco: consulta leve a cada 20 s e a lista completa só quando muda algo.
 
-### 7.4 Mercado Pago (PIX automático) — opcional
+### 7.4 Mercado Pago (PIX automático)
 
-Já está implementado, mas **desligado**: o modo atual é o PIX manual. Com ele ligado, o servidor gera o PIX no Mercado Pago, e a confirmação e a baixa do estoque ficam automáticas (webhook). Para ligar:
+**Ligado na Akylla Shop desde 21/10/2026.** Com ele, o servidor gera o PIX no Mercado Pago, e a confirmação e a baixa do estoque ficam automáticas (webhook). Para ligar:
 
 1. Em developers.mercadopago.com → **Criar aplicação** → *Checkout Transparente* → **API de Orders** → copie o **Access Token de produção** (`APP_USR-…`).
-2. Na aplicação → **Webhooks**: URL `https://SEU-SERVIDOR/api/webhook`, evento **Order**, modo produção. Copie a **assinatura secreta**.
+2. Na aplicação → **Webhooks**: URL `https://SEU-SERVIDOR/api/webhook`, eventos **Order** e **Pagamentos** (este para o cartão), modo produção. Copie a **assinatura secreta**.
 3. Cadastre os segredos `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` (seção 7.2).
 4. No painel → Loja → *Forma de pagamento*: **Mercado Pago automático** → Publicar. Faça uma compra real barata para testar e depois estorne.
 
@@ -748,6 +769,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Anúncios 9:16 dos 22 produtos (gerador em `ferramentas/anuncios/`). |
 | 21/10/2026 | Layout: 2 produtos por linha no celular, barra fixa da sacola, 12 por página, tabela de frete recolhível, selo "Mais vendido", faixa de categorias clicável. |
 | 21/10/2026 | Avisos de pedido: som, vibração, contador e notificação push no celular e no PC; painel instalável como app. |
+| 21/10/2026 | Cartão de crédito em até 12x (Checkout Pro, juros com o cliente, taxa repassada), página Acompanhar pedido, etapas de entrega e aba Clientes no painel; correção da baixa dupla de estoque no PIX automático. |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.

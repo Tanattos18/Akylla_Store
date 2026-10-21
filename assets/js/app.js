@@ -122,6 +122,12 @@
     checkoutSteps: document.getElementById('checkoutSteps'),
     manualCustomer: document.getElementById('manualCustomer'),
     manualName: document.getElementById('manualName'),
+    cardBox: document.getElementById('cardBox'),
+    cardPrice: document.getElementById('cardPrice'),
+    cardNote: document.getElementById('cardNote'),
+    cardPay: document.getElementById('cardPay'),
+    cardError: document.getElementById('cardError'),
+    mpTrack: document.getElementById('mpTrack'),
     manualPhone: document.getElementById('manualPhone'),
     manualError: document.getElementById('manualError'),
     pixLocked: document.getElementById('pixLocked'),
@@ -891,7 +897,7 @@
       deliveryMessageLines().join('\n'),
       'Total: ' + formatBRL(order.total),
       '',
-      registered ? 'Paguei o PIX e vou enviar o comprovante agora. (Pedido registrado no site — produto separado aguardando a confirmação.)' : 'Vou enviar o comprovante do PIX agora.'
+      registered ? 'Paguei o PIX e vou enviar o comprovante agora. (Pedido registrado no site — produto separado aguardando a confirmação.)\nAcompanhar: ' + trackUrl(order.id) : 'Vou enviar o comprovante do PIX agora.'
     ].filter(function (line, i, all) { return line !== '' || all[i - 1] !== ''; }).join('\n');
   }
 
@@ -941,6 +947,7 @@
     if (els.mpBox) els.mpBox.hidden = !ready || !auto;
     if (els.manualCustomer) els.manualCustomer.hidden = !ready || auto || !!state.manualSent;
     if (auto) renderMercadoPago(ready);
+    renderCard(ready);
 
     if (els.checkoutItems) {
       els.checkoutItems.innerHTML = order.items.map(function (item) {
@@ -1171,6 +1178,131 @@
     }
   }
 
+  /* ------------------------- cliente: lembrar dados e pedidos ------------------------- */
+
+  var CUSTOMER_KEY = 'akylla-customer';
+  var MY_ORDERS_KEY = 'akylla-my-orders';
+  var CARD_PENDING_KEY = 'akylla-card-pending';
+
+  function readLocal(key, fallback) {
+    try { var v = window.localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
+  }
+  function writeLocal(key, value) {
+    try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* sem armazenamento */ }
+  }
+
+  /* Preenche nome/WhatsApp/e-mail com o que o cliente usou da última vez neste aparelho. */
+  function fillCustomer() {
+    var c = readLocal(CUSTOMER_KEY, {});
+    [[els.mpName, c.name], [els.manualName, c.name], [els.mpPhone, c.phone], [els.manualPhone, c.phone], [els.mpEmail, c.email]].forEach(function (pair) {
+      if (pair[0] && !pair[0].value && pair[1]) pair[0].value = pair[1];
+    });
+  }
+  function rememberCustomer(c) {
+    var prev = readLocal(CUSTOMER_KEY, {});
+    writeLocal(CUSTOMER_KEY, { name: c.name || prev.name || '', phone: c.phone || prev.phone || '', email: c.email || prev.email || '' });
+  }
+  function rememberOrder(id, phone, total) {
+    var mine = readLocal(MY_ORDERS_KEY, []).filter(function (o) { return o.id !== id; });
+    mine.unshift({ id: id, phone: phone || '', total: total || 0, at: Date.now() });
+    writeLocal(MY_ORDERS_KEY, mine.slice(0, 10));
+  }
+  function trackUrl(id) {
+    return 'https://akyllashop.com/pedido.html?id=' + encodeURIComponent(id);
+  }
+
+  /* Dados do cliente: do bloco visível (PIX automático ou manual). */
+  function customerFields() {
+    var auto = mpEnabled();
+    var name = (auto ? els.mpName : els.manualName) || els.mpName || els.manualName;
+    var phone = (auto ? els.mpPhone : els.manualPhone) || els.mpPhone || els.manualPhone;
+    return {
+      nameInput: name,
+      name: name ? name.value.replace(/\s+/g, ' ').trim() : '',
+      phone: phone ? phone.value.trim() : '',
+      email: auto && els.mpEmail ? els.mpEmail.value.trim() : ''
+    };
+  }
+
+  /* ------------------------- cartão de crédito (Mercado Pago) ------------------------- */
+
+  function cardConfig() {
+    var c = CONFIG.card || {};
+    return {
+      enabled: !!c.enabled && !!CONFIG.paymentApiUrl,
+      max: Math.min(12, Math.max(1, Math.floor(Number(c.maxInstallments) || 12))),
+      fee: Math.min(20, Math.max(0, Number(c.feePercent) || 0))
+    };
+  }
+  function cardTotalFor(base) {
+    return Math.ceil(base / (1 - cardConfig().fee / 100)); // a loja recebe o preço do PIX
+
+  }
+
+  var cardBusy = false;
+  function renderCard(ready) {
+    if (!els.cardBox) return;
+    var cfg = cardConfig();
+    var paying = state.mp && state.mp.order && state.mp.order.status === 'pending';
+    var done = (state.mp && state.mp.done) || !!state.manualSent;
+    els.cardBox.hidden = !cfg.enabled || !ready || paying || done || !state.order;
+    if (els.cardBox.hidden) return;
+    var total = cardTotalFor(state.order.total);
+    if (els.cardPrice) els.cardPrice.textContent = formatBRL(total) + ' em até ' + cfg.max + 'x no cartão';
+    if (els.cardNote) {
+      els.cardNote.textContent = 'Pagamento na página segura do Mercado Pago. ' +
+        (cfg.fee ? 'No cartão o valor tem acréscimo de ' + (Math.round((1 / (1 - cfg.fee / 100) - 1) * 10000) / 100).toLocaleString('pt-BR') + '% (no PIX sai ' + formatBRL(state.order.total) + '). ' : '') +
+        'Os juros do parcelamento são do cartão e aparecem antes de você confirmar.';
+    }
+    if (els.cardPay) {
+      els.cardPay.disabled = cardBusy;
+      els.cardPay.textContent = cardBusy ? 'Abrindo o Mercado Pago…' : 'Pagar ' + formatBRL(total) + ' no cartão';
+    }
+  }
+
+  function cardFail(message) {
+    if (!els.cardError) return;
+    els.cardError.textContent = message;
+    els.cardError.hidden = !message;
+  }
+
+  function payWithCard() {
+    if (cardBusy || !state.order) return;
+    var c = customerFields();
+    if (c.name.length < 3) {
+      cardFail('Informe seu nome completo (logo acima) para pagar no cartão.');
+      if (c.nameInput) c.nameInput.focus();
+      return;
+    }
+    cardFail('');
+    var d = state.delivery;
+    cardBusy = true;
+    renderCheckout();
+    mpApi('/api/card-orders', {
+      method: 'POST',
+      body: {
+        items: state.cart.map(function (i) { return { id: i.id, qty: i.qty }; }),
+        delivery: d.mode === 'pickup' ? { mode: 'pickup' } : {
+          mode: 'delivery',
+          cep: d.quote ? d.quote.address.cep : '',
+          number: d.quote ? d.quote.address.number : '',
+          complement: d.complement || ''
+        },
+        email: c.email,
+        customer: { name: c.name, phone: c.phone }
+      }
+    }).then(function (order) {
+      rememberCustomer(c);
+      rememberOrder(order.id, c.phone, order.total);
+      writeLocal(CARD_PENDING_KEY, order.id);
+      window.location.href = order.checkoutUrl;
+    }).catch(function (error) {
+      cardBusy = false;
+      cardFail(error.status ? error.message : 'Não conseguimos abrir o pagamento no cartão agora. Tente de novo ou pague no PIX.');
+      renderCheckout();
+    });
+  }
+
   /* ------------------------- PIX automático (Mercado Pago) ------------------------- */
 
   function mpEnabled() {
@@ -1283,6 +1415,8 @@
         customer: { name: name, phone: els.mpPhone ? els.mpPhone.value : '' }
       }
     }).then(function (order) {
+      rememberCustomer({ name: name, phone: els.mpPhone ? els.mpPhone.value.trim() : '', email: els.mpEmail ? els.mpEmail.value.trim() : '' });
+      rememberOrder(order.id, els.mpPhone ? els.mpPhone.value.trim() : '', order.total);
       state.mp.order = order;
       state.mp.signature = mpSignature();
       if (state.order && order.total !== state.order.total) {
@@ -1347,13 +1481,19 @@
         (d.kind === 'carrier' ? '\nFrete: transportadora — aguardo a cotação' : d.kind === 'negotiable' ? '\nFrete: a combinar' : '\nFrete: ' + formatBRL(order.shipping));
     var message = ['Olá! Meu pagamento foi confirmado na Akylla Shop ✅', '', 'Pedido: ' + order.id, '', lines.join('\n'), '',
       deliveryLine, 'Total pago: ' + formatBRL(order.total) + ' (Mercado Pago #' + order.paymentId + ')'].join('\n');
-    if (els.mpWhats) els.mpWhats.href = whatsappLink(message);
+    if (els.mpWhats) els.mpWhats.href = whatsappLink(message + '\nAcompanhar: ' + trackUrl(order.id));
+    if (els.mpTrack) els.mpTrack.href = 'pedido.html?id=' + encodeURIComponent(order.id);
     if (els.mpDoneText) els.mpDoneText.textContent = 'Pedido ' + order.id + ' · ' + formatBRL(order.total) + '. Agora é só enviar o pedido no WhatsApp para combinarmos a ' + (d.mode === 'pickup' ? 'retirada.' : 'entrega.');
     state.cart = [];
     saveCart();
     renderCart();
     renderCheckout();
     toast('Pagamento confirmado! Obrigado pela compra.');
+  }
+
+  function setupCard() {
+    if (els.cardPay) els.cardPay.addEventListener('click', payWithCard);
+    fillCustomer();
   }
 
   function setupMercadoPago() {
@@ -1713,6 +1853,9 @@
   }
 
   function finishManual(id, link, win) {
+    var c = customerFields();
+    rememberCustomer(c);
+    rememberOrder(id, c.phone, state.order ? state.order.total : 0);
     if (win && !win.closed) win.location.href = link; else window.location.href = link;
     state.manualSent = id;
     state.cart = [];
@@ -1972,6 +2115,7 @@
   setupCheckout();
   setupDelivery();
   setupMercadoPago();
+  setupCard();
   setupDialogs();
   setupReveal();
 

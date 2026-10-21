@@ -4807,3 +4807,65 @@ dialog::backdrop {
   .price-old { font-size: 0.66rem; }
   .add-btn { width: 38px; height: 38px; flex: none; border-radius: 12px; }
 }
+
+/* ===== Cartão de crédito no checkout ===== */
+.card-pay {
+  margin-top: 1.2rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+}
+.card-pay[hidden] { display: none; }
+.card-pay-head { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem; }
+.card-pay-head h3 { margin: 0; font-size: 1rem; }
+.card-pay-head p { margin: 0.1rem 0 0; font-weight: 700; color: var(--text); }
+.card-pay-ico { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 14px; background: #060913; color: #ff8a00; }
+.card-pay-ico svg { width: 24px; height: 24px; }
+.card-pay-note { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+
+/* ===== Acompanhar pedido ===== */
+.track { padding: 2.2rem 0 4rem; }
+.track-shell { max-width: 760px; }
+.track h1 { margin: 0.3rem 0 0.4rem; font-size: clamp(2rem, 6vw, 2.8rem); letter-spacing: -0.04em; }
+.track-lead { margin: 0 0 1.4rem; color: var(--muted); }
+.track-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.7rem; align-items: end; padding: 1rem; border: 1px solid var(--line); border-radius: 22px; background: var(--white); }
+.track-form label { display: grid; gap: 0.35rem; font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+.track-form input { min-height: 48px; padding: 0.6rem 0.85rem; border: 1px solid var(--line); border-radius: 14px; font: inherit; font-size: 1rem; color: var(--text); background: #fff; }
+.track-form input:focus { outline: none; border-color: #ff8a00; box-shadow: 0 0 0 3px rgba(255, 138, 0, 0.22); }
+.track-form .btn { min-height: 48px; }
+@media (max-width: 640px) { .track-form { grid-template-columns: 1fr; } }
+.track-error { margin: 0.8rem 0 0; padding: 0.7rem 0.9rem; border-radius: 14px; background: #fde8e8; color: #b42318; font-weight: 600; }
+.track-error[hidden], .track-mine[hidden], .track-result[hidden] { display: none; }
+.track-mine { margin-top: 1.4rem; }
+.track-mine h2 { margin: 0 0 0.6rem; font-size: 1rem; }
+.track-mine ul { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.track-mine-item { display: grid; gap: 0.1rem; padding: 0.55rem 0.8rem; border: 1px solid var(--line); border-radius: 14px; background: var(--white); text-align: left; font: inherit; cursor: pointer; }
+.track-mine-item span { color: var(--muted); font-size: 0.78rem; }
+.track-mine-item:hover { border-color: #ff8a00; }
+.track-result { display: grid; gap: 1rem; margin-top: 1.6rem; }
+.track-status { display: flex; gap: 0.9rem; align-items: flex-start; padding: 1.2rem; border-radius: 22px; background: #060913; color: #fff; }
+.track-status.is-paid { background: linear-gradient(135deg, #0d3b23, #060913); }
+.track-status.is-canceled { background: #3a3f4b; }
+.track-status-ico { font-size: 2rem; line-height: 1; }
+.track-status-id { margin: 0; color: rgba(255, 255, 255, 0.65); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; }
+.track-status h2 { margin: 0.15rem 0 0.3rem; font-size: 1.35rem; color: #fff; }
+.track-status p { margin: 0; color: rgba(255, 255, 255, 0.82); }
+.track-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 0; }
+.track-steps li { position: relative; padding: 0 0 1rem 2rem; color: var(--muted); }
+.track-steps li::before { content: ""; position: absolute; left: 0.35rem; top: 0.25rem; width: 0.8rem; height: 0.8rem; border-radius: 50%; border: 2px solid var(--line); background: var(--white); }
+.track-steps li::after { content: ""; position: absolute; left: 0.72rem; top: 1.2rem; bottom: 0; width: 2px; background: var(--line); }
+.track-steps li:last-child::after { display: none; }
+.track-steps li.is-done { color: var(--text); }
+.track-steps li.is-done::before { border-color: #ff8a00; background: #ff8a00; }
+.track-steps li.is-done::after { background: #ff8a00; }
+.track-steps strong { display: block; }
+.track-steps span { font-size: 0.8rem; color: var(--muted); }
+.track-box { padding: 1.1rem; border: 1px solid var(--line); border-radius: 22px; background: var(--white); }
+.track-box h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.track-lines { margin: 0 0 0.8rem; padding-left: 1.1rem; }
+.track-total { display: flex; justify-content: space-between; margin: 0; padding-top: 0.7rem; border-top: 1px solid var(--line); font-size: 1.05rem; }
+.track-meta { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.track-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.track .legal-back { display: inline-flex; margin-bottom: 1.2rem; }
+.track .eyebrow { display: block; }

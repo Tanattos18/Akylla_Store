@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-3">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-4">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -611,6 +611,7 @@
         <h3>Atendimento</h3>
         <ul>
           <li><a href="https://wa.me/556281517002" data-whatsapp target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
+          <li><a href="pedido.html">Acompanhar meu pedido</a></li>
           <li><a href="#garantia">Garantia e trocas</a></li>
           <li><a href="#garantia">Envio e entrega</a></li>
           <li><span>Goiânia/GO</span></li>
@@ -656,6 +657,7 @@
       <a href="#produtos" data-filter-link="carregadores" data-close-mobile>Carregadores</a>
       <a href="#sobre" data-close-mobile>Sobre a loja</a>
       <a href="#faq" data-close-mobile>Dúvidas</a>
+      <a href="pedido.html">Acompanhar meu pedido</a>
       <a href="#contato" data-close-mobile>Contato</a>
     </nav>
     <div class="mobile-menu-foot">
@@ -824,6 +826,7 @@
           <div class="mp-done" id="mpDone" hidden>
             <strong>Pagamento confirmado!</strong>
             <p id="mpDoneText"></p>
+            <a class="btn btn-ghost btn-block" id="mpTrack" href="pedido.html">Acompanhar este pedido</a>
             <a class="btn btn-whatsapp btn-block" id="mpWhats" href="#" target="_blank" rel="noopener noreferrer">
               <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
               Enviar pedido no WhatsApp
@@ -888,6 +891,19 @@
           <p class="mp-note">Depois de pagar, toque em <strong>Enviar comprovante</strong>: seu pedido é registrado, o produto fica separado para você e a conversa abre no WhatsApp da loja para enviar o comprovante.</p>
         </section>
 
+        <section class="card-pay" id="cardBox" hidden aria-labelledby="cardTitle">
+          <div class="card-pay-head">
+            <span class="card-pay-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 10h19M6 15h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+            <div>
+              <h3 id="cardTitle">Prefere cartão de crédito?</h3>
+              <p id="cardPrice">Em até 12x pelo Mercado Pago</p>
+            </div>
+          </div>
+          <p class="card-pay-note" id="cardNote"></p>
+          <button class="btn btn-dark btn-block" type="button" id="cardPay">Pagar com cartão</button>
+          <p class="manual-error" id="cardError" role="alert" hidden></p>
+        </section>
+
         <ol class="checkout-steps" id="checkoutSteps">
           <li><span>1</span> Pague o PIX com o valor exato do pedido.</li>
           <li><span>2</span> Envie o comprovante pelo WhatsApp.</li>
@@ -939,12 +955,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261021-3" defer></script>
-  <script src="assets/js/config.js?v=20261021-3" defer></script>
-  <script src="assets/js/products.js?v=20261021-3" defer></script>
-  <script src="assets/js/pix.js?v=20261021-3" defer></script>
-  <script src="assets/js/promo.js?v=20261021-3" defer></script>
-  <script src="assets/js/frete.js?v=20261021-3" defer></script>
-  <script src="assets/js/app.js?v=20261021-3" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261021-4" defer></script>
+  <script src="assets/js/config.js?v=20261021-4" defer></script>
+  <script src="assets/js/products.js?v=20261021-4" defer></script>
+  <script src="assets/js/pix.js?v=20261021-4" defer></script>
+  <script src="assets/js/promo.js?v=20261021-4" defer></script>
+  <script src="assets/js/frete.js?v=20261021-4" defer></script>
+  <script src="assets/js/app.js?v=20261021-4" defer></script>
 </body>
 </html>

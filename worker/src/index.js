@@ -17,6 +17,14 @@
  *   GET  /api/admin/orders/changes  última mudança nos pedidos (o painel consulta a cada 20 s)
  *   GET  /api/health              teste rápido
  *
+ * Rotas — cartão de crédito (Checkout Pro do Mercado Pago, até 12x, juros com o cliente):
+ *   POST /api/card-orders                cria o pedido, reserva o estoque e devolve o link da página de pagamento
+ *   (o aviso do pagamento chega em /api/webhook com type=payment)
+ *
+ * Rotas — acompanhamento e etapas:
+ *   GET  /api/track?id=AK-…&phone=…      cliente acompanha o pedido (confere o WhatsApp do pedido)
+ *   POST /api/admin/orders/:id/stage     painel: separando → pronto/enviado → entregue
+ *
  * Rotas — avisos de pedido no painel (Web Push, celular e PC):
  *   GET  /api/push/key                   chave pública VAPID (o servidor cria e guarda no KV)
  *   POST /api/admin/push/subscribe       painel: cadastra este aparelho para receber avisos
@@ -264,6 +272,24 @@ async function createPix(env, { id, total, email, expiresAt, workerUrl }) {
   return { paymentId: String(payment.id), code: tx.qr_code, image: tx.qr_code_base64, ticketUrl: tx.ticket_url };
 }
 
+function normalizePayment(raw) {
+  return {
+    state: raw.status === 'approved' ? 'paid' : ['pending', 'in_process', 'authorized'].includes(raw.status) ? 'pending' : 'closed',
+    amountCents: Math.round(Number(raw.transaction_amount) * 100),
+    ref: String(raw.external_reference || ''),
+    id: String(raw.id),
+    installments: raw.installments || 1,
+    raw
+  };
+}
+
+/* Pagamento no cartão: procura pelo número do pedido (o cliente pode ter tentado mais de um cartão). */
+async function readCardPayment(env, order) {
+  const found = await mp(env, '/v1/payments/search?external_reference=' + encodeURIComponent(order.id) + '&sort=date_created&criteria=desc&limit=20');
+  const list = (found.results || []).map(normalizePayment);
+  return list.find((p) => p.state === 'paid') || list[0] || { state: 'pending', amountCents: 0, ref: order.id, id: '' };
+}
+
 function normalize(env, raw) {
   if (useOrdersApi(env)) {
     const paid = raw.status === 'processed' && (raw.status_detail === 'accredited' || !raw.status_detail);
@@ -447,7 +473,13 @@ function publicOrder(order) {
     manual: !!order.manual,
     canceledAt: order.canceledAt,
     cancelReason: order.cancelReason,
-    customerName: order.customer ? order.customer.name : ''
+    customerName: order.customer ? order.customer.name : '',
+    kind: order.kind || (order.manual ? 'manual' : 'pix'),
+    stage: order.stage || '',
+    stageAt: order.stageAt || {},
+    baseTotal: order.baseTotal,
+    cardFeePercent: order.cardFeePercent,
+    installments: order.installments
   };
 }
 
@@ -491,6 +523,149 @@ async function createOrder(request, env) {
   return json(publicOrder(order), 201);
 }
 
+/* ------------------------- cartão (Checkout Pro) ------------------------- */
+
+function cardSettings(config) {
+  const c = (config && config.card) || {};
+  return {
+    enabled: !!c.enabled,
+    maxInstallments: Math.min(12, Math.max(1, Math.floor(Number(c.maxInstallments) || 12))),
+    feePercent: Math.min(20, Math.max(0, Number(c.feePercent) || 0))
+  };
+}
+
+/* Preço no cartão: a taxa do Mercado Pago (feePercent) é descontada do valor cobrado, então
+   cobra-se PIX ÷ (1 − taxa) — assim a loja recebe exatamente o preço do PIX. Juros das parcelas: o cliente. */
+function cardTotal(base, feePercent) {
+  return Math.ceil(base / (1 - feePercent / 100));
+}
+
+function siteUrl(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const allowed = String(env.ALLOWED_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean);
+  return allowed.includes(origin) ? origin : (allowed[0] || 'https://akyllashop.com');
+}
+
+async function createCardOrder(request, env) {
+  if (!env.MP_ACCESS_TOKEN) throw new OrderError('Pagamento com cartão indisponível no momento.', 503);
+  await rateLimit(env, request, 20, 'rlc');
+  const body = await request.json().catch(() => null);
+  if (!body) throw new OrderError('Pedido inválido.');
+  const catalog = await loadCatalog(env, true);
+  const card = cardSettings(catalog.config);
+  if (!card.enabled) throw new OrderError('Pagamento com cartão indisponível no momento.', 409);
+  const reserved = reservedByProduct(await activeReservations(env));
+  const now = Date.now();
+  const built = buildLines({ products: catalog.products, config: catalog.config, items: body.items, reserved, now: brazilNow(now) });
+  const customer = cleanCustomer(body.customer);
+  const shipping = await serverShipping(body.delivery, catalog.config);
+  const base = built.subtotal + shipping.fee;
+  const total = cardTotal(base, card.feePercent);
+  const id = newOrderId(now);
+  const expiresAt = now + 60 * 60 * 1000; // 1 h para concluir no Mercado Pago
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email || '')) ? String(body.email).slice(0, 120) : '';
+  const site = siteUrl(request, env);
+  const back = site + '/pedido.html?id=' + encodeURIComponent(id);
+  const summary = built.lines.map((l) => l.qty + 'x ' + l.name).join(', ');
+
+  const pref = await mp(env, '/checkout/preferences', {
+    method: 'POST',
+    idempotency: 'card-' + id,
+    body: {
+      items: [{ id, title: 'Akylla Shop - pedido ' + id, description: summary.slice(0, 250), quantity: 1, currency_id: 'BRL', unit_price: Number(reais(total)) }],
+      external_reference: id,
+      payer: { name: customer.name, ...(email ? { email } : {}) },
+      payment_methods: { installments: card.maxInstallments, excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }, { id: 'bank_transfer' }] },
+      back_urls: { success: back, pending: back, failure: back },
+      auto_return: 'approved',
+      binary_mode: true,
+      notification_url: new URL(request.url).origin + '/api/webhook?source=card',
+      expires: true,
+      expiration_date_from: mpDate(now - 60000),
+      expiration_date_to: mpDate(expiresAt),
+      statement_descriptor: 'AKYLLASHOP'
+    }
+  });
+  if (!pref.init_point) throw new Error('Mercado Pago não devolveu o link de pagamento.');
+
+  const order = {
+    id,
+    kind: 'card',
+    status: 'pending',
+    createdAt: now,
+    expiresAt,
+    lines: built.lines,
+    subtotal: built.subtotal,
+    savings: built.savings,
+    shipping,
+    baseTotal: base,
+    cardFeePercent: card.feePercent,
+    maxInstallments: card.maxInstallments,
+    total,
+    email,
+    customer,
+    paymentId: '',
+    preferenceId: String(pref.id || '')
+  };
+  await saveOrder(env, order);
+  await reserve(env, order);
+  return json({ ...publicOrder(order), checkoutUrl: pref.init_point }, 201);
+}
+
+/* --------------------- acompanhamento e etapas do pedido --------------------- */
+
+const STAGES = ['separando', 'pronto', 'enviado', 'entregue'];
+
+function digitsTail(phone) {
+  return String(phone || '').replace(/\D/g, '').slice(-8);
+}
+
+async function trackOrder(request, env) {
+  await rateLimit(env, request, 60, 'rlt');
+  const url = new URL(request.url);
+  const id = String(url.searchParams.get('id') || '').trim().toUpperCase();
+  if (!/^AK-[A-Z0-9]{6,16}$/.test(id)) throw new OrderError('Número de pedido inválido. Ele começa com AK-.', 400);
+  let order = await getOrder(env, id);
+  const notFound = new OrderError('Não encontramos esse pedido. Confira o número e o WhatsApp.', 404);
+  if (!order) throw notFound;
+  const stored = digitsTail(order.customer && order.customer.phone);
+  const given = digitsTail(url.searchParams.get('phone'));
+  if (stored && stored !== given) throw notFound;
+  if (order.status === 'pending') order = await syncPayment(env, order).catch(() => order);
+  const d = order.shipping || {};
+  const a = (d.quote && d.quote.address) || d.address || {};
+  return json({
+    id: order.id,
+    status: order.status,
+    kind: order.kind || (order.manual ? 'manual' : 'pix'),
+    stage: order.stage || '',
+    stageAt: order.stageAt || {},
+    createdAt: order.createdAt,
+    paidAt: order.paidAt || null,
+    canceledAt: order.canceledAt || null,
+    expiresAt: order.expiresAt || null,
+    firstName: String((order.customer && order.customer.name) || '').split(' ')[0],
+    lines: (order.lines || []).map((l) => ({ qty: l.qty, name: l.name })),
+    total: order.total,
+    installments: order.installments || null,
+    delivery: d.mode === 'pickup' ? { mode: 'pickup' } : { mode: 'delivery', area: [a.district, a.city].filter(Boolean).join(', ') }
+  });
+}
+
+async function adminStage(request, env, id) {
+  await requireAdmin(request, env);
+  const body = await request.json().catch(() => ({}));
+  const stage = String(body.stage || '');
+  if (!STAGES.includes(stage)) throw new OrderError('Etapa inválida.');
+  const order = await getOrder(env, id);
+  if (!order) throw new OrderError('Pedido não encontrado.', 404);
+  if (order.status !== 'paid') throw new OrderError('Só pedidos pagos avançam de etapa.', 409);
+  order.stage = stage;
+  order.stageAt = { ...(order.stageAt || {}), [stage]: Date.now() };
+  await saveOrder(env, order);
+  return json(publicOrder(order));
+}
+
 /* Conferência do Access Token sem criar cobrança (GET /users/me). Não expõe dados da conta. */
 async function mpCheck(env) {
   if (!env.MP_ACCESS_TOKEN) return { mpToken: 'ausente' };
@@ -505,7 +680,10 @@ async function mpCheck(env) {
 /* Confere o pagamento no Mercado Pago e, se aprovado, conclui o pedido (idempotente). */
 async function syncPayment(env, order, payment) {
   if (!order || order.status !== 'pending') return order;
-  const pay = payment || await readPix(env, order.paymentId);
+  const card = order.kind === 'card';
+  const pay = payment || (card ? await readCardPayment(env, order) : await readPix(env, order.paymentId));
+  if (card && pay.id) order.paymentId = pay.id;
+  if (card && pay.installments) order.installments = pay.installments;
   const amountOk = pay.amountCents === order.total;
   const refOk = pay.ref === order.id;
 
@@ -534,7 +712,7 @@ async function syncPayment(env, order, payment) {
     order.pushed = await notifyAdmins(env, pushMessage(order));
     await saveOrder(env, order);
     await release(env, order.id);
-  } else if (pay.state === 'closed' || Date.now() > order.expiresAt + 5 * 60 * 1000) {
+  } else if ((pay.state === 'closed' && !card) || Date.now() > order.expiresAt + 5 * 60 * 1000) {
     order.status = 'expired';
     await saveOrder(env, order);
     await release(env, order.id);
@@ -565,6 +743,23 @@ async function cancelOrder(env, id) {
   return json(publicOrder(order));
 }
 
+async function cardWebhook(request, env, url, dataId) {
+  if (!(await validSignature(request, env, url.searchParams.get('data.id') || dataId))) return json({ ok: false, error: 'assinatura inválida' }, 401);
+  let pay;
+  try {
+    pay = normalizePayment(await mp(env, '/v1/payments/' + encodeURIComponent(dataId)));
+  } catch (err) {
+    if (err.status === 404 || err.status === 400) return json({ ok: true, unknown: true });
+    throw err;
+  }
+  const order = pay.ref ? await getOrder(env, pay.ref) : null;
+  if (!order || order.kind !== 'card') return json({ ok: true, unknown: true });
+  if (order.status !== 'pending') return json({ ok: true, status: order.status });
+  if (pay.state !== 'paid') return json({ ok: true, status: 'pending' });
+  const result = await syncPayment(env, order, pay);
+  return json({ ok: true, status: result.status });
+}
+
 async function webhook(request, env) {
   const url = new URL(request.url);
   const body = await request.json().catch(() => ({}));
@@ -572,6 +767,7 @@ async function webhook(request, env) {
   const dataId = (body.data && body.data.id) || url.searchParams.get('data.id') || url.searchParams.get('id');
   const expected = useOrdersApi(env) ? 'order' : 'payment';
   if (!env.MP_ACCESS_TOKEN) return json({ ok: true, ignored: 'Mercado Pago não configurado' });
+  if (type === 'payment' && expected === 'order' && dataId) return cardWebhook(request, env, url, dataId);
   if (type !== expected || !dataId) return json({ ok: true, ignored: true });
   if (!(await validSignature(request, env, url.searchParams.get('data.id') || dataId))) return json({ ok: false, error: 'assinatura inválida' }, 401);
 
@@ -605,11 +801,11 @@ async function requireAdmin(request, env) {
 
 /* ------------------------- PIX manual com reserva ------------------------- */
 
-async function rateLimit(env, request, limit) {
+async function rateLimit(env, request, limit, scope) {
   const ip = request.headers.get('CF-Connecting-IP') || 'local';
-  const key = 'rl:' + ip + ':' + Math.floor(Date.now() / 3600000);
+  const key = (scope || 'rl') + ':' + ip + ':' + Math.floor(Date.now() / 3600000);
   const count = Number(await env.ORDERS.get(key)) || 0;
-  if (count >= limit) throw new OrderError('Muitos pedidos seguidos deste aparelho. Fale com a gente no WhatsApp.', 429);
+  if (count >= limit) throw new OrderError(scope === 'rlt' ? 'Muitas consultas seguidas. Tente de novo em alguns minutos.' : 'Muitos pedidos seguidos deste aparelho. Fale com a gente no WhatsApp.', 429);
   await env.ORDERS.put(key, String(count + 1), { expirationTtl: 3700 });
 }
 
@@ -685,6 +881,12 @@ async function autoCancel(env) {
     const order = await env.ORDERS.get(k.name, 'json');
     if (order) await cancelManual(env, order, 'sem confirmação em ' + hours + ' h (cancelado automaticamente)').catch((err) => console.error(err));
   }
+  /* pedidos online (PIX automático/cartão) parados: confere no Mercado Pago e encerra os vencidos */
+  const stale = list.keys.filter((k) => k.metadata && k.metadata.status === 'pending' && now - k.metadata.createdAt > 75 * 60 * 1000);
+  for (const k of stale) {
+    const order = await env.ORDERS.get(k.name, 'json');
+    if (order && env.MP_ACCESS_TOKEN) await syncPayment(env, order).catch((err) => console.error(err));
+  }
   return due.length;
 }
 
@@ -720,9 +922,13 @@ export default {
       let response;
       const match = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]{6,40})(\/cancel)?$/);
       const admin = url.pathname.match(/^\/api\/admin\/orders\/([A-Z0-9-]{6,40})\/(confirm|cancel)$/);
+      const stage = url.pathname.match(/^\/api\/admin\/orders\/([A-Z0-9-]{6,40})\/stage$/);
       if (url.pathname === '/api/health') response = json({ ok: true, repo: env.GITHUB_REPO, configured: !!env.GITHUB_TOKEN, manual: !!env.GITHUB_TOKEN, mercadopago: !!(env.MP_ACCESS_TOKEN && env.GITHUB_TOKEN), whatsappAlerts: !!env.CALLMEBOT_APIKEY, ...(url.searchParams.get('check') === 'mp' ? await mpCheck(env) : {}) });
       else if (url.pathname === '/api/manual-orders' && request.method === 'POST') response = await createManualOrder(request, env);
       else if (admin && request.method === 'POST') response = await adminAction(request, env, admin[1], admin[2]);
+      else if (stage && request.method === 'POST') response = await adminStage(request, env, stage[1]);
+      else if (url.pathname === '/api/card-orders' && request.method === 'POST') response = await createCardOrder(request, env);
+      else if (url.pathname === '/api/track' && request.method === 'GET') response = await trackOrder(request, env);
       else if (url.pathname === '/api/orders' && request.method === 'POST') response = await createOrder(request, env);
       else if (match && match[2] && request.method === 'POST') response = await cancelOrder(env, match[1]);
       else if (match && request.method === 'GET') response = await orderStatus(env, match[1]);

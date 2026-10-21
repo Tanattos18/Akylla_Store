@@ -540,3 +540,30 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .busy-box { color: var(--text); background: var(--card); }
 .kpi-value { color: var(--strong); }
 .dash-table td, .dash-table th { border-color: var(--line); }
+
+/* Etapas do pedido */
+.stage-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.stage-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.seg-sm .seg-btn { min-height: 30px; padding: 0.2rem 0.6rem; font-size: 0.78rem; }
+
+/* Clientes */
+.client-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+.client-list .empty { padding: 2rem 1rem; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 16px; }
+.client-card { padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--shadow); display: grid; gap: 0.7rem; }
+.client-top { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.avatar { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%; background: var(--sel-bg); color: var(--sel-text); font-weight: 800; }
+.client-main { flex: 1; min-width: 160px; }
+.client-main strong { display: block; color: var(--strong); }
+.client-main .muted { display: block; font-size: 0.8rem; }
+.client-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 0.6rem 0.7rem; border-radius: 12px; background: var(--soft); }
+.client-stats div { display: grid; }
+.client-stats .muted { font-size: 0.72rem; }
+.client-stats strong { color: var(--strong); font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .client-stats { grid-template-columns: 1fr 1fr; } }
+.client-orders summary { cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--brand-deep); }
+.client-orders ul { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.client-orders li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; font-size: 0.83rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--line); }
+.client-order-total { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Nota explicativa (cartão) */
+.note-box { margin: 0; padding: 0.7rem 0.85rem; border-radius: 12px; background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--text); font-size: 0.85rem; line-height: 1.5; }

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060913">
+  <meta name="robots" content="noindex">
+  <title>Acompanhar pedido — Akylla Shop</title>
+  <meta name="description" content="Acompanhe o seu pedido da Akylla Shop: pagamento, separação, retirada ou entrega.">
+  <link rel="canonical" href="https://akyllashop.com/pedido.html">
+  <link rel="icon" href="assets/img/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/logo-mark.jpg">
+  <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-4">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Akylla Shop — voltar à página inicial">
+        <span class="brand-mark" aria-hidden="true"><img src="assets/img/logo-mark.jpg" alt="" width="40" height="40"></span>
+        <span class="brand-type">
+          <span class="brand-word">AKYLLA<span class="brand-dot">.</span></span>
+          <span class="brand-sub">SHOP</span>
+        </span>
+      </a>
+      <div class="header-actions">
+        <a class="btn btn-dark" href="index.html#produtos">Ver catálogo</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo" class="track">
+    <div class="container track-shell">
+      <a class="legal-back" href="index.html">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Voltar para a loja
+      </a>
+      <p class="eyebrow">Meus pedidos</p>
+      <h1>Acompanhar pedido</h1>
+      <p class="track-lead">Digite o número do pedido (começa com <strong>AK-</strong>) e o WhatsApp que você informou na compra.</p>
+
+      <form class="track-form" id="trackForm" novalidate>
+        <label>Número do pedido
+          <input id="trackId" name="id" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AK-XXXXXXXXX" maxlength="20" required>
+        </label>
+        <label>WhatsApp da compra
+          <input id="trackPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(62) 90000-0000" maxlength="16">
+        </label>
+        <button class="btn btn-primary" type="submit" id="trackBtn">Ver pedido</button>
+      </form>
+      <p class="track-error" id="trackError" role="alert" hidden></p>
+
+      <section class="track-mine" id="trackMine" hidden aria-labelledby="mineTitle">
+        <h2 id="mineTitle">Pedidos feitos neste aparelho</h2>
+        <ul id="mineList"></ul>
+      </section>
+
+      <section class="track-result" id="trackResult" hidden aria-live="polite">
+        <div class="track-status" id="trackStatus">
+          <span class="track-status-ico" id="trackIco" aria-hidden="true">🧾</span>
+          <div>
+            <p class="track-status-id" id="trackOrderId"></p>
+            <h2 id="trackHeadline"></h2>
+            <p id="trackText"></p>
+          </div>
+        </div>
+        <ol class="track-steps" id="trackSteps"></ol>
+        <div class="track-box">
+          <h3>Itens</h3>
+          <ul class="track-lines" id="trackLines"></ul>
+          <p class="track-total"><span>Total</span><strong id="trackTotal"></strong></p>
+          <p class="track-meta" id="trackMeta"></p>
+        </div>
+        <div class="track-actions">
+          <a class="btn btn-whatsapp" id="trackWhats" href="#" target="_blank" rel="noopener noreferrer">Falar com a loja no WhatsApp</a>
+          <button class="btn btn-ghost" type="button" id="trackRefresh">Atualizar</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-bottom" style="margin-top: 0;">
+      <p>© <span data-year>2026</span> Akylla Shop. Todos os direitos reservados.</p>
+      <p class="footer-seller">Vendedor responsável: Joás Santana Nascimento · <span class="nowrap">CPF 909.999.082-00</span> · Rua Capauam, nº 752, Conj. Res. Aruanã III · <span class="nowrap">Goiânia/GO</span> · <span class="nowrap">CEP 74740-450</span></p>
+      <p>Seus dados são usados só para localizar o pedido. <a href="privacidade.html">Política de privacidade</a>.</p>
+    </div>
+  </footer>
+
+  <script src="assets/js/config.js?v=20261021-4" defer></script>
+  <script src="assets/js/pedido.js?v=20261021-4" defer></script>
+</body>
+</html>
