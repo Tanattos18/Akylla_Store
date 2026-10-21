@@ -4463,3 +4463,162 @@ dialog::backdrop {
   filter: grayscale(0.6);
   cursor: not-allowed;
 }
+
+/* ---------------------------------------------------------------
+   PIX automático (Mercado Pago)
+   --------------------------------------------------------------- */
+.mp-box {
+  padding: 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+}
+
+.mp-box[hidden],
+.mp-box [hidden] {
+  display: none !important;
+}
+
+.mp-customer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.mp-customer label,
+.mp-email {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.8rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mp-customer label {
+  margin-bottom: 0;
+}
+
+.mp-customer input,
+.mp-email input {
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.mp-note {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mp-pay {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.mp-qr img {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.mp-info {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.mp-info code {
+  display: block;
+  max-height: 4.6em;
+  overflow: auto;
+  word-break: break-all;
+  font-size: 0.72rem;
+}
+
+.mp-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: #a34a00;
+  font-weight: 700;
+}
+
+.mp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: pulse 1.6s infinite;
+}
+
+.mp-expire {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mp-done {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: #e7f6ec;
+  color: #17723a;
+}
+
+.mp-done strong {
+  font-size: 1.15rem;
+}
+
+.mp-done p {
+  margin: 0;
+  color: var(--text);
+}
+
+.mp-error {
+  margin-top: 0.8rem;
+  padding: 0.8rem 1rem;
+  border-radius: 14px;
+  background: #fde8e8;
+  color: #b42318;
+  font-size: 0.88rem;
+}
+
+.mp-error p {
+  margin: 0 0 0.5rem;
+}
+
+/* Enquanto o PIX automático está aberto, os itens e a entrega ficam travados. */
+.checkout-dialog.is-paying .summary-item-controls,
+.checkout-dialog.is-paying .delivery-form,
+.checkout-dialog.is-paying .delivery-options {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .mp-pay,
+  .mp-customer {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-qr img {
+    margin: 0 auto;
+  }
+}

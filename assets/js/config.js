@@ -85,5 +85,7 @@ window.AKYLLA_CONFIG = {
         "price": null
       }
     ]
-  }
+  },
+  "paymentProvider": "manual",
+  "paymentApiUrl": ""
 };

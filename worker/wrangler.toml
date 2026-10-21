@@ -1,0 +1,23 @@
+# Akylla Shop — servidor de pagamentos (Cloudflare Worker)
+# Publicar:  cd worker  →  npx wrangler deploy
+# Segredos (uma vez):  npx wrangler secret put MP_ACCESS_TOKEN
+#                      npx wrangler secret put MP_WEBHOOK_SECRET
+#                      npx wrangler secret put GITHUB_TOKEN
+#                      npx wrangler secret put CALLMEBOT_APIKEY   (aviso de vendas no WhatsApp)
+name = "akylla-shop-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+GITHUB_REPO = "Tanattos18/Akylla_Store"
+GITHUB_BRANCH = "main"
+ALLOWED_ORIGINS = "https://akyllashop.com,https://www.akyllashop.com,http://127.0.0.1:8765"
+PAYMENT_MINUTES = "30"
+# WhatsApp da loja que recebe o aviso de cada venda (DDI + DDD + número, só dígitos).
+STORE_WHATSAPP = "556281517002"
+
+# Pedidos e reservas de estoque. Crie com:  npx wrangler kv namespace create ORDERS
+# e cole o "id" retornado abaixo.
+[[kv_namespaces]]
+binding = "ORDERS"
+id = "COLE_AQUI_O_ID_DO_KV"

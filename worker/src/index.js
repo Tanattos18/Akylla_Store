@@ -1,0 +1,420 @@
+/*
+ * Akylla Shop — servidor de pagamentos (Cloudflare Worker).
+ *
+ * Rotas:
+ *   POST /api/orders              cria o pedido: valida estoque, recalcula preço/frete,
+ *                                 reserva o estoque e gera o PIX no Mercado Pago
+ *   GET  /api/orders/:id          status do pedido (consulta o Mercado Pago se estiver pendente)
+ *   POST /api/orders/:id/cancel   cancela um PIX não pago (libera a reserva)
+ *   POST /api/webhook             aviso do Mercado Pago → confere o pagamento → baixa o estoque
+ *   GET  /api/admin/orders        lista de pedidos (para o painel; exige a chave do GitHub)
+ *   GET  /api/health              teste rápido
+ *
+ * Segredos (Cloudflare → Worker → Settings → Variables and Secrets):
+ *   MP_ACCESS_TOKEN     Access Token de PRODUÇÃO do Mercado Pago
+ *   MP_WEBHOOK_SECRET   assinatura secreta dos webhooks do Mercado Pago
+ *   GITHUB_TOKEN        chave fine-grained do GitHub (Contents: Read and write no repositório)
+ *   CALLMEBOT_APIKEY    chave do CallMeBot para avisar as vendas no WhatsApp da loja (opcional)
+ * Variáveis (wrangler.toml): GITHUB_REPO, GITHUB_BRANCH, ALLOWED_ORIGINS, PAYMENT_MINUTES, STORE_WHATSAPP
+ * KV: ORDERS (pedidos e reservas)
+ */
+import {
+  OrderError, brazilNow, newOrderId, reservedByProduct, buildLines, serverShipping,
+  applySale, centsToReais, mpDate, Formato, cleanCustomer, saleMessage
+} from './logic.js';
+
+const PRODUCTS_PATH = 'assets/js/products.js';
+const CONFIG_PATH = 'assets/js/config.js';
+
+/* ------------------------------- utilidades ------------------------------- */
+
+function json(data, status, headers) {
+  return new Response(JSON.stringify(data), {
+    status: status || 200,
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...(headers || {}) }
+  });
+}
+
+function corsHeaders(request, env) {
+  const origin = request.headers.get('Origin') || '';
+  const allowed = String(env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (!allowed.includes(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '600',
+    Vary: 'Origin'
+  };
+}
+
+function b64ToUtf8(b64) {
+  const bin = atob(String(b64).replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+
+function utf8ToB64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/* --------------------------------- GitHub --------------------------------- */
+
+async function gh(env, path, options) {
+  const res = await fetch('https://api.github.com' + path, {
+    method: (options && options.method) || 'GET',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: 'Bearer ' + env.GITHUB_TOKEN,
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'akylla-shop-worker',
+      ...(options && options.body ? { 'Content-Type': 'application/json' } : {})
+    },
+    body: options && options.body ? JSON.stringify(options.body) : undefined
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const err = new Error('GitHub ' + res.status + ': ' + (data.message || ''));
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+/* O nome do repositório pode mudar (ex.: Akylla_Store → Akylla_Shop): resolve o atual. */
+let repoName = null;
+async function repo(env) {
+  if (!repoName) {
+    const info = await gh(env, '/repos/' + env.GITHUB_REPO);
+    repoName = info.full_name;
+  }
+  return repoName;
+}
+
+async function readFile(env, path) {
+  const r = await repo(env);
+  const data = await gh(env, '/repos/' + r + '/contents/' + path + '?ref=' + encodeURIComponent(env.GITHUB_BRANCH || 'main'));
+  return { text: b64ToUtf8(data.content), sha: data.sha };
+}
+
+/* Catálogo + configuração atuais (cache curto para não estourar a API). */
+let catalogCache = null;
+async function loadCatalog(env, fresh) {
+  if (!fresh && catalogCache && Date.now() - catalogCache.at < 30000) return catalogCache;
+  const [p, c] = await Promise.all([readFile(env, PRODUCTS_PATH), readFile(env, CONFIG_PATH)]);
+  const parsed = Formato.parseProducts(p.text);
+  catalogCache = { at: Date.now(), products: parsed.products, categories: parsed.categories, config: Formato.parseConfig(c.text), productsSha: p.sha };
+  return catalogCache;
+}
+
+/* Baixa o estoque no products.js (com nova tentativa se alguém publicou ao mesmo tempo). */
+async function commitSale(env, order) {
+  const r = await repo(env);
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const file = await readFile(env, PRODUCTS_PATH);
+    const catalog = Formato.parseProducts(file.text);
+    const result = applySale(catalog.products, order.lines);
+    const text = Formato.serializeProducts(catalog.categories, result.products);
+    const summary = order.lines.map((l) => l.qty + 'x ' + l.name).join(', ');
+    try {
+      await gh(env, '/repos/' + r + '/contents/' + PRODUCTS_PATH, {
+        method: 'PUT',
+        body: {
+          message: 'venda: pedido ' + order.id + ' (' + summary + ')\n\nPagamento Mercado Pago ' + order.paymentId + ' aprovado.\n' +
+            (result.warnings.length ? 'ATENÇÃO: ' + result.warnings.join('; ') + '\n' : '') + '\nBaixa automática de estoque pelo servidor.',
+          content: utf8ToB64(text),
+          sha: file.sha,
+          branch: env.GITHUB_BRANCH || 'main'
+        }
+      });
+      catalogCache = null;
+      return result.warnings;
+    } catch (err) {
+      if (err.status !== 409 && err.status !== 422) throw err;
+      await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+    }
+  }
+  throw new Error('Não consegui gravar o estoque no GitHub depois de várias tentativas.');
+}
+
+/* ------------------------------ Mercado Pago ------------------------------ */
+
+async function mp(env, path, options) {
+  const res = await fetch('https://api.mercadopago.com' + path, {
+    method: (options && options.method) || 'GET',
+    headers: {
+      Authorization: 'Bearer ' + env.MP_ACCESS_TOKEN,
+      'Content-Type': 'application/json',
+      ...(options && options.idempotency ? { 'X-Idempotency-Key': options.idempotency } : {})
+    },
+    body: options && options.body ? JSON.stringify(options.body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error('Mercado Pago ' + res.status + ': ' + (data.message || data.error || ''));
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+/* Assinatura dos webhooks (x-signature: ts=...,v1=...). */
+async function validSignature(request, env, dataId) {
+  if (!env.MP_WEBHOOK_SECRET) return true; // sem segredo configurado, confia na consulta ao MP
+  const header = request.headers.get('x-signature') || '';
+  const requestId = request.headers.get('x-request-id') || '';
+  const parts = Object.fromEntries(header.split(',').map((kv) => kv.trim().split('=')));
+  if (!parts.ts || !parts.v1) return false;
+  const manifest = 'id:' + String(dataId).toLowerCase() + ';request-id:' + requestId + ';ts:' + parts.ts + ';';
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.MP_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(manifest));
+  const hex = Array.from(new Uint8Array(sig), (b) => b.toString(16).padStart(2, '0')).join('');
+  return hex === parts.v1;
+}
+
+/* ------------------------- aviso no WhatsApp da loja ------------------------- */
+
+async function notifyStore(env, order) {
+  if (!env.CALLMEBOT_APIKEY || !env.STORE_WHATSAPP) return false;
+  const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(env.STORE_WHATSAPP) +
+    '&text=' + encodeURIComponent(saleMessage(order)) + '&apikey=' + encodeURIComponent(env.CALLMEBOT_APIKEY);
+  try {
+    const res = await fetch(url);
+    return res.ok;
+  } catch (err) {
+    console.error('aviso WhatsApp falhou', err);
+    return false;
+  }
+}
+
+/* ---------------------------------- KV ---------------------------------- */
+
+const ORDER_TTL = 60 * 60 * 24 * 120; // pedidos ficam 120 dias
+
+async function getOrder(env, id) {
+  return env.ORDERS.get('order:' + id, 'json');
+}
+
+async function saveOrder(env, order) {
+  await env.ORDERS.put('order:' + order.id, JSON.stringify(order), {
+    expirationTtl: ORDER_TTL,
+    metadata: { status: order.status, total: order.total, createdAt: order.createdAt }
+  });
+}
+
+async function activeReservations(env) {
+  const list = await env.ORDERS.list({ prefix: 'res:' });
+  const now = Date.now();
+  return list.keys
+    .filter((k) => k.metadata && k.metadata.expiresAt > now)
+    .map((k) => ({ id: k.name.slice(4), items: k.metadata.items }));
+}
+
+async function reserve(env, order) {
+  const ttl = Math.max(60, Math.ceil((order.expiresAt - Date.now()) / 1000) + 300);
+  await env.ORDERS.put('res:' + order.id, '1', {
+    expirationTtl: ttl,
+    metadata: { expiresAt: order.expiresAt, items: order.lines.map((l) => ({ id: l.id, qty: l.qty })) }
+  });
+}
+
+async function release(env, id) {
+  await env.ORDERS.delete('res:' + id);
+}
+
+/* ------------------------------ fluxo do pedido ------------------------------ */
+
+function publicOrder(order) {
+  return {
+    id: order.id,
+    status: order.status,
+    subtotal: order.subtotal,
+    shipping: order.shipping.fee,
+    total: order.total,
+    savings: order.savings,
+    lines: order.lines,
+    delivery: order.shipping,
+    expiresAt: order.expiresAt,
+    paymentId: order.paymentId,
+    pix: order.status === 'pending' ? order.pix : undefined,
+    paidAt: order.paidAt,
+    customerName: order.customer ? order.customer.name : ''
+  };
+}
+
+async function createOrder(request, env) {
+  const body = await request.json().catch(() => null);
+  if (!body) throw new OrderError('Pedido inválido.');
+  const catalog = await loadCatalog(env, true);
+  const reserved = reservedByProduct(await activeReservations(env));
+  const now = Date.now();
+  const built = buildLines({ products: catalog.products, config: catalog.config, items: body.items, reserved, now: brazilNow(now) });
+  const customer = cleanCustomer(body.customer);
+  const shipping = await serverShipping(body.delivery, catalog.config);
+  const total = built.subtotal + shipping.fee;
+
+  const minutes = Math.max(10, Number(env.PAYMENT_MINUTES) || 30);
+  const id = newOrderId(now);
+  const expiresAt = now + minutes * 60 * 1000;
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email || '')) ? String(body.email).slice(0, 120) : 'pedido+' + id.toLowerCase() + '@akyllashop.com';
+  const workerUrl = new URL(request.url).origin;
+
+  const payment = await mp(env, '/v1/payments', {
+    method: 'POST',
+    idempotency: id,
+    body: {
+      transaction_amount: centsToReais(total),
+      description: 'Akylla Shop - pedido ' + id,
+      payment_method_id: 'pix',
+      external_reference: id,
+      notification_url: workerUrl + '/api/webhook',
+      date_of_expiration: mpDate(expiresAt),
+      payer: { email }
+    }
+  });
+
+  const tx = (payment.point_of_interaction && payment.point_of_interaction.transaction_data) || {};
+  const order = {
+    id,
+    status: 'pending',
+    createdAt: now,
+    expiresAt,
+    lines: built.lines,
+    subtotal: built.subtotal,
+    savings: built.savings,
+    shipping,
+    total,
+    email: body.email ? email : '',
+    customer,
+    paymentId: String(payment.id),
+    pix: { code: tx.qr_code, image: tx.qr_code_base64 ? 'data:image/png;base64,' + tx.qr_code_base64 : '', ticketUrl: tx.ticket_url }
+  };
+  await saveOrder(env, order);
+  await reserve(env, order);
+  return json(publicOrder(order), 201);
+}
+
+/* Confere o pagamento no Mercado Pago e, se aprovado, conclui o pedido (idempotente). */
+async function syncPayment(env, order, payment) {
+  if (!order || order.status !== 'pending') return order;
+  const pay = payment || await mp(env, '/v1/payments/' + order.paymentId);
+  const amountOk = Math.round(Number(pay.transaction_amount) * 100) === order.total;
+  const refOk = String(pay.external_reference) === order.id;
+
+  if (pay.status === 'approved' && amountOk && refOk) {
+    order.status = 'paid';
+    order.paidAt = Date.now();
+    await saveOrder(env, order); // marca antes de mexer no estoque: evita baixa em dobro
+    try {
+      order.stockWarnings = await commitSale(env, order);
+      order.stockUpdated = true;
+    } catch (err) {
+      order.stockUpdated = false;
+      order.stockError = String(err.message || err);
+    }
+    order.notified = await notifyStore(env, order);
+    await saveOrder(env, order);
+    await release(env, order.id);
+  } else if (pay.status === 'approved') {
+    order.status = 'review';
+    order.reviewReason = 'Pagamento aprovado com valor ou referência diferente (R$ ' + pay.transaction_amount + ').';
+    order.notified = await notifyStore(env, order);
+    await saveOrder(env, order);
+    await release(env, order.id);
+  } else if (['cancelled', 'rejected', 'expired', 'refunded', 'charged_back'].includes(pay.status) || Date.now() > order.expiresAt + 5 * 60 * 1000) {
+    order.status = 'expired';
+    await saveOrder(env, order);
+    await release(env, order.id);
+  }
+  return order;
+}
+
+async function orderStatus(env, id) {
+  let order = await getOrder(env, id);
+  if (!order) throw new OrderError('Pedido não encontrado.', 404);
+  if (order.status === 'pending') order = await syncPayment(env, order);
+  return json(publicOrder(order));
+}
+
+async function cancelOrder(env, id) {
+  const order = await getOrder(env, id);
+  if (!order) throw new OrderError('Pedido não encontrado.', 404);
+  if (order.status === 'pending') {
+    const synced = await syncPayment(env, order);
+    if (synced.status === 'pending') {
+      await mp(env, '/v1/payments/' + order.paymentId, { method: 'PUT', body: { status: 'cancelled' } }).catch(() => null);
+      synced.status = 'expired';
+      await saveOrder(env, synced);
+      await release(env, id);
+    }
+    return json(publicOrder(synced));
+  }
+  return json(publicOrder(order));
+}
+
+async function webhook(request, env) {
+  const url = new URL(request.url);
+  const body = await request.json().catch(() => ({}));
+  const type = body.type || url.searchParams.get('type') || url.searchParams.get('topic');
+  const dataId = (body.data && body.data.id) || url.searchParams.get('data.id') || url.searchParams.get('id');
+  if (type !== 'payment' || !dataId) return json({ ok: true, ignored: true });
+  if (!(await validSignature(request, env, url.searchParams.get('data.id') || dataId))) return json({ ok: false, error: 'assinatura inválida' }, 401);
+
+  const pay = await mp(env, '/v1/payments/' + dataId);
+  const id = pay.external_reference;
+  const order = id ? await getOrder(env, id) : null;
+  if (!order) return json({ ok: true, unknown: true });
+  if (String(order.paymentId) !== String(pay.id)) return json({ ok: true, mismatch: true });
+  const result = await syncPayment(env, order, pay);
+  return json({ ok: true, status: result.status });
+}
+
+/* Painel: lista pedidos (quem tem a chave do GitHub com permissão de escrita). */
+async function adminOrders(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.replace(/^Bearer\s+/i, '');
+  if (!token) throw new OrderError('Sem autorização.', 401);
+  const check = await fetch('https://api.github.com/repos/' + env.GITHUB_REPO, {
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'akylla-shop-worker' }
+  });
+  const info = await check.json().catch(() => ({}));
+  if (!check.ok || !info.permissions || !info.permissions.push) throw new OrderError('Chave sem permissão.', 403);
+
+  const list = await env.ORDERS.list({ prefix: 'order:' });
+  const keys = list.keys
+    .sort((a, b) => ((b.metadata && b.metadata.createdAt) || 0) - ((a.metadata && a.metadata.createdAt) || 0))
+    .slice(0, 60);
+  const orders = await Promise.all(keys.map((k) => env.ORDERS.get(k.name, 'json')));
+  return json({ orders: orders.filter(Boolean).map((o) => ({ ...publicOrder(o), pix: undefined, email: o.email, customer: o.customer, notified: o.notified, stockUpdated: o.stockUpdated, stockError: o.stockError, stockWarnings: o.stockWarnings, reviewReason: o.reviewReason })) });
+}
+
+/* --------------------------------- roteador --------------------------------- */
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const cors = corsHeaders(request, env);
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+
+    try {
+      let response;
+      const match = url.pathname.match(/^\/api\/orders\/([A-Z0-9-]{6,40})(\/cancel)?$/);
+      if (url.pathname === '/api/health') response = json({ ok: true, repo: env.GITHUB_REPO, configured: !!(env.MP_ACCESS_TOKEN && env.GITHUB_TOKEN) });
+      else if (url.pathname === '/api/orders' && request.method === 'POST') response = await createOrder(request, env);
+      else if (match && match[2] && request.method === 'POST') response = await cancelOrder(env, match[1]);
+      else if (match && request.method === 'GET') response = await orderStatus(env, match[1]);
+      else if (url.pathname === '/api/webhook' && request.method === 'POST') response = await webhook(request, env);
+      else if (url.pathname === '/api/admin/orders' && request.method === 'GET') response = await adminOrders(request, env);
+      else response = json({ error: 'Rota não encontrada.' }, 404);
+      for (const [k, v] of Object.entries(cors)) response.headers.set(k, v);
+      return response;
+    } catch (err) {
+      const status = err instanceof OrderError ? err.status : 500;
+      const message = err instanceof OrderError ? err.message : 'Erro no servidor. Tente de novo em instantes.';
+      if (!(err instanceof OrderError)) console.error(err);
+      return json({ error: message }, status, cors);
+    }
+  }
+};

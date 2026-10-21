@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-13">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-14">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -785,6 +785,52 @@
         <h3 class="checkout-step-title"><span>2</span> Pague com PIX</h3>
         <p class="pix-locked" id="pixLocked">Escolha a retirada ou calcule o frete acima para gerar o PIX com o valor certo.</p>
 
+        <div class="mp-box" id="mpBox" hidden>
+          <div class="mp-start" id="mpStart">
+            <div class="mp-customer">
+              <label>Nome completo <input id="mpName" autocomplete="name" placeholder="Como você se chama?" maxlength="80"></label>
+              <label>WhatsApp (opcional) <input id="mpPhone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(62) 90000-0000" maxlength="16"></label>
+            </div>
+            <label class="mp-email">E-mail (opcional — o Mercado Pago envia o comprovante)
+              <input id="mpEmail" type="email" autocomplete="email" inputmode="email" placeholder="voce@email.com">
+            </label>
+            <button class="btn btn-primary btn-block" type="button" id="mpCreate">Gerar PIX</button>
+            <p class="mp-note">Pagamento pelo Mercado Pago. A confirmação é automática e o estoque fica reservado para você por 30 minutos.</p>
+          </div>
+          <div class="mp-pay" id="mpPay" hidden>
+            <div class="mp-qr"><img id="mpQr" alt="QR Code PIX do pedido" width="220" height="220"></div>
+            <div class="mp-info">
+              <p class="pix-amount-label">Valor do pedido</p>
+              <p class="pix-amount" id="mpTotal">R$ 0,00</p>
+              <p class="mp-status" id="mpStatus" aria-live="polite"><span class="mp-dot" aria-hidden="true"></span> Aguardando pagamento…</p>
+              <div class="pix-payload-row">
+                <div>
+                  <span class="pix-key-label">PIX copia e cola</span>
+                  <code id="mpCode"></code>
+                </div>
+              </div>
+              <button class="btn btn-primary" type="button" id="mpCopy">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-copy"></use></svg>
+                Copiar código PIX
+              </button>
+              <p class="mp-expire" id="mpExpire"></p>
+              <button class="btn btn-ghost btn-sm" type="button" id="mpCancel">Cancelar este PIX e alterar o pedido</button>
+            </div>
+          </div>
+          <div class="mp-done" id="mpDone" hidden>
+            <strong>Pagamento confirmado!</strong>
+            <p id="mpDoneText"></p>
+            <a class="btn btn-whatsapp btn-block" id="mpWhats" href="#" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
+              Enviar pedido no WhatsApp
+            </a>
+          </div>
+          <div class="mp-error" id="mpError" role="alert" hidden>
+            <p id="mpErrorText"></p>
+            <button class="btn btn-ghost btn-sm" type="button" id="mpManual" hidden>Pagar com PIX manual</button>
+          </div>
+        </div>
+
         <div class="pix-box" id="pixBox" hidden>
           <div class="pix-qr-wrap">
             <div class="pix-qr" id="pixQr" role="img" aria-label="QR Code PIX do pedido"></div>
@@ -828,7 +874,7 @@
           </div>
         </div>
 
-        <ol class="checkout-steps">
+        <ol class="checkout-steps" id="checkoutSteps">
           <li><span>1</span> Pague o PIX com o valor exato do pedido.</li>
           <li><span>2</span> Envie o comprovante pelo WhatsApp.</li>
           <li><span>3</span> Aguarde a confirmação; entregamos ou separamos para retirada.</li>
@@ -871,12 +917,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261020-13" defer></script>
-  <script src="assets/js/config.js?v=20261020-13" defer></script>
-  <script src="assets/js/products.js?v=20261020-13" defer></script>
-  <script src="assets/js/pix.js?v=20261020-13" defer></script>
-  <script src="assets/js/promo.js?v=20261020-13" defer></script>
-  <script src="assets/js/frete.js?v=20261020-13" defer></script>
-  <script src="assets/js/app.js?v=20261020-13" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261020-14" defer></script>
+  <script src="assets/js/config.js?v=20261020-14" defer></script>
+  <script src="assets/js/products.js?v=20261020-14" defer></script>
+  <script src="assets/js/pix.js?v=20261020-14" defer></script>
+  <script src="assets/js/promo.js?v=20261020-14" defer></script>
+  <script src="assets/js/frete.js?v=20261020-14" defer></script>
+  <script src="assets/js/app.js?v=20261020-14" defer></script>
 </body>
 </html>

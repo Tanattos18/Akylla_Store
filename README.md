@@ -139,6 +139,53 @@ node scripts/atualizar-precos.js
 
 ---
 
+## 4.1 Pagamento automático (Mercado Pago) e baixa de estoque
+
+Com o pagamento automático ligado, a compra funciona assim:
+
+1. O cliente escolhe retirada/entrega, informa **nome** (obrigatório), WhatsApp e e-mail (opcionais) e clica em **Gerar PIX**.
+2. O **servidor** (`worker/`, Cloudflare Worker) recalcula preço, promoção e frete com os mesmos arquivos do site (o navegador não decide valores), confere o estoque, **reserva** os itens por 30 minutos e cria o PIX no **Mercado Pago**.
+3. O cliente paga; o Mercado Pago avisa o servidor (webhook) e o site também consulta a cada 4 segundos.
+4. O servidor confere no Mercado Pago: **aprovado + valor exato + número do pedido**. Só então:
+   - **baixa o estoque** no `assets/js/products.js` (commit “venda: pedido AK-…”; o site atualiza em ~1 min);
+   - envia o **aviso da venda no WhatsApp da loja** (produto, código, nome do comprador, data, endereço, frete e total);
+   - mostra “Pagamento confirmado” ao cliente, com botão para enviar o pedido no WhatsApp.
+5. PIX não pago em 30 minutos expira e a reserva é liberada. Pagamento com valor diferente vai para **“Conferir pagamento”** (não baixa estoque e avisa no WhatsApp).
+
+O painel tem a aba **Pedidos** (lista, status, cliente, itens, entrega, total, estoque/aviso). Enquanto o servidor não estiver publicado, o site usa o **PIX manual** (padrão) — nada quebra.
+
+### Publicar o servidor (uma vez)
+
+Requisitos: Node 18+ no computador e conta Cloudflare (grátis).
+
+```bash
+cd worker
+npx wrangler login                          # abre o navegador para autorizar a sua conta Cloudflare
+npx wrangler kv namespace create ORDERS     # copie o "id" mostrado e cole em wrangler.toml (kv_namespaces → id)
+npx wrangler deploy                         # publica e mostra o endereço: https://akylla-shop-api.SEU-USUARIO.workers.dev
+```
+
+**Segredos** — cadastre no painel da Cloudflare (*Workers & Pages → akylla-shop-api → Settings → Variables and Secrets → Add → Type: Secret*), nunca no código nem no chat:
+
+| Nome | Onde conseguir |
+|---|---|
+| `MP_ACCESS_TOKEN` | Mercado Pago → *Seu negócio → Configurações → Credenciais* (ou developers.mercadopago.com → *Suas integrações* → sua aplicação → **Credenciais de produção** → *Access Token*, começa com `APP_USR-`). |
+| `MP_WEBHOOK_SECRET` | developers.mercadopago.com → sua aplicação → **Webhooks** → *Configurar notificações*: URL `https://SEU-WORKER.workers.dev/api/webhook`, evento **Pagamentos**, modo produção → copie a **assinatura secreta**. |
+| `GITHUB_TOKEN` | github.com/settings/personal-access-tokens/new → *Fine-grained* → repositório **Akylla_Store** → **Contents: Read and write**. Use uma chave separada da do painel (nome: “Servidor Akylla”, validade 1 ano — anote para renovar). |
+| `CALLMEBOT_APIKEY` | Aviso de vendas no WhatsApp: siga as instruções do site oficial **callmebot.com** (salvar o número do robô e enviar a frase de autorização pelo WhatsApp da loja) e copie a *apikey* que ele responde. O número que recebe fica em `STORE_WHATSAPP` no `wrangler.toml`. |
+
+Depois:
+
+1. Abra `https://SEU-WORKER.workers.dev/api/health` → deve mostrar `"configured": true`.
+2. Painel → **Loja** → *Forma de pagamento*: **Mercado Pago automático** e *Endereço do servidor*: `https://SEU-WORKER.workers.dev` → **Publicar**.
+3. Faça uma compra real de um item barato (ex.: um cabo) para testar; depois devolva o valor pelo app do Mercado Pago.
+
+Para voltar ao PIX manual a qualquer momento: painel → Loja → *PIX manual* → Publicar.
+
+> Atualizar o servidor depois de mudanças no código: `cd worker` → `npx wrangler deploy`. Testes do servidor: `node --test "tests/*.test.js"` (simulam Mercado Pago, GitHub e o banco de pedidos).
+
+---
+
 ## 5. Domínio, DNS e HTTPS
 
 ### Registros DNS (Hostinger → Domínios → akyllashop.com → DNS / Nameservers)
@@ -199,8 +246,12 @@ Akylla_Store/
 │   │   ├── products.js     # catálogo, preços, estoque, fotos           (editado pelo painel)
 │   │   ├── promo.js        # cálculo de promoções
 │   │   ├── frete.js        # cálculo do frete (CEP → endereço → rota → tabela)
+│   │   (também usados pelo servidor: worker/)
 │   │   └── pix.js          # gerador do BR Code PIX + CRC16
 │   └── vendor/qrcode.js    # qrcode-generator 2.0.4 (MIT)
+├── worker/                 # servidor de pagamentos (Cloudflare Worker): Mercado Pago, reservas, baixa de estoque, aviso no WhatsApp
+│   ├── wrangler.toml · package.json
+│   └── src/index.js · src/logic.js
 ├── scripts/atualizar-precos.js   # relatório site × planilha (não altera nada)
 ├── tests/site.test.js            # testes automáticos
 ├── .github/workflows/testes.yml  # roda os testes a cada push
@@ -323,6 +374,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 20/10/2026 | Servidor de pagamentos (Mercado Pago): PIX automático, reserva e baixa de estoque, aviso de vendas no WhatsApp, aba Pedidos (aguardando publicação do servidor). |
 | 20/10/2026 | Frete no checkout (tabela por distância, cidades, retirada grátis) e aba Frete no painel. |
 | 20/10/2026 | Marca renomeada de **Akylla Store** para **Akylla Shop** (site, painel, documentação e arte da vitrine). |
 

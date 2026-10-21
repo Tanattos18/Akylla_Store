@@ -285,3 +285,11 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
 .carrier-table td { padding: 0.45rem 0.2rem; border-bottom: 1px solid var(--line); }
 .carrier-table td:last-child { text-align: right; font-weight: 700; }
 .carrier-table tr.total td { color: var(--ink); font-size: 1.05rem; border-bottom: 0; }
+
+/* Pedidos */
+.orders-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.order-item { padding: 0.8rem 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.order-item p { margin: 0.35rem 0 0; font-size: 0.88rem; }
+.order-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.order-lines { margin: 0.4rem 0 0; padding-left: 1.1rem; font-size: 0.88rem; }
+.order-total { font-weight: 700; }

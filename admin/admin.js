@@ -714,6 +714,62 @@
     }).catch(function (error) { out.textContent = 'Não foi possível: ' + error.message; });
   }
 
+  /* -------------------------------- pedidos -------------------------------- */
+
+  var STATUS = {
+    paid: ['ok', 'Pago'],
+    pending: ['low', 'Aguardando PIX'],
+    expired: ['', 'Expirado/cancelado'],
+    review: ['out', 'Conferir pagamento']
+  };
+
+  function loadOrders() {
+    var api = String(state.config.paymentApiUrl || '').replace(/\/+$/, '');
+    var list = $('#ordersList');
+    if (!api) {
+      $('#ordersHint').hidden = false;
+      list.innerHTML = '';
+      $('#ordersSummary').textContent = '';
+      return;
+    }
+    $('#ordersHint').hidden = true;
+    $('#ordersSummary').textContent = 'Carregando…';
+    fetch(api + '/api/admin/orders', { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' })
+      .then(function (res) { return res.json().then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
+      .then(function (data) {
+        list.innerHTML = '';
+        var paid = data.orders.filter(function (o) { return o.status === 'paid'; });
+        var sum = paid.reduce(function (t, o) { return t + o.total; }, 0);
+        $('#ordersSummary').textContent = data.orders.length + ' pedido(s) · ' + paid.length + ' pago(s) · ' + brl(sum);
+        if (!data.orders.length) list.appendChild(el('li', { class: 'muted', text: 'Nenhum pedido ainda.' }));
+        data.orders.forEach(function (o) {
+          var st = STATUS[o.status] || ['', o.status];
+          var d = o.delivery || {};
+          var a = d.address || {};
+          var when = new Date(o.paidAt || o.expiresAt - 30 * 60000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+          var where = d.mode === 'pickup' ? 'Retirada na loja'
+            : [a.street, a.number].filter(Boolean).join(', ') + (d.complement ? ' — ' + d.complement : '') + ' · ' + a.district + ', ' + a.city + '/' + a.uf + ' · CEP ' + a.cep;
+          var c = o.customer || {};
+          list.appendChild(el('li', { class: 'order-item' }, [
+            el('div', { class: 'order-head' }, [
+              el('strong', { text: o.id }),
+              el('span', { class: 'badge ' + st[0], text: st[1] }),
+              el('span', { class: 'muted', text: when })
+            ]),
+            el('p', { text: (c.name || '—') + (c.phone ? ' · ' + c.phone : '') + (o.email ? ' · ' + o.email : '') }),
+            el('ul', { class: 'order-lines' }, o.lines.map(function (l) {
+              return el('li', { text: l.qty + 'x ' + l.name + ' (cód. ' + l.code + ') — ' + brl(l.unit * l.qty) });
+            })),
+            el('p', { text: 'Entrega: ' + where + ' · Frete: ' + (d.mode === 'pickup' ? 'grátis' : d.kind === 'carrier' ? 'transportadora (cotar)' : d.kind === 'negotiable' ? 'a combinar' : brl(o.shipping)) }),
+            el('p', { class: 'order-total', text: 'Total: ' + brl(o.total) + (o.paymentId ? ' · Mercado Pago #' + o.paymentId : '') }),
+            o.status === 'paid' ? el('p', { class: 'muted', text: (o.stockUpdated ? 'Estoque baixado automaticamente.' : 'ATENÇÃO: estoque não atualizado — ' + (o.stockError || '')) + (o.notified ? ' Aviso enviado no WhatsApp.' : '') }) : null,
+            o.reviewReason ? el('p', { class: 'warn', text: o.reviewReason }) : null
+          ]));
+        });
+      })
+      .catch(function (err) { $('#ordersSummary').textContent = 'Não foi possível carregar: ' + err.message; });
+  }
+
   function renderAll() {
     renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); renderShipForm(); refreshPending();
     var select = $('#categorySelect');
@@ -1081,6 +1137,8 @@
     $('#promoForm').addEventListener('input', function (event) { if (event.target.name === 'text') handlePromoForm(event); });
     $('#promoForm').addEventListener('submit', function (event) { event.preventDefault(); });
     $('#promoSearch').addEventListener('input', renderPromoList);
+    $('#ordersReload').addEventListener('click', loadOrders);
+    document.querySelector('[data-tab="pedidos"]').addEventListener('click', loadOrders);
     $('#shipForm').addEventListener('change', handleShipForm);
     $('#shipForm').addEventListener('submit', function (event) { event.preventDefault(); });
     $('#addBandBtn').addEventListener('click', function () {

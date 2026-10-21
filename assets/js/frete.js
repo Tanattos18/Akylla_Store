@@ -86,7 +86,10 @@
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   function getJSON(url) {
-    return fetch(url, { headers: { Accept: 'application/json' } }).then(function (res) {
+    var headers = { Accept: 'application/json' };
+    /* No servidor (sem navegador), os serviços de mapa pedem identificação. */
+    if (typeof document === 'undefined') headers['User-Agent'] = 'AkyllaShop/1.0 (+https://akyllashop.com)';
+    return fetch(url, { headers: headers }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     });

@@ -1,0 +1,180 @@
+/*
+ * Testes do servidor de pagamentos (worker/) com Mercado Pago, GitHub e KV simulados.
+ * Rode com: node --test "tests/*.test.js"
+ */
+'use strict';
+
+var test = require('node:test');
+var assert = require('node:assert/strict');
+var fs = require('fs');
+var path = require('path');
+
+var ROOT = path.resolve(__dirname, '..');
+var F = require('../admin/formato.js');
+
+function kvMock() {
+  var store = new Map();
+  return {
+    store: store,
+    get: async function (k, type) { var v = store.get(k); if (!v) return null; return type === 'json' ? JSON.parse(v.value) : v.value; },
+    put: async function (k, value, opts) { store.set(k, { value: value, metadata: opts && opts.metadata }); },
+    delete: async function (k) { store.delete(k); },
+    list: async function (opts) {
+      return { keys: Array.from(store.entries()).filter(function (e) { return e[0].indexOf(opts.prefix) === 0; }).map(function (e) { return { name: e[0], metadata: e[1].metadata }; }) };
+    }
+  };
+}
+
+/* Cenário: GitHub com o catálogo real (estoque controlado), Mercado Pago simulado. */
+function scenario() {
+  var catalog = F.parseProducts(fs.readFileSync(path.join(ROOT, 'assets/js/products.js'), 'utf8'));
+  var config = F.parseConfig(fs.readFileSync(path.join(ROOT, 'assets/js/config.js'), 'utf8'));
+  config.promo = { active: true, text: 'Teste', percent: 10, until: '2099-12-31' };
+  catalog.products.forEach(function (p) { p.stock = 2; });
+  var files = {
+    'assets/js/products.js': { text: F.serializeProducts(catalog.categories, catalog.products), sha: 'p1' },
+    'assets/js/config.js': { text: F.serializeConfig(config), sha: 'c1' }
+  };
+  var payments = {};
+  var commits = [];
+  var nextPay = 1000;
+  var notices = [];
+  var b64 = function (t) { return Buffer.from(t, 'utf8').toString('base64'); };
+  var res = function (data, status) { return Promise.resolve(new Response(JSON.stringify(data), { status: status || 200, headers: { 'Content-Type': 'application/json' } })); };
+
+  var fakeFetch = function (url, opts) {
+    opts = opts || {};
+    var u = new URL(url);
+    if (u.host === 'api.github.com') {
+      if (/^\/repos\/[^/]+\/[^/]+$/.test(u.pathname)) return res({ full_name: 'Tanattos18/Akylla_Store', permissions: { push: (opts.headers.Authorization || '') === 'Bearer gh-admin' || (opts.headers.Authorization || '') === 'Bearer gh-worker' } });
+      var m = u.pathname.match(/\/contents\/(.+)$/);
+      if (m && (!opts.method || opts.method === 'GET')) return res({ content: b64(files[m[1]].text), sha: files[m[1]].sha });
+      if (m && opts.method === 'PUT') {
+        var body = JSON.parse(opts.body);
+        if (body.sha !== files[m[1]].sha) return res({ message: 'conflict' }, 409);
+        files[m[1]] = { text: Buffer.from(body.content, 'base64').toString('utf8'), sha: 'p' + (commits.length + 2) };
+        commits.push(body.message);
+        return res({ content: { sha: files[m[1]].sha } });
+      }
+    }
+    if (u.host === 'api.callmebot.com') { notices.push(u.searchParams.get('text')); return res({ ok: true }); }
+    if (u.host === 'api.mercadopago.com') {
+      if (u.pathname === '/v1/payments' && opts.method === 'POST') {
+        var b = JSON.parse(opts.body);
+        var id = nextPay++;
+        payments[id] = { id: id, status: 'pending', transaction_amount: b.transaction_amount, external_reference: b.external_reference, request: b };
+        return res({ id: id, status: 'pending', point_of_interaction: { transaction_data: { qr_code: '000201PIXMP' + id, qr_code_base64: 'iVBOR', ticket_url: 'https://mp/t/' + id } } }, 201);
+      }
+      var pm = u.pathname.match(/^\/v1\/payments\/(\d+)$/);
+      if (pm && opts.method === 'PUT') { payments[pm[1]].status = JSON.parse(opts.body).status; return res(payments[pm[1]]); }
+      if (pm) return res(payments[pm[1]]);
+    }
+    return Promise.reject(new Error('fetch inesperado: ' + url));
+  };
+  var env = {
+    MP_ACCESS_TOKEN: 'mp-test', GITHUB_TOKEN: 'gh-worker', GITHUB_REPO: 'Tanattos18/Akylla_Store', GITHUB_BRANCH: 'main',
+    ALLOWED_ORIGINS: 'https://akyllashop.com', PAYMENT_MINUTES: '30', ORDERS: kvMock(),
+    CALLMEBOT_APIKEY: 'cmb-test', STORE_WHATSAPP: '556281517002'
+  };
+  return { env: env, fetch: fakeFetch, files: files, payments: payments, commits: commits, catalog: catalog, notices: notices };
+}
+
+async function call(worker, env, method, pathname, body, headers) {
+  var res = await worker.fetch(new Request('https://api.test' + pathname, {
+    method: method,
+    headers: Object.assign({ 'Content-Type': 'application/json', Origin: 'https://akyllashop.com' }, headers || {}),
+    body: body ? JSON.stringify(body) : undefined
+  }), env);
+  return { status: res.status, data: await res.json(), headers: res.headers };
+}
+
+test('servidor: compra completa — PIX do Mercado Pago, aprovação e baixa automática do estoque', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var w34 = s.catalog.products.find(function (p) { return p.id === 'w34-plus'; });
+
+    // o cliente tenta mandar preço falso: o servidor ignora e usa o catálogo
+    var created = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w34-plus', qty: 2, price: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    var order = created.data;
+    var expectedUnit = Math.floor(Math.round(w34.price * 90) / 100 / 10) * 10;
+    assert.equal(order.total, expectedUnit * 2, 'preço do servidor com 10% de promoção');
+    assert.equal(s.payments[order.paymentId].transaction_amount, order.total / 100);
+    assert.ok(order.pix.code && order.pix.image, 'QR do Mercado Pago');
+    assert.equal(created.headers.get('access-control-allow-origin'), 'https://akyllashop.com');
+
+    // reserva: com 2 em estoque e 2 reservados, outro cliente não consegue comprar
+    var second = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } });
+    assert.equal(second.status, 409);
+    assert.match(second.data.error, /esgotar|disponíve/);
+
+    // ainda não pago
+    var pending = await call(worker, s.env, 'GET', '/api/orders/' + order.id);
+    assert.equal(pending.data.status, 'pending');
+
+    // Mercado Pago aprova e avisa o servidor
+    s.payments[order.paymentId].status = 'approved';
+    var hook = await call(worker, s.env, 'POST', '/api/webhook', { type: 'payment', data: { id: String(order.paymentId) } });
+    assert.equal(hook.data.status, 'paid');
+    assert.equal(s.notices.length, 1, 'aviso de venda enviado ao WhatsApp da loja');
+    var notice = s.notices[0];
+    ['NOVA VENDA', order.id, 'Maria Teste', '62999990000', 'cód. ' + w34.code, 'Retirada na loja', 'TOTAL PAGO', 'Data: '].forEach(function (part) {
+      assert.ok(notice.indexOf(part) >= 0, 'mensagem sem: ' + part + ' | ' + notice);
+    });
+    var stock = F.parseProducts(s.files['assets/js/products.js'].text).products.find(function (p) { return p.id === 'w34-plus'; }).stock;
+    assert.equal(stock, 0, 'estoque baixou de 2 para 0');
+    assert.equal(s.commits.length, 1);
+    assert.match(s.commits[0], /venda: pedido AK-/);
+
+    // aviso repetido não baixa o estoque de novo
+    await call(worker, s.env, 'POST', '/api/webhook', { type: 'payment', data: { id: String(order.paymentId) } });
+    assert.equal(s.commits.length, 1, 'idempotente');
+
+    var paid = await call(worker, s.env, 'GET', '/api/orders/' + order.id);
+    assert.equal(paid.data.status, 'paid');
+    assert.equal(paid.data.pix, undefined, 'QR não é mais exposto depois de pago');
+
+    // painel: lista de pedidos exige a chave do GitHub com permissão
+    assert.equal((await call(worker, s.env, 'GET', '/api/admin/orders')).status, 401);
+    var admin = await call(worker, s.env, 'GET', '/api/admin/orders', null, { Authorization: 'Bearer gh-admin' });
+    assert.equal(admin.data.orders.length, 1);
+    assert.equal(admin.data.orders[0].stockUpdated, true);
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('servidor: pagamento com valor diferente vai para revisão e não baixa estoque; cancelamento libera a reserva', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var a = (await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'hw8-pro-max', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } })).data;
+    s.payments[a.paymentId].status = 'approved';
+    s.payments[a.paymentId].transaction_amount = 1;
+    var hook = await call(worker, s.env, 'POST', '/api/webhook', { type: 'payment', data: { id: String(a.paymentId) } });
+    assert.equal(hook.data.status, 'review');
+    assert.equal(s.commits.length, 0);
+
+    var b = (await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w69-ultra', qty: 2 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } })).data;
+    var cancel = await call(worker, s.env, 'POST', '/api/orders/' + b.id + '/cancel');
+    assert.equal(cancel.data.status, 'expired');
+    assert.equal(s.payments[b.paymentId].status, 'cancelled');
+    var again = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w69-ultra', qty: 2 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } });
+    assert.equal(again.status, 201, 'reserva liberada após cancelamento');
+
+    var bad = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'nao-existe', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Teste', phone: '(62) 99999-0000' } });
+    assert.equal(bad.status, 409);
+    var noName = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w31-pro-max', qty: 1 }], delivery: { mode: 'pickup' } });
+    assert.equal(noName.status, 400);
+    assert.match(noName.data.error, /nome/);
+    var noDelivery = await call(worker, s.env, 'POST', '/api/orders', { items: [{ id: 'w31-pro-max', qty: 1 }], customer: { name: 'Ana Lima' } });
+    assert.equal(noDelivery.status, 400);
+  } finally {
+    global.fetch = realFetch;
+  }
+});

@@ -31,7 +31,9 @@
     order: null,
     pixPayload: '',
     /* Entrega escolhida no checkout: mode 'pickup' | 'delivery' | null; quote = cotação do frete. */
-    delivery: { mode: null, quote: null, complement: '', loading: false }
+    delivery: { mode: null, quote: null, complement: '', loading: false },
+    /* PIX automático (Mercado Pago): pedido no servidor, assinatura do pedido, polling. */
+    mp: { order: null, signature: '', timer: null, countdown: null, busy: false, error: '', manual: false, done: false }
   };
 
   var els = {
@@ -94,6 +96,27 @@
     pickupOption: document.getElementById('pickupOption'),
     pickupNote: document.getElementById('pickupNote'),
     pixBox: document.getElementById('pixBox'),
+    mpBox: document.getElementById('mpBox'),
+    mpStart: document.getElementById('mpStart'),
+    mpEmail: document.getElementById('mpEmail'),
+    mpName: document.getElementById('mpName'),
+    mpPhone: document.getElementById('mpPhone'),
+    mpCreate: document.getElementById('mpCreate'),
+    mpPay: document.getElementById('mpPay'),
+    mpQr: document.getElementById('mpQr'),
+    mpTotal: document.getElementById('mpTotal'),
+    mpStatus: document.getElementById('mpStatus'),
+    mpCode: document.getElementById('mpCode'),
+    mpCopy: document.getElementById('mpCopy'),
+    mpExpire: document.getElementById('mpExpire'),
+    mpCancel: document.getElementById('mpCancel'),
+    mpDone: document.getElementById('mpDone'),
+    mpDoneText: document.getElementById('mpDoneText'),
+    mpWhats: document.getElementById('mpWhats'),
+    mpError: document.getElementById('mpError'),
+    mpErrorText: document.getElementById('mpErrorText'),
+    mpManual: document.getElementById('mpManual'),
+    checkoutSteps: document.getElementById('checkoutSteps'),
     pixLocked: document.getElementById('pixLocked'),
     checkoutSubtotal: document.getElementById('checkoutSubtotal'),
     checkoutShipping: document.getElementById('checkoutShipping'),
@@ -887,8 +910,11 @@
     if (els.checkoutSubtotal) els.checkoutSubtotal.textContent = formatBRL(order.subtotal);
     if (els.checkoutShipping) els.checkoutShipping.textContent = shippingSummaryText();
     renderDelivery();
-    if (els.pixBox) els.pixBox.hidden = !ready;
+    var auto = mpEnabled();
+    if (els.pixBox) els.pixBox.hidden = !ready || auto;
     if (els.pixLocked) els.pixLocked.hidden = ready;
+    if (els.mpBox) els.mpBox.hidden = !ready || !auto;
+    if (auto) renderMercadoPago(ready);
 
     if (els.checkoutItems) {
       els.checkoutItems.innerHTML = order.items.map(function (item) {
@@ -914,6 +940,7 @@
 
     if (els.sendProof) {
       els.sendProof.href = whatsappLink(buildProofMessage(order));
+      els.sendProof.hidden = auto;
       els.sendProof.setAttribute('aria-disabled', ready ? 'false' : 'true');
       if (ready) els.sendProof.removeAttribute('tabindex'); else els.sendProof.setAttribute('tabindex', '-1');
     }
@@ -921,7 +948,7 @@
     if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
     if (els.pixHolder) els.pixHolder.textContent = CONFIG.pixHolder || '';
 
-    if (!ready) {
+    if (!ready || auto) {
       state.pixPayload = '';
       return;
     }
@@ -1118,7 +1145,209 @@
     }
   }
 
+  /* ------------------------- PIX automático (Mercado Pago) ------------------------- */
+
+  function mpEnabled() {
+    return !state.mp.manual && CONFIG.paymentProvider === 'mercadopago' && !!CONFIG.paymentApiUrl;
+  }
+
+  function mpApi(path, options) {
+    var base = String(CONFIG.paymentApiUrl || '').replace(/\/+$/, '');
+    var opts = options || {};
+    return fetch(base + path, {
+      method: opts.method || 'GET',
+      headers: opts.body ? { 'Content-Type': 'application/json' } : {},
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      cache: 'no-store'
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) {
+          var error = new Error(data.error || 'Erro ' + res.status);
+          error.status = res.status;
+          throw error;
+        }
+        return data;
+      });
+    });
+  }
+
+  /* O que define o pedido no servidor: itens + entrega. Mudou → precisa de novo PIX. */
+  function mpSignature() {
+    var d = state.delivery;
+    return JSON.stringify({
+      items: state.cart.map(function (i) { return [i.id, i.qty]; }),
+      mode: d.mode,
+      cep: d.mode === 'delivery' && d.quote ? d.quote.address.cep : '',
+      number: d.mode === 'delivery' && d.quote ? d.quote.address.number : ''
+    });
+  }
+
+  function mpStopTimers() {
+    clearInterval(state.mp.timer);
+    clearInterval(state.mp.countdown);
+    state.mp.timer = null;
+    state.mp.countdown = null;
+  }
+
+  function mpReset(message) {
+    var order = state.mp.order;
+    mpStopTimers();
+    if (order && order.status === 'pending') {
+      mpApi('/api/orders/' + order.id + '/cancel', { method: 'POST' }).catch(function () {});
+    }
+    state.mp.order = null;
+    state.mp.signature = '';
+    state.mp.error = message || '';
+  }
+
+  function renderMercadoPago(ready) {
+    var mp = state.mp;
+    if (mp.order && mp.order.status === 'pending' && mp.signature !== mpSignature() && !mp.done) {
+      mpReset('Seu pedido mudou. Gere um novo PIX com o valor atualizado.');
+    }
+    var order = mp.order;
+    var paying = !!order && order.status === 'pending';
+    if (els.mpStart) els.mpStart.hidden = !ready || paying || mp.done;
+    if (els.mpPay) els.mpPay.hidden = !paying || mp.done;
+    if (els.mpDone) els.mpDone.hidden = !mp.done;
+    if (els.mpCreate) {
+      els.mpCreate.disabled = mp.busy;
+      els.mpCreate.textContent = mp.busy ? 'Gerando PIX…' : 'Gerar PIX de ' + formatBRL(state.order ? state.order.total : 0);
+    }
+    if (els.mpError) els.mpError.hidden = !mp.error;
+    if (els.mpErrorText) els.mpErrorText.textContent = mp.error || '';
+    if (els.checkoutDialog) els.checkoutDialog.classList.toggle('is-paying', paying || mp.done);
+    if (els.checkoutSteps) {
+      els.checkoutSteps.innerHTML = '<li><span>1</span> Gere o PIX e pague no app do seu banco.</li>' +
+        '<li><span>2</span> A confirmação é automática (Mercado Pago) e o estoque é baixado na hora.</li>' +
+        '<li><span>3</span> Envie o pedido no WhatsApp para combinarmos a entrega ou a retirada.</li>';
+    }
+    if (paying) {
+      if (els.mpQr && order.pix && order.pix.image) els.mpQr.src = order.pix.image;
+      if (els.mpCode) els.mpCode.textContent = (order.pix && order.pix.code) || '';
+      if (els.mpTotal) els.mpTotal.textContent = formatBRL(order.total);
+    }
+  }
+
+  function mpCreate() {
+    if (state.mp.busy || !state.order) return;
+    var name = els.mpName ? els.mpName.value.replace(/\s+/g, ' ').trim() : '';
+    if (name.length < 3) {
+      state.mp.error = 'Informe seu nome completo para gerar o PIX.';
+      renderCheckout();
+      if (els.mpName) els.mpName.focus();
+      return;
+    }
+    var d = state.delivery;
+    state.mp.busy = true;
+    state.mp.error = '';
+    renderCheckout();
+    var delivery = d.mode === 'pickup' ? { mode: 'pickup' } : {
+      mode: 'delivery',
+      cep: d.quote ? d.quote.address.cep : '',
+      number: d.quote ? d.quote.address.number : '',
+      complement: d.complement || ''
+    };
+    mpApi('/api/orders', {
+      method: 'POST',
+      body: {
+        items: state.cart.map(function (i) { return { id: i.id, qty: i.qty }; }),
+        delivery: delivery,
+        email: els.mpEmail ? els.mpEmail.value.trim() : '',
+        customer: { name: name, phone: els.mpPhone ? els.mpPhone.value : '' }
+      }
+    }).then(function (order) {
+      state.mp.order = order;
+      state.mp.signature = mpSignature();
+      if (state.order && order.total !== state.order.total) {
+        toast('Valor confirmado pelo servidor: ' + formatBRL(order.total) + '.');
+      }
+      mpStartPolling();
+    }).catch(function (error) {
+      var offline = !error.status;
+      state.mp.error = offline
+        ? 'Não conseguimos gerar o PIX automático agora. Tente de novo ou pague com o PIX manual (confirmação pelo WhatsApp).'
+        : error.message;
+      if (els.mpManual) els.mpManual.hidden = !offline && error.status !== 500;
+    }).finally(function () {
+      state.mp.busy = false;
+      renderCheckout();
+    });
+  }
+
+  function mpStartPolling() {
+    mpStopTimers();
+    var tick = function () {
+      var order = state.mp.order;
+      if (!order) return;
+      var left = Math.max(0, order.expiresAt - Date.now());
+      var min = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
+      if (els.mpExpire) els.mpExpire.textContent = left ? 'O PIX vale por mais ' + min + ':' + String(sec).padStart(2, '0') + ' min.' : 'PIX expirado.';
+    };
+    tick();
+    state.mp.countdown = setInterval(tick, 1000);
+    state.mp.timer = setInterval(mpCheck, 4000);
+  }
+
+  function mpCheck() {
+    var order = state.mp.order;
+    if (!order) return;
+    mpApi('/api/orders/' + order.id).then(function (fresh) {
+      if (!state.mp.order || state.mp.order.id !== fresh.id) return;
+      if (fresh.status === 'paid') {
+        mpStopTimers();
+        state.mp.order = fresh;
+        mpPaid(fresh);
+      } else if (fresh.status === 'expired') {
+        mpStopTimers();
+        state.mp.order = null;
+        state.mp.error = 'O PIX expirou sem pagamento. Gere um novo para continuar.';
+        renderCheckout();
+      } else if (fresh.status === 'review') {
+        mpStopTimers();
+        state.mp.error = 'Recebemos um pagamento que precisa de conferência. Fale com a gente no WhatsApp informando o pedido ' + fresh.id + '.';
+        renderCheckout();
+      }
+    }).catch(function () { /* rede instável: tenta de novo no próximo ciclo */ });
+  }
+
+  function mpPaid(order) {
+    state.mp.done = true;
+    var lines = order.lines.map(function (l) { return '• ' + l.qty + 'x ' + l.name + ' (cód. ' + l.code + ') — ' + formatBRL(l.unit * l.qty); });
+    var d = order.delivery || {};
+    var deliveryLine = d.mode === 'pickup' ? 'Entrega: retirada na loja'
+      : 'Entrega: ' + [d.address && d.address.street, d.address && d.address.number].filter(Boolean).join(', ') + (d.complement ? ' — ' + d.complement : '') +
+        (d.address ? ' · ' + d.address.district + ', ' + d.address.city + '/' + d.address.uf + ' · CEP ' + d.address.cep : '') +
+        (d.kind === 'carrier' ? '\nFrete: transportadora — aguardo a cotação' : d.kind === 'negotiable' ? '\nFrete: a combinar' : '\nFrete: ' + formatBRL(order.shipping));
+    var message = ['Olá! Meu pagamento foi confirmado na Akylla Shop ✅', '', 'Pedido: ' + order.id, '', lines.join('\n'), '',
+      deliveryLine, 'Total pago: ' + formatBRL(order.total) + ' (Mercado Pago #' + order.paymentId + ')'].join('\n');
+    if (els.mpWhats) els.mpWhats.href = whatsappLink(message);
+    if (els.mpDoneText) els.mpDoneText.textContent = 'Pedido ' + order.id + ' · ' + formatBRL(order.total) + '. Agora é só enviar o pedido no WhatsApp para combinarmos a ' + (d.mode === 'pickup' ? 'retirada.' : 'entrega.');
+    state.cart = [];
+    saveCart();
+    renderCart();
+    renderCheckout();
+    toast('Pagamento confirmado! Obrigado pela compra.');
+  }
+
+  function setupMercadoPago() {
+    if (els.mpCreate) els.mpCreate.addEventListener('click', mpCreate);
+    if (els.mpCopy) els.mpCopy.addEventListener('click', function () {
+      if (state.mp.order && state.mp.order.pix) copyText(state.mp.order.pix.code, 'Código PIX copiado. Cole no app do seu banco.');
+    });
+    if (els.mpCancel) els.mpCancel.addEventListener('click', function () {
+      mpReset('PIX cancelado. Altere o pedido e gere um novo PIX.');
+      renderCheckout();
+    });
+    if (els.mpManual) els.mpManual.addEventListener('click', function () {
+      state.mp.manual = true;
+      state.mp.error = '';
+      renderCheckout();
+    });
+  }
+
   function refreshOrderFromCart() {
+    if (state.mp.done) return;
     var items = getCartItems();
     if (!items.length) {
       state.order = null;
@@ -1138,6 +1367,10 @@
   }
 
   function openCheckout() {
+    if (state.mp.done) {
+      state.mp = { order: null, signature: '', timer: null, countdown: null, busy: false, error: '', manual: false, done: false };
+      state.delivery.quote = state.delivery.mode === 'delivery' ? state.delivery.quote : null;
+    }
     var items = getCartItems();
     if (!items.length) {
       toast('Sua sacola está vazia. Escolha um produto primeiro.');
@@ -1597,6 +1830,7 @@
   setupProductDialog();
   setupCheckout();
   setupDelivery();
+  setupMercadoPago();
   setupDialogs();
   setupReveal();
 

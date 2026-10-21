@@ -36,3 +36,8 @@ Logo_Vitrine*.png
 
 # Fotos candidatas para validação (não publicar sem aprovação)
 fotos-candidatas/
+
+# Servidor (Cloudflare Worker)
+worker/node_modules/
+worker/.wrangler/
+worker/.dev.vars
