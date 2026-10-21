@@ -265,7 +265,8 @@
     state.original.products.forEach(function (p) { if (!now[p.id]) list.push('excluído: ' + p.shortName); });
     var cfgOld = clone(state.original.config), cfgNow = clone(state.config);
     if (JSON.stringify(cfgOld.promo || null) !== JSON.stringify(cfgNow.promo || null)) list.push('promoção geral');
-    delete cfgOld.promo; delete cfgNow.promo;
+    if (JSON.stringify(cfgOld.shipping || null) !== JSON.stringify(cfgNow.shipping || null)) list.push('frete');
+    delete cfgOld.promo; delete cfgNow.promo; delete cfgOld.shipping; delete cfgNow.shipping;
     if (JSON.stringify(cfgOld) !== JSON.stringify(cfgNow)) list.push('configurações da loja');
     if (state.uploads[VITRINE.big]) list.push('nova foto da vitrine');
     return list;
@@ -582,8 +583,117 @@
     afterPromoChange();
   }
 
+  /* -------------------------------- frete -------------------------------- */
+
+  var Frete = window.AkyllaFrete;
+
+  function ship() {
+    if (!state.config.shipping) state.config.shipping = clone(Frete.DEFAULTS);
+    return state.config.shipping;
+  }
+
+  function renderShipForm() {
+    var s = ship();
+    var form = $('#shipForm');
+    form.elements.enabled.checked = s.enabled !== false;
+    form.elements.pickup.checked = s.pickup !== false;
+    form.elements.pickupNote.value = s.pickupNote || '';
+    form.elements.extraStepKm.value = String(s.extraStepKm || 5);
+    form.elements.extraStepPrice.value = moneyInput(s.extraStepPrice || 0);
+    form.elements.originLabel.value = s.originLabel || '';
+    form.elements.originLat.value = s.origin ? String(s.origin.lat) : '';
+    form.elements.originLon.value = s.origin ? String(s.origin.lon) : '';
+    renderBands();
+    renderCities();
+  }
+
+  function renderBands() {
+    var list = $('#bandList');
+    var s = ship();
+    list.innerHTML = '';
+    var prev = 0;
+    s.bands.forEach(function (band, i) {
+      var km = el('input', { type: 'number', min: '1', step: '0.5', inputmode: 'decimal', value: String(band.upToKm), 'aria-label': 'Até quantos km' });
+      var price = el('input', { inputmode: 'decimal', value: moneyInput(band.price), 'aria-label': 'Valor da faixa' });
+      km.addEventListener('change', function () {
+        var v = Number(String(km.value).replace(',', '.'));
+        if (!(v > 0)) { toast('Distância inválida.'); km.value = String(band.upToKm); return; }
+        band.upToKm = v;
+        s.bands.sort(function (a, b) { return a.upToKm - b.upToKm; });
+        renderBands(); refreshPending();
+      });
+      price.addEventListener('change', function () {
+        var c = parseMoney(price.value);
+        if (!(c >= 0)) { toast('Valor inválido.'); price.value = moneyInput(band.price); return; }
+        band.price = c; refreshPending();
+      });
+      list.appendChild(el('li', {}, [
+        el('span', { class: 'band-from', text: prev ? 'acima de ' + prev + ' até' : 'até' }),
+        km, el('span', { class: 'band-unit', text: 'km → R$' }), price,
+        el('button', { type: 'button', 'aria-label': 'Remover faixa', text: '✕', onclick: function () {
+          if (s.bands.length <= 1) { toast('Deixe pelo menos uma faixa.'); return; }
+          s.bands.splice(i, 1); renderBands(); refreshPending();
+        } })
+      ]));
+      prev = band.upToKm;
+    });
+  }
+
+  function renderCities() {
+    var list = $('#cityList');
+    var s = ship();
+    list.innerHTML = '';
+    s.cities.forEach(function (city, i) {
+      var name = el('input', { value: city.name, 'aria-label': 'Nome da cidade' });
+      var price = el('input', { inputmode: 'decimal', value: city.price == null ? '' : moneyInput(city.price), placeholder: 'a combinar', 'aria-label': 'Valor (vazio = a combinar)' });
+      name.addEventListener('change', function () { city.name = name.value.trim(); refreshPending(); });
+      price.addEventListener('change', function () {
+        if (!price.value.trim()) { city.price = null; refreshPending(); return; }
+        var c = parseMoney(price.value);
+        if (!(c >= 0)) { toast('Valor inválido.'); price.value = city.price == null ? '' : moneyInput(city.price); return; }
+        city.price = c; refreshPending();
+      });
+      list.appendChild(el('li', { class: 'city-row' }, [
+        name, el('span', { class: 'band-unit', text: 'R$' }), price,
+        el('button', { type: 'button', 'aria-label': 'Remover cidade', text: '✕', onclick: function () { s.cities.splice(i, 1); renderCities(); refreshPending(); } })
+      ]));
+    });
+  }
+
+  function handleShipForm(event) {
+    var input = event.target;
+    var s = ship();
+    if (input.name === 'enabled') s.enabled = input.checked;
+    else if (input.name === 'pickup') s.pickup = input.checked;
+    else if (input.name === 'pickupNote') s.pickupNote = input.value;
+    else if (input.name === 'originLabel') s.originLabel = input.value;
+    else if (input.name === 'extraStepKm') s.extraStepKm = Math.max(1, parseInt(input.value, 10) || 5);
+    else if (input.name === 'extraStepPrice') { var c = parseMoney(input.value); if (c >= 0) s.extraStepPrice = c; }
+    else if (input.name === 'originLat' || input.name === 'originLon') {
+      var v = Number(String(input.value).replace(',', '.'));
+      if (!Number.isFinite(v)) { toast('Coordenada inválida.'); return; }
+      s.origin = s.origin || {};
+      s.origin[input.name === 'originLat' ? 'lat' : 'lon'] = v;
+    } else return;
+    refreshPending();
+  }
+
+  function simulate(event) {
+    event.preventDefault();
+    var out = $('#simResult');
+    out.textContent = 'Calculando…';
+    Frete.quote({ cep: $('#simCep').value, number: $('#simNumber').value }, state.config).then(function (q) {
+      var a = q.address;
+      var where = [a.street, a.number].filter(Boolean).join(', ') + ' · ' + a.district + ', ' + a.city + '/' + a.uf;
+      if (q.kind === 'distance') out.textContent = brl(q.fee) + ' — ' + String(q.km).replace('.', ',') + ' km de ida (' + q.precision + ') · ' + where;
+      else if (q.kind === 'fixed') out.textContent = brl(q.fee) + ' — valor fixo de ' + a.city;
+      else if (q.kind === 'negotiable') out.textContent = 'A combinar — ' + a.city;
+      else out.textContent = 'Fora da área — ' + a.city + '/' + a.uf;
+    }).catch(function (error) { out.textContent = 'Não foi possível: ' + error.message; });
+  }
+
   function renderAll() {
-    renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); refreshPending();
+    renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); renderShipForm(); refreshPending();
     var select = $('#categorySelect');
     select.innerHTML = '';
     state.original.categories.filter(function (c) { return c.id !== 'todos'; }).forEach(function (c) {
@@ -949,6 +1059,23 @@
     $('#promoForm').addEventListener('input', function (event) { if (event.target.name === 'text') handlePromoForm(event); });
     $('#promoForm').addEventListener('submit', function (event) { event.preventDefault(); });
     $('#promoSearch').addEventListener('input', renderPromoList);
+    $('#shipForm').addEventListener('change', handleShipForm);
+    $('#shipForm').addEventListener('submit', function (event) { event.preventDefault(); });
+    $('#addBandBtn').addEventListener('click', function () {
+      var s = ship();
+      var last = s.bands[s.bands.length - 1] || { upToKm: 0, price: 0 };
+      s.bands.push({ upToKm: last.upToKm + (s.extraStepKm || 5), price: last.price + (s.extraStepPrice || 0) });
+      renderBands(); refreshPending();
+    });
+    $('#addCityBtn').addEventListener('click', function () {
+      ship().cities.push({ name: 'Nova cidade', price: null });
+      renderCities(); refreshPending();
+    });
+    $('#simForm').addEventListener('submit', simulate);
+    $('#simCep').addEventListener('input', function () {
+      var d = $('#simCep').value.replace(/\D/g, '').slice(0, 8);
+      $('#simCep').value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+    });
     $('#promoAllGeneral').addEventListener('click', function () {
       state.products.forEach(function (p) { delete p.promo; });
       afterPromoChange();

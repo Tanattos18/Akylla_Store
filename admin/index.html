@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data: https://raw.githubusercontent.com; connect-src https://api.github.com; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data: https://raw.githubusercontent.com; connect-src https://api.github.com https://viacep.com.br https://nominatim.openstreetmap.org https://router.project-osrm.org; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
   <meta name="theme-color" content="#060913">
   <title>Painel Akylla</title>
   <link rel="icon" href="../assets/img/favicon.png" type="image/png">
-  <link rel="stylesheet" href="admin.css?v=20261020-3">
+  <link rel="stylesheet" href="admin.css?v=20261020-5">
 </head>
 <body>
   <header class="topbar">
@@ -61,6 +61,7 @@
       <button class="tab is-active" type="button" role="tab" data-tab="estoque" aria-selected="true">Estoque</button>
       <button class="tab" type="button" role="tab" data-tab="promocao" aria-selected="false">Promoção</button>
       <button class="tab" type="button" role="tab" data-tab="produtos" aria-selected="false">Produtos</button>
+      <button class="tab" type="button" role="tab" data-tab="frete" aria-selected="false">Frete</button>
       <button class="tab" type="button" role="tab" data-tab="loja" aria-selected="false">Loja</button>
     </nav>
 
@@ -111,6 +112,48 @@
     </section>
 
     <!-- Loja -->
+    <!-- Frete -->
+    <section class="panel" data-panel="frete" hidden>
+      <form class="card form-grid" id="shipForm" novalidate>
+        <h2 class="full">Entrega e retirada</h2>
+        <label class="check full"><input type="checkbox" name="enabled"> Entrega ligada no checkout</label>
+        <label class="check full"><input type="checkbox" name="pickup"> Oferecer retirada grátis na loja</label>
+        <label class="full">Texto da retirada <input name="pickupNote" maxlength="140"></label>
+
+        <h2 class="full">Goiânia — preço pela distância de ida</h2>
+        <div class="full">
+          <ul class="band-list" id="bandList"></ul>
+          <button class="btn btn-ghost btn-sm" type="button" id="addBandBtn">+ Faixa</button>
+        </div>
+        <label>Acima da última faixa: a cada (km) <input name="extraStepKm" type="number" min="1" step="1" inputmode="numeric"></label>
+        <label>somar (R$) <input name="extraStepPrice" inputmode="decimal"></label>
+
+        <h2 class="full">Outras cidades</h2>
+        <p class="muted full">Valor em branco = “a combinar” (o cliente paga só os produtos no PIX e o frete é combinado no WhatsApp). Cidades fora da lista aparecem como “fora da área”.</p>
+        <div class="full">
+          <ul class="band-list" id="cityList"></ul>
+          <button class="btn btn-ghost btn-sm" type="button" id="addCityBtn">+ Cidade</button>
+        </div>
+
+        <h2 class="full">Ponto de partida</h2>
+        <label class="full">Endereço (para referência) <input name="originLabel"></label>
+        <label>Latitude <input name="originLat" inputmode="decimal"></label>
+        <label>Longitude <input name="originLon" inputmode="decimal"></label>
+        <p class="muted full">A Rua Capauam ainda não existe no mapa aberto (OpenStreetMap); o ponto atual é o centro do Conj. Res. Aruanã III. Para mais precisão, copie a latitude e a longitude da loja no Google Maps (toque e segure no local).</p>
+      </form>
+
+      <section class="card">
+        <h2>Simular frete</h2>
+        <p class="muted">Usa a configuração desta tela (mesmo antes de publicar).</p>
+        <form class="sim-row" id="simForm" novalidate>
+          <label>CEP <input id="simCep" inputmode="numeric" placeholder="00000-000" maxlength="9"></label>
+          <label>Número <input id="simNumber" placeholder="120"></label>
+          <button class="btn btn-primary" type="submit" id="simBtn">Calcular</button>
+        </form>
+        <p class="sim-result" id="simResult" aria-live="polite"></p>
+      </section>
+    </section>
+
     <section class="panel" data-panel="loja" hidden>
       <form class="card form-grid" id="configForm">
         <h2 class="full">Contato e PIX</h2>
@@ -221,6 +264,7 @@
 
   <script src="formato.js?v=20261020-1"></script>
   <script src="../assets/js/promo.js?v=20261020-4"></script>
-  <script src="admin.js?v=20261020-6"></script>
+  <script src="../assets/js/frete.js?v=20261020-8"></script>
+  <script src="admin.js?v=20261020-7"></script>
 </body>
 </html>

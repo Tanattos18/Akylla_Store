@@ -29,7 +29,9 @@
     visibleCount: PAGE_SIZE,
     cart: [],
     order: null,
-    pixPayload: ''
+    pixPayload: '',
+    /* Entrega escolhida no checkout: mode 'pickup' | 'delivery' | null; quote = cotação do frete. */
+    delivery: { mode: null, quote: null, complement: '', loading: false }
   };
 
   var els = {
@@ -81,6 +83,19 @@
     pixQr: document.getElementById('pixQr'),
     copyKey: document.getElementById('copyKey'),
     copyPix: document.getElementById('copyPix'),
+    deliveryBox: document.getElementById('deliveryBox'),
+    deliveryForm: document.getElementById('deliveryForm'),
+    deliveryCep: document.getElementById('deliveryCep'),
+    deliveryNumber: document.getElementById('deliveryNumber'),
+    deliveryComplement: document.getElementById('deliveryComplement'),
+    deliveryCalc: document.getElementById('deliveryCalc'),
+    deliveryResult: document.getElementById('deliveryResult'),
+    pickupOption: document.getElementById('pickupOption'),
+    pickupNote: document.getElementById('pickupNote'),
+    pixBox: document.getElementById('pixBox'),
+    pixLocked: document.getElementById('pixLocked'),
+    checkoutSubtotal: document.getElementById('checkoutSubtotal'),
+    checkoutShipping: document.getElementById('checkoutShipping'),
     downloadQr: document.getElementById('downloadQr'),
     sendProof: document.getElementById('sendProof'),
     backToCart: document.getElementById('backToCart'),
@@ -799,11 +814,13 @@
       '',
       lines.join('\n'),
       '',
-      'Total: ' + formatBRL(order.total),
+      'Subtotal: ' + formatBRL(order.subtotal),
       order.savings > 0 ? 'Desconto da promoção: ' + formatBRL(order.savings) : '',
+      deliveryMessageLines().join('\n'),
+      'Total: ' + formatBRL(order.total),
       '',
       'Vou enviar o comprovante do PIX agora.'
-    ].join('\n');
+    ].filter(function (line, i, all) { return line !== '' || all[i - 1] !== ''; }).join('\n');
   }
 
   function renderQrCode(payload) {
@@ -835,9 +852,19 @@
     var order = state.order;
     if (!order) return;
 
+    var shipping = deliveryFee();
+    order.shipping = shipping || 0;
+    order.total = order.subtotal + order.shipping;
+    var ready = deliveryReady();
+
     if (els.orderId) els.orderId.textContent = order.id;
     if (els.pixTotal) els.pixTotal.textContent = formatBRL(order.total);
     if (els.checkoutTotal) els.checkoutTotal.textContent = formatBRL(order.total);
+    if (els.checkoutSubtotal) els.checkoutSubtotal.textContent = formatBRL(order.subtotal);
+    if (els.checkoutShipping) els.checkoutShipping.textContent = shippingSummaryText();
+    renderDelivery();
+    if (els.pixBox) els.pixBox.hidden = !ready;
+    if (els.pixLocked) els.pixLocked.hidden = ready;
 
     if (els.checkoutItems) {
       els.checkoutItems.innerHTML = order.items.map(function (item) {
@@ -859,6 +886,11 @@
 
     if (els.pixKey) els.pixKey.textContent = CONFIG.pixKey || '';
     if (els.pixHolder) els.pixHolder.textContent = CONFIG.pixHolder || '';
+
+    if (!ready) {
+      state.pixPayload = '';
+      return;
+    }
 
     try {
       state.pixPayload = Pix.buildPixPayload({
@@ -882,6 +914,172 @@
     }
   }
 
+  /* ------------------------------- entrega ------------------------------ */
+
+  var Frete = window.AkyllaFrete;
+
+  function shippingSettings() {
+    return Frete ? Frete.settings(CONFIG) : { enabled: false, pickup: true };
+  }
+
+  /* Valor do frete (centavos) já definido, ou null se ainda não há valor. */
+  function deliveryFee() {
+    var d = state.delivery;
+    if (d.mode === 'pickup') return 0;
+    if (d.mode === 'delivery' && d.quote && (d.quote.kind === 'distance' || d.quote.kind === 'fixed')) return d.quote.fee;
+    return null;
+  }
+
+  /* Pode gerar o PIX? Retirada, frete calculado ou frete "a combinar" (PIX só dos produtos). */
+  function deliveryReady() {
+    var d = state.delivery;
+    if (d.mode === 'pickup') return true;
+    if (d.mode !== 'delivery' || !d.quote) return false;
+    return d.quote.kind === 'distance' || d.quote.kind === 'fixed' || d.quote.kind === 'negotiable';
+  }
+
+  function shippingSummaryText() {
+    var d = state.delivery;
+    if (d.mode === 'pickup') return 'Retirada grátis';
+    if (d.mode === 'delivery' && d.quote) {
+      if (d.quote.kind === 'negotiable') return 'A combinar';
+      if (d.quote.fee != null) return formatBRL(d.quote.fee);
+    }
+    return '—';
+  }
+
+  function addressText(a, complement) {
+    if (!a) return '';
+    return [a.street, a.number].filter(Boolean).join(', ') + (complement ? ' — ' + complement : '') +
+      ' · ' + [a.district, a.city + '/' + a.uf].filter(Boolean).join(', ') + ' · CEP ' + a.cep;
+  }
+
+  function deliveryMessageLines() {
+    var d = state.delivery;
+    if (d.mode === 'pickup') return ['Entrega: retirada na loja (grátis)'];
+    if (d.mode !== 'delivery' || !d.quote) return [];
+    var q = d.quote;
+    var lines = ['Entrega: ' + addressText(q.address, d.complement)];
+    if (q.kind === 'distance') lines.push('Frete: ' + formatBRL(q.fee) + ' (' + String(q.km).replace('.', ',') + ' km de ida' + (q.precision !== 'endereço' ? ', aproximado pela ' + q.precision : '') + ')');
+    else if (q.kind === 'fixed') lines.push('Frete: ' + formatBRL(q.fee) + ' (' + q.address.city + ')');
+    else if (q.kind === 'negotiable') lines.push('Frete: a combinar (' + q.address.city + ') — paguei só os produtos');
+    return lines;
+  }
+
+  function renderDelivery() {
+    var s = shippingSettings();
+    var d = state.delivery;
+    if (!els.deliveryBox) return;
+    if (els.pickupOption) els.pickupOption.hidden = !s.pickup;
+    if (els.pickupNote) els.pickupNote.textContent = 'Grátis · ' + (s.pickupNote || '');
+    Array.prototype.forEach.call(els.deliveryBox.querySelectorAll('input[name="deliveryMode"]'), function (input) {
+      input.checked = input.value === d.mode;
+      var option = input.closest('.delivery-option');
+      if (option) option.classList.toggle('is-active', input.value === d.mode);
+    });
+    if (els.deliveryForm) els.deliveryForm.hidden = d.mode !== 'delivery';
+    if (els.deliveryCalc) {
+      els.deliveryCalc.disabled = d.loading;
+      els.deliveryCalc.textContent = d.loading ? 'Calculando…' : (d.quote ? 'Recalcular frete' : 'Calcular frete');
+    }
+    if (!els.deliveryResult) return;
+    var result = els.deliveryResult;
+    if (d.mode !== 'delivery' || (!d.quote && !d.error && !d.loading)) { result.hidden = true; return; }
+    result.hidden = false;
+    result.className = 'delivery-result';
+    if (d.loading) { result.textContent = 'Buscando o endereço e calculando a rota…'; return; }
+    if (d.error) { result.classList.add('is-error'); result.textContent = d.error; return; }
+    var q = d.quote;
+    var title = q.kind === 'distance' ? 'Frete: ' + formatBRL(q.fee) + ' · ' + String(q.km).replace('.', ',') + ' km'
+      : q.kind === 'fixed' ? 'Frete: ' + formatBRL(q.fee)
+      : q.kind === 'negotiable' ? 'Frete a combinar'
+      : 'Fora da área de entrega';
+    if (q.kind === 'outside') result.classList.add('is-error');
+    if (q.kind === 'negotiable') result.classList.add('is-warn');
+    result.innerHTML = '<strong>' + escapeHTML(title) + '</strong><span>' + escapeHTML(addressText(q.address, d.complement)) + '</span>' +
+      (q.kind === 'negotiable' ? '<span>O PIX abaixo é só dos produtos. Combinamos o frete pelo WhatsApp.</span>' : '') +
+      (q.message ? '<span>' + escapeHTML(q.message) + '</span>' : '');
+  }
+
+  function setDeliveryMode(mode) {
+    state.delivery.mode = mode;
+    state.delivery.error = '';
+    renderCheckout();
+    if (mode === 'delivery' && els.deliveryCep && !state.delivery.quote) els.deliveryCep.focus();
+  }
+
+  function calculateShipping(event) {
+    if (event) event.preventDefault();
+    if (!Frete) return;
+    var cep = els.deliveryCep ? els.deliveryCep.value : '';
+    var number = els.deliveryNumber ? els.deliveryNumber.value.trim() : '';
+    state.delivery.complement = els.deliveryComplement ? els.deliveryComplement.value.trim() : '';
+    if (String(cep).replace(/\D/g, '').length !== 8) { state.delivery.error = 'Digite o CEP com 8 números.'; state.delivery.quote = null; renderCheckout(); return; }
+    if (!number) { state.delivery.error = 'Informe o número (ou quadra/lote) do endereço.'; state.delivery.quote = null; renderCheckout(); return; }
+    state.delivery.loading = true;
+    state.delivery.error = '';
+    state.delivery.quote = null;
+    renderCheckout();
+    Frete.quote({ cep: cep, number: number }, CONFIG).then(function (quote) {
+      state.delivery.quote = quote;
+    }).catch(function (error) {
+      state.delivery.error = (error && error.message && !/HTTP|fetch|rota|Failed/i.test(error.message))
+        ? error.message
+        : 'Não conseguimos calcular agora. Tente de novo ou combine o frete pelo WhatsApp.';
+    }).finally(function () {
+      state.delivery.loading = false;
+      renderCheckout();
+    });
+  }
+
+  /* Tabela de fretes da seção "Envio e entrega" (gerada da configuração). */
+  function renderShippingTable() {
+    if (!Frete) return;
+    var s = shippingSettings();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-shipping-table] tbody'), function (body) {
+      var rows = [];
+      var prev = 0;
+      s.bands.forEach(function (b) {
+        rows.push([(prev ? 'Acima de ' + prev + ' até ' : 'Até ') + b.upToKm + ' km (Goiânia)', formatBRL(b.price)]);
+        prev = b.upToKm;
+      });
+      if (prev) rows.push(['Acima de ' + prev + ' km', '+ ' + formatBRL(s.extraStepPrice) + ' a cada ' + s.extraStepKm + ' km']);
+      s.cities.forEach(function (c) {
+        rows.push([c.name, c.price == null ? 'A combinar' : formatBRL(c.price)]);
+      });
+      if (s.pickup) rows.push(['Retirada na loja', 'Grátis']);
+      body.innerHTML = rows.map(function (r) {
+        return '<tr><td>' + escapeHTML(r[0]) + '</td><td>' + escapeHTML(r[1]) + '</td></tr>';
+      }).join('');
+    });
+  }
+
+  function setupDelivery() {
+    renderShippingTable();
+    if (!els.deliveryBox) return;
+    var s = shippingSettings();
+    if (!s.enabled) {
+      state.delivery.mode = 'pickup';
+      els.deliveryBox.hidden = true;
+    }
+    els.deliveryBox.addEventListener('change', function (event) {
+      if (event.target.name === 'deliveryMode') setDeliveryMode(event.target.value);
+    });
+    if (els.deliveryForm) els.deliveryForm.addEventListener('submit', calculateShipping);
+    if (els.deliveryCep) {
+      els.deliveryCep.addEventListener('input', function () {
+        var digits = els.deliveryCep.value.replace(/\D/g, '').slice(0, 8);
+        els.deliveryCep.value = digits.length > 5 ? digits.slice(0, 5) + '-' + digits.slice(5) : digits;
+      });
+    }
+    if (els.deliveryComplement) {
+      els.deliveryComplement.addEventListener('change', function () {
+        state.delivery.complement = els.deliveryComplement.value.trim();
+        if (state.order) renderCheckout();
+      });
+    }
+  }
+
   function openCheckout() {
     var items = getCartItems();
     if (!items.length) {
@@ -898,15 +1096,17 @@
       id: createOrderId(),
       txid: createTxid(),
       items: items,
-      total: items.reduce(function (total, item) {
+      subtotal: items.reduce(function (total, item) {
         return total + item.unit * item.qty;
       }, 0),
+      shipping: 0,
+      total: 0,
       savings: items.reduce(function (total, item) {
         return total + (item.original - item.unit) * item.qty;
       }, 0)
     };
 
-    if (!state.order.total) {
+    if (!state.order.subtotal) {
       state.order = null;
       toast('Não foi possível montar o pedido. Tente novamente.');
       return;
@@ -1316,6 +1516,7 @@
   setupCart();
   setupProductDialog();
   setupCheckout();
+  setupDelivery();
   setupDialogs();
   setupReveal();
 

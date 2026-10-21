@@ -4122,3 +4122,208 @@ dialog::backdrop {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------
+   Entrega (checkout) — frete calculado em assets/js/frete.js
+   --------------------------------------------------------------- */
+.checkout-step-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.8rem;
+  font-size: 1rem;
+}
+
+.checkout-step-title span {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.delivery-box {
+  margin-bottom: 1.4rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+}
+
+.delivery-box[hidden] {
+  display: none;
+}
+
+.delivery-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.delivery-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.delivery-option[hidden] {
+  display: none;
+}
+
+.delivery-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0.15rem 0 0;
+  accent-color: var(--brand-deep);
+  flex: none;
+}
+
+.delivery-option strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.delivery-option small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.delivery-option.is-active {
+  border-color: var(--brand);
+  background: #fff7ee;
+}
+
+.delivery-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.delivery-form[hidden] {
+  display: none;
+}
+
+.delivery-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.delivery-form input {
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.delivery-form input:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.delivery-full {
+  grid-column: 1 / -1;
+}
+
+.delivery-result {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.8rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 14px;
+  background: #e7f6ec;
+  color: #17723a;
+  font-size: 0.86rem;
+}
+
+.delivery-result[hidden] {
+  display: none;
+}
+
+.delivery-result strong {
+  font-size: 1rem;
+}
+
+.delivery-result span {
+  color: var(--text);
+}
+
+.delivery-result.is-warn {
+  background: #fff1e0;
+  color: #a34a00;
+}
+
+.delivery-result.is-error {
+  background: #fde8e8;
+  color: #b42318;
+}
+
+.pix-locked {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pix-locked[hidden],
+.pix-box[hidden] {
+  display: none;
+}
+
+.summary-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.45rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.88rem;
+}
+
+.shipping-table {
+  width: 100%;
+  margin-top: 0.8rem;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.shipping-table th,
+.shipping-table td {
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.shipping-table td:last-child,
+.shipping-table th:last-child {
+  text-align: right;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .delivery-options,
+  .delivery-form {
+    grid-template-columns: 1fr;
+  }
+}

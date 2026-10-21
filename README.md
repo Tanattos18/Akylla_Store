@@ -126,6 +126,19 @@ node scripts/atualizar-precos.js
 
 ---
 
+### Frete e entrega
+
+- No checkout o cliente escolhe **Retirar na loja (grátis)** ou **Entregar**. O QR do PIX só aparece depois dessa escolha.
+- **Entrega:** o cliente digita **CEP + número**. O site busca o endereço (ViaCEP), as coordenadas (OpenStreetMap/Nominatim, da mais precisa para a mais aproximada: endereço → rua → bairro) e a distância da **rota de ida** a partir da loja (OSRM). Serviços gratuitos, sem chave.
+- **Tabela (Goiânia):** até 15 km R$ 25,00 · até 20 km R$ 28,00 · até 25 km R$ 31,00 · até 30 km R$ 34,00 · até 35 km R$ 37,00 · até 40 km R$ 40,00 · acima de 40 km, + R$ 3,00 a cada 5 km (ou fração).
+- **Outras cidades:** Senador Canedo R$ 25,00 fixo; Aparecida de Goiânia, Goianira e Trindade **a combinar** (o PIX cobre só os produtos e o frete é combinado no WhatsApp). Cidades fora da lista aparecem como fora da área.
+- O frete entra no **total e no QR do PIX**; a mensagem do WhatsApp leva o endereço, a distância em km e a precisão ("aproximado pelo bairro" quando a rua não está no mapa) — **confira no Google Maps** se a distância estiver perto do limite de uma faixa.
+- **Ponto de partida:** centro do Conj. Res. Aruanã III (a Rua Capauam ainda não existe no OpenStreetMap). Para mais precisão, coloque a latitude/longitude exata da loja na aba Frete do painel.
+- Tudo editável na aba **Frete** do painel (faixas, valores, cidades, retirada, ponto de partida) com **simulador** de CEP. A tabela da seção "Envio e entrega" do site é gerada dessa configuração. Cálculo em `assets/js/frete.js`.
+- O servidor público do OSRM é para uso leve (ok para o volume da loja). Se um dia ficar lento, dá para trocar por OpenRouteService (grátis com chave) ou Google Maps.
+
+---
+
 ## 5. Domínio, DNS e HTTPS
 
 ### Registros DNS (Hostinger → Domínios → akyllashop.com → DNS / Nameservers)
@@ -185,6 +198,7 @@ Akylla_Store/
 │   │   ├── config.js       # WhatsApp, PIX, textos, promoção, margem  (editado pelo painel)
 │   │   ├── products.js     # catálogo, preços, estoque, fotos           (editado pelo painel)
 │   │   ├── promo.js        # cálculo de promoções
+│   │   ├── frete.js        # cálculo do frete (CEP → endereço → rota → tabela)
 │   │   └── pix.js          # gerador do BR Code PIX + CRC16
 │   └── vendor/qrcode.js    # qrcode-generator 2.0.4 (MIT)
 ├── scripts/atualizar-precos.js   # relatório site × planilha (não altera nada)
@@ -309,6 +323,7 @@ Rodam também no GitHub Actions a cada push. Cobrem: catálogo (ids/códigos ún
 | 20/10/2026 | Painel administrativo (`/admin/`). |
 | 20/10/2026 | Promoções com desconto real; preços com margem de 50%. |
 | 20/10/2026 | WhatsApp trocado para (62) 8151-7002; domínio `akyllashop.com` (antes: `tanattos18.github.io/Akylla_Store`). |
+| 20/10/2026 | Frete no checkout (tabela por distância, cidades, retirada grátis) e aba Frete no painel. |
 | 20/10/2026 | Marca renomeada de **Akylla Store** para **Akylla Shop** (site, painel, documentação e arte da vitrine). |
 
 O histórico completo está nos commits: `git log --oneline`.

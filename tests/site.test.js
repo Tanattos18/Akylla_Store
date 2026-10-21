@@ -198,3 +198,47 @@ test('promoção: QR do PIX usa o total com desconto', function () {
   assert.equal(Pix.validatePixPayload(payload).fields['54'], (total / 100).toFixed(2));
   assert.match(read('assets/js/app.js'), /item\.unit \* item\.qty/);
 });
+
+/* ---------------------------------- frete ---------------------------------- */
+
+test('frete: tabela por distância de ida e cidades especiais', function () {
+  var Frete = require('../assets/js/frete.js');
+  var cfg = CONFIG;
+  var cases = { 0.5: 2500, 15: 2500, 15.1: 2800, 20: 2800, 25: 3100, 30: 3400, 35: 3700, 40: 4000, 40.1: 4300, 45: 4300, 45.1: 4600, 50: 4600 };
+  Object.keys(cases).forEach(function (km) {
+    assert.equal(Frete.feeForKm(Number(km), cfg), cases[km], km + ' km');
+  });
+  assert.equal(Frete.cityRule('Senador Canedo', cfg).price, 2500);
+  assert.equal(Frete.cityRule('aparecida de goiania', cfg).price, null, 'Aparecida: a combinar');
+  assert.equal(Frete.cityRule('Goianira', cfg).price, null);
+  assert.equal(Frete.cityRule('Trindade', cfg).price, null);
+  assert.equal(Frete.cityRule('Anápolis', cfg), null);
+});
+
+test('frete: cotação completa (CEP → mapa → rota) com serviços simulados', async function () {
+  var Frete = require('../assets/js/frete.js');
+  var realFetch = global.fetch;
+  var json = function (data) { return Promise.resolve({ ok: true, json: function () { return Promise.resolve(data); } }); };
+  global.fetch = function (url) {
+    if (url.indexOf('viacep') >= 0) {
+      if (url.indexOf('75250000') >= 0) return json({ cep: '75250-000', logradouro: '', bairro: '', localidade: 'Senador Canedo', uf: 'GO' });
+      if (url.indexOf('75000000') >= 0) return json({ cep: '75000-000', logradouro: '', bairro: '', localidade: 'Anápolis', uf: 'GO' });
+      return json({ cep: '74230-010', logradouro: 'Rua T-30', bairro: 'Setor Bueno', localidade: 'Goiânia', uf: 'GO' });
+    }
+    if (url.indexOf('nominatim') >= 0) return json([{ lat: '-16.70', lon: '-49.27' }]);
+    if (url.indexOf('osrm') >= 0) return json({ code: 'Ok', routes: [{ distance: 17340 }] });
+    return Promise.reject(new Error('url inesperada ' + url));
+  };
+  try {
+    var q = await Frete.quote({ cep: '74230-010', number: '120' }, CONFIG);
+    assert.equal(q.kind, 'distance');
+    assert.equal(q.km, 17.3);
+    assert.equal(q.fee, 2800);
+    assert.equal(q.precision, 'endereço');
+    assert.equal((await Frete.quote({ cep: '75250-000', number: '1' }, CONFIG)).fee, 2500);
+    assert.equal((await Frete.quote({ cep: '75000-000', number: '1' }, CONFIG)).kind, 'outside');
+    await assert.rejects(Frete.quote({ cep: '123', number: '1' }, CONFIG), /8 números/);
+  } finally {
+    global.fetch = realFetch;
+  }
+});

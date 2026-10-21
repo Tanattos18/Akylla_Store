@@ -20,7 +20,7 @@
   <link rel="apple-touch-icon" href="assets/img/logo-mark.jpg">
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-7">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-8">
 </head>
 <body>
   <aside class="announcement" aria-label="Informações da loja">
@@ -63,9 +63,10 @@
           <p>Esta política explica, de forma direta, como a <strong>Akylla Shop</strong> trata informações quando você usa este site e quando fala com a gente pelo WhatsApp. O site é uma vitrine estática: ele roda inteiramente no seu navegador e não possui cadastro, login ou formulários que guardem dados em servidores da loja.</p>
 
           <h2>1. Dados que este site trata</h2>
-          <p>O site <strong>não coleta dados pessoais automaticamente</strong>. Não pedimos nome, e-mail, CPF, endereço ou dados de cartão, e não processamos pagamentos aqui.</p>
+          <p>O site <strong>não coleta dados pessoais automaticamente</strong>. Não pedimos nome, e-mail, CPF ou dados de cartão, e não processamos pagamentos aqui. O endereço (CEP e número) só é pedido se você escolher entrega, para calcular o frete.</p>
           <ul>
             <li><strong>Sacola de compras:</strong> os itens que você adiciona ficam salvos somente no armazenamento local (<code>localStorage</code>) do seu navegador, no seu dispositivo. Eles não são enviados para nenhum servidor.</li>
+            <li><strong>Cálculo do frete:</strong> se você escolher entrega, o CEP e o número que digitar no checkout são usados só para encontrar o endereço e calcular a distância. Eles não são guardados pelo site; vão na mensagem do pedido apenas se você enviar pelo WhatsApp.</li>
             <li><strong>Contato pelo WhatsApp:</strong> quando você inicia uma conversa, os dados que enviar (nome, mensagens, comprovante de pagamento) são tratados pelo WhatsApp e por nós apenas para responder, confirmar o pedido e combinar a entrega.</li>
           </ul>
 
@@ -76,6 +77,7 @@
           <p>Para o site funcionar, alguns recursos são carregados de provedores externos, que tratam dados conforme as próprias políticas:</p>
           <ul>
             <li><strong>GitHub Pages</strong> — hospedagem deste site; registra acessos técnicos (como endereço IP e horário) em logs de servidor.</li>
+            <li><strong>ViaCEP, OpenStreetMap (Nominatim) e OSRM</strong> — serviços públicos usados no cálculo do frete: recebem o CEP, o endereço e o número informados (e o endereço IP de quem acessa) para devolver o endereço, as coordenadas e a distância da rota.</li>
             <li><strong>WhatsApp (Meta)</strong> — canal de atendimento e de envio do comprovante, regido pela política de privacidade do próprio WhatsApp.</li>
           </ul>
 
@@ -119,7 +121,7 @@
     </div>
   </footer>
 
-  <script src="assets/js/config.js?v=20261020-7" defer></script>
+  <script src="assets/js/config.js?v=20261020-8" defer></script>
   <script>
     window.addEventListener('DOMContentLoaded', function () {
       var year = (window.AKYLLA_CONFIG && window.AKYLLA_CONFIG.year) || new Date().getFullYear();

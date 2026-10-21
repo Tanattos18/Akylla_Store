@@ -263,3 +263,18 @@ input:invalid:not(:placeholder-shown) { border-color: var(--danger); }
   .promo-item { grid-template-columns: 48px 1fr minmax(320px, 1.2fr); }
   .promo-controls { grid-column: auto; }
 }
+
+/* Frete */
+.band-list { list-style: none; margin: 0 0 0.6rem; padding: 0; }
+.band-list li { display: grid; grid-template-columns: auto 80px auto 1fr 40px; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+.band-list li.city-row { grid-template-columns: 1fr auto 110px 40px; }
+.band-list button { height: 40px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+.band-from, .band-unit { color: var(--muted); font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+.sim-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: end; }
+.sim-result { margin: 0.8rem 0 0; font-weight: 700; }
+@media (max-width: 520px) {
+  .band-list li { grid-template-columns: 70px auto 1fr 40px; }
+  .band-list li .band-from { grid-column: 1 / -1; }
+  .sim-row { grid-template-columns: 1fr 1fr; }
+  .sim-row .btn { grid-column: 1 / -1; }
+}

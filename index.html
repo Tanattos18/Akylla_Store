@@ -47,7 +47,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-7">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261020-8">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -467,7 +467,11 @@
           <article class="policy-card">
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-truck"></use></svg></span>
             <h3>Envio e entrega</h3>
-            <p>Entrega combinada pelo WhatsApp em Goiânia/GO e região. Para outras localidades, consulte disponibilidade, prazo e frete antes de finalizar.</p>
+            <p>Entrega em Goiânia com frete pela distância de ida a partir da loja, calculado no checkout pelo seu CEP. Retirada grátis na loja.</p>
+            <table class="shipping-table" data-shipping-table aria-label="Tabela de fretes">
+              <thead><tr><th>Distância / cidade</th><th>Frete</th></tr></thead>
+              <tbody></tbody>
+            </table>
           </article>
           <article class="policy-card">
             <span class="policy-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-pix"></use></svg></span>
@@ -512,7 +516,7 @@
           </details>
           <details class="faq-item">
             <summary>Como recebo meu pedido?<span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-plus"></use></svg></span></summary>
-            <div class="faq-answer"><p>Combinamos a entrega ou retirada pelo WhatsApp. Atendemos Goiânia/GO e região; para outras localidades, consulte prazo e frete antes de finalizar. O prazo depende da sua localização e da disponibilidade do item.</p></div>
+            <div class="faq-answer"><p>No checkout você escolhe <strong>retirar na loja (grátis)</strong> ou <strong>receber em casa</strong>. Para entrega, digite seu CEP e número: em Goiânia o frete é calculado pela distância de ida a partir da loja (a partir de R$ 25,00 até 15 km); Senador Canedo tem valor fixo; Aparecida de Goiânia, Goianira e Trindade são combinadas pelo WhatsApp. O valor do frete já entra no PIX. Para outras localidades, fale com a gente.</p></div>
           </details>
           <details class="faq-item">
             <summary>Os produtos têm garantia?<span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-plus"></use></svg></span></summary>
@@ -685,7 +689,7 @@
         <span>Total</span>
         <strong id="cartTotal">R$ 0,00</strong>
       </div>
-      <p class="cart-note">Pagamento via PIX. Entrega combinada pelo WhatsApp após a confirmação. Consulte a disponibilidade do item antes de finalizar.</p>
+      <p class="cart-note">Pagamento via PIX. No próximo passo você escolhe retirada grátis ou entrega (frete calculado pelo CEP).</p>
       <button class="btn btn-primary btn-block" type="button" id="checkoutBtn">
         Finalizar com PIX
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
@@ -754,7 +758,31 @@
           </button>
         </div>
 
-        <div class="pix-box">
+        <section class="delivery-box" id="deliveryBox" aria-labelledby="deliveryTitle">
+          <h3 class="checkout-step-title" id="deliveryTitle"><span>1</span> Como você quer receber?</h3>
+          <div class="delivery-options" role="radiogroup" aria-labelledby="deliveryTitle">
+            <label class="delivery-option" id="pickupOption">
+              <input type="radio" name="deliveryMode" value="pickup">
+              <span><strong>Retirar na loja</strong><small id="pickupNote">Grátis</small></span>
+            </label>
+            <label class="delivery-option">
+              <input type="radio" name="deliveryMode" value="delivery">
+              <span><strong>Entregar no meu endereço</strong><small>Goiânia, Senador Canedo e região · frete pela distância</small></span>
+            </label>
+          </div>
+          <form class="delivery-form" id="deliveryForm" hidden novalidate>
+            <label>CEP <input id="deliveryCep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9"></label>
+            <label>Número / Qd. Lt. <input id="deliveryNumber" autocomplete="off" placeholder="Ex.: 120"></label>
+            <label class="delivery-full">Complemento (opcional) <input id="deliveryComplement" autocomplete="off" placeholder="Apto, bloco, referência"></label>
+            <button class="btn btn-dark delivery-full" type="submit" id="deliveryCalc">Calcular frete</button>
+          </form>
+          <div class="delivery-result" id="deliveryResult" aria-live="polite" hidden></div>
+        </section>
+
+        <h3 class="checkout-step-title"><span>2</span> Pague com PIX</h3>
+        <p class="pix-locked" id="pixLocked">Escolha a retirada ou calcule o frete acima para gerar o PIX com o valor certo.</p>
+
+        <div class="pix-box" id="pixBox" hidden>
           <div class="pix-qr-wrap">
             <div class="pix-qr" id="pixQr" role="img" aria-label="QR Code PIX do pedido"></div>
             <p class="pix-qr-caption"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-pix"></use></svg> Escaneie no app do seu banco</p>
@@ -800,7 +828,7 @@
         <ol class="checkout-steps">
           <li><span>1</span> Pague o PIX com o valor exato do pedido.</li>
           <li><span>2</span> Envie o comprovante pelo WhatsApp.</li>
-          <li><span>3</span> Aguarde a confirmação e combine a entrega.</li>
+          <li><span>3</span> Aguarde a confirmação; entregamos ou separamos para retirada.</li>
         </ol>
 
         <p class="checkout-fine">Este site não processa pagamentos automaticamente. O pedido é confirmado somente após a conferência do comprovante pela nossa equipe.</p>
@@ -815,6 +843,8 @@
         </div>
 
         <div class="summary-foot">
+          <div class="summary-line"><span>Subtotal</span><span id="checkoutSubtotal">R$ 0,00</span></div>
+          <div class="summary-line"><span>Entrega</span><span id="checkoutShipping">—</span></div>
           <div class="summary-total-row">
             <span>Total</span>
             <strong id="checkoutTotal">R$ 0,00</strong>
@@ -838,11 +868,12 @@
     </div>
   </noscript>
 
-  <script src="assets/vendor/qrcode.js?v=20261020-7" defer></script>
-  <script src="assets/js/config.js?v=20261020-7" defer></script>
-  <script src="assets/js/products.js?v=20261020-7" defer></script>
-  <script src="assets/js/pix.js?v=20261020-7" defer></script>
-  <script src="assets/js/promo.js?v=20261020-7" defer></script>
-  <script src="assets/js/app.js?v=20261020-7" defer></script>
+  <script src="assets/vendor/qrcode.js?v=20261020-8" defer></script>
+  <script src="assets/js/config.js?v=20261020-8" defer></script>
+  <script src="assets/js/products.js?v=20261020-8" defer></script>
+  <script src="assets/js/pix.js?v=20261020-8" defer></script>
+  <script src="assets/js/promo.js?v=20261020-8" defer></script>
+  <script src="assets/js/frete.js?v=20261020-8" defer></script>
+  <script src="assets/js/app.js?v=20261020-8" defer></script>
 </body>
 </html>
