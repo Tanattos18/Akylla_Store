@@ -87,5 +87,5 @@ window.AKYLLA_CONFIG = {
     ]
   },
   "paymentProvider": "manual",
-  "paymentApiUrl": ""
+  "paymentApiUrl": "https://akylla-shop-api.akyllashop.workers.dev"
 };

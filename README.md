@@ -162,7 +162,7 @@ Requisitos: Node 18+ no computador e conta Cloudflare (grátis).
 cd worker
 npx wrangler login                          # abre o navegador para autorizar a sua conta Cloudflare
 npx wrangler kv namespace create ORDERS     # copie o "id" mostrado e cole em wrangler.toml (kv_namespaces → id)
-npx wrangler deploy                         # publica e mostra o endereço: https://akylla-shop-api.SEU-USUARIO.workers.dev
+npx wrangler deploy                         # publica e mostra o endereço: https://akylla-shop-api.akyllashop.workers.dev
 ```
 
 **Segredos** — cadastre no painel da Cloudflare (*Workers & Pages → akylla-shop-api → Settings → Variables and Secrets → Add → Type: Secret*), nunca no código nem no chat:
@@ -170,14 +170,14 @@ npx wrangler deploy                         # publica e mostra o endereço: http
 | Nome | Onde conseguir |
 |---|---|
 | `MP_ACCESS_TOKEN` | Mercado Pago → *Seu negócio → Configurações → Credenciais* (ou developers.mercadopago.com → *Suas integrações* → sua aplicação → **Credenciais de produção** → *Access Token*, começa com `APP_USR-`). |
-| `MP_WEBHOOK_SECRET` | developers.mercadopago.com → sua aplicação → **Webhooks** → *Configurar notificações*: URL `https://SEU-WORKER.workers.dev/api/webhook`, evento **Pagamentos**, modo produção → copie a **assinatura secreta**. |
+| `MP_WEBHOOK_SECRET` | developers.mercadopago.com → sua aplicação → **Webhooks** → *Configurar notificações*: URL `https://akylla-shop-api.akyllashop.workers.dev/api/webhook`, evento **Pagamentos**, modo produção → copie a **assinatura secreta**. |
 | `GITHUB_TOKEN` | github.com/settings/personal-access-tokens/new → *Fine-grained* → repositório **Akylla_Store** → **Contents: Read and write**. Use uma chave separada da do painel (nome: “Servidor Akylla”, validade 1 ano — anote para renovar). |
 | `CALLMEBOT_APIKEY` | Aviso de vendas no WhatsApp: siga as instruções do site oficial **callmebot.com** (salvar o número do robô e enviar a frase de autorização pelo WhatsApp da loja) e copie a *apikey* que ele responde. O número que recebe fica em `STORE_WHATSAPP` no `wrangler.toml`. |
 
 Depois:
 
-1. Abra `https://SEU-WORKER.workers.dev/api/health` → deve mostrar `"configured": true`.
-2. Painel → **Loja** → *Forma de pagamento*: **Mercado Pago automático** e *Endereço do servidor*: `https://SEU-WORKER.workers.dev` → **Publicar**.
+1. Abra `https://akylla-shop-api.akyllashop.workers.dev/api/health` → deve mostrar `"configured": true`.
+2. Painel → **Loja** → *Forma de pagamento*: **Mercado Pago automático** e *Endereço do servidor*: `https://akylla-shop-api.akyllashop.workers.dev` → **Publicar**.
 3. Faça uma compra real de um item barato (ex.: um cabo) para testar; depois devolva o valor pelo app do Mercado Pago.
 
 Para voltar ao PIX manual a qualquer momento: painel → Loja → *PIX manual* → Publicar.
