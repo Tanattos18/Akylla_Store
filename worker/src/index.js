@@ -493,6 +493,8 @@ function publicOrder(order) {
 }
 
 async function createOrder(request, env) {
+  /* evita que alguém prenda o estoque gerando PIX em série */
+  await rateLimit(env, request, Number(env.PIX_ORDERS_PER_HOUR) || 20, 'rlp');
   const body = await request.json().catch(() => null);
   if (!body) throw new OrderError('Pedido inválido.');
   const catalog = await loadCatalog(env, true);

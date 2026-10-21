@@ -23,7 +23,8 @@ export function brazilNow(ms) {
 
 export function newOrderId(ms) {
   const time = (ms == null ? Date.now() : ms).toString(36).slice(-6);
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(3)), (b) => (b % 36).toString(36)).join('');
+  /* 6 caracteres aleatórios (36^6 ≈ 2 bilhões): o número do pedido não dá para adivinhar */
+  const rand = Array.from(crypto.getRandomValues(new Uint32Array(6)), (n) => (n % 36).toString(36)).join('');
   return ('AK-' + time + rand).toUpperCase();
 }
 

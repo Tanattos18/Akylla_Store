@@ -908,7 +908,9 @@
   /* ------------------------------- checkout ----------------------------- */
 
   function createOrderId() {
-    var random = Math.random().toString(36).slice(2, 5).padEnd(3, '0');
+    var random = '';
+    var bytes = window.crypto && window.crypto.getRandomValues ? window.crypto.getRandomValues(new Uint32Array(6)) : null;
+    for (var i = 0; i < 6; i += 1) random += ((bytes ? bytes[i] : Math.floor(Math.random() * 1e9)) % 36).toString(36);
     return ('AK-' + Date.now().toString(36).slice(-6) + random).toUpperCase();
   }
 
