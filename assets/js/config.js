@@ -61,7 +61,7 @@ window.AKYLLA_CONFIG = {
       }
     ],
     "extraStepKm": 5,
-    "extraStepPrice": 300,
+    "extraStepPrice": 500,
     "homeCity": "Goiânia",
     "carrier": {
       "enabled": true,
