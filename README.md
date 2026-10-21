@@ -18,8 +18,45 @@ Custo mensal: **zero**. GitHub Pages e Cloudflare Workers são grátis nesse vol
 
 ---
 
+## Comece aqui (explicação em 1 minuto)
+
+Pense na loja como **três peças** que conversam entre si:
+
+| Peça | O que é, em palavras simples | Onde fica |
+|---|---|---|
+| **A vitrine** | O site que o cliente vê: produtos, sacola, checkout e "Meus pedidos". | GitHub Pages (grátis) |
+| **O caixa** | Um pequeno servidor que confere preço e estoque, gera o PIX ou o link do cartão, guarda os pedidos e te avisa no celular. | Cloudflare Worker (grátis) |
+| **O escritório** | O painel `/admin/`, onde você cuida de tudo: pedidos, estoque, preços, promoções, frete, clientes e artes para as redes. | No próprio site, protegido por uma chave |
+
+**Regra de ouro:** tudo o que você muda no painel só vai para o site quando você clica em **Publicar** (cerca de 1 minuto depois aparece para o cliente).
+
+### O dia a dia da loja (passo a passo)
+
+| Quero… | Faço assim |
+|---|---|
+| Saber quando chega pedido | Painel → **Pedidos** → *Avisos de pedido* → **Ativar** (uma vez em cada aparelho). Toca som e chega notificação. |
+| Confirmar um PIX manual | Confira o dinheiro no banco → painel → **Pedidos** → **✓ Confirmar pagamento**. |
+| Avisar o cliente que está pronto | **Pedidos** → filtro **Para entregar** → botão da etapa (*Pronto*, *Saiu para entrega*, *Entregue*) → botão **WhatsApp** (a mensagem já vem pronta). |
+| Repor estoque | **Estoque** → **+1 (repus)** ou digite a quantidade → **Publicar**. |
+| Colocar produto novo | **Produtos** → **+ Novo produto** → preencha, envie as fotos e salve → **Publicar**. Para conferir antes de mostrar ao cliente, deixe o produto **fora da loja** e depois use **✓ Colocar na loja**. |
+| Fazer promoção | **Promo** → ligue a promoção, escolha o % e a data final → **Publicar**. |
+| Fazer arte para Instagram/TikTok/WhatsApp | **Artes** → escolha o produto, o estilo (⭐ *Anúncio* é o padrão) e os formatos → **Gerar artes** → **Baixar** ou **Compartilhar** e copie a legenda pronta. |
+| Ver quanto vendi | **Início** (dashboard) → escolha o período. |
+
+### O que o sistema faz sozinho (para você não se preocupar)
+
+- **Reserva o estoque** assim que o cliente gera o pedido, para dois clientes não comprarem a mesma última unidade.
+- **Devolve o estoque** de pedido não pago: PIX automático em 30 min, cartão em 1 h, PIX manual em 48 h.
+- **Vende além do estoque de casa** até o limite de reposição (padrão +10) e marca no pedido quantos você precisa comprar no fornecedor.
+- **Junta as suas edições com as vendas.** Se uma venda acontecer enquanto o painel está aberto, o **Publicar** mantém o que você editou e respeita o estoque novo, sem conflito.
+- **Cartão aprovado depois de cancelado** (o cliente pagou numa aba esquecida): o pedido vai para **Conferir pagamento** e você é avisado, para entregar ou devolver o valor.
+- **O cliente nunca fica preso:** no pedido em aberto ele pode **concluir o cartão**, **trocar para PIX** ou **cancelar**. A seta "voltar" do celular fecha janelas sem sair do site, e voltar da página do Mercado Pago cai no pedido dele.
+
+---
+
 ## Índice
 
+0. [Comece aqui (explicação em 1 minuto)](#comece-aqui-explicação-em-1-minuto)
 1. [Endereços](#1-endereços)
 2. [Como tudo funciona (visão geral)](#2-como-tudo-funciona-visão-geral)
 3. [Guia: criar uma loja nova a partir deste projeto](#3-guia-criar-uma-loja-nova-a-partir-deste-projeto)
@@ -307,7 +344,16 @@ Proteções:
 - **Cliente:** <https://akyllashop.com/pedido.html> (link no rodapé, no menu e nas mensagens do WhatsApp). Digita o número do pedido e o WhatsApp da compra e vê: situação do pagamento, etapas (Recebido → Pago → Separando → Pronto para retirada / Saiu para entrega → Entregue), itens, total e forma de pagamento. Não mostra endereço nem telefone. O aparelho lembra os pedidos feitos nele.
 - **Loja:** painel → **Pedidos** → filtro **Para entregar** → em cada pedido pago, botões de **Etapa**. Depois de mudar a etapa, o botão **WhatsApp** já traz a mensagem certa ("pronto para retirada", "saiu para entrega"…) com o link de acompanhamento.
 - **Meus pedidos** no topo do site leva à página de acompanhamento.
-- **Pagamento no cartão não concluído** (o cliente voltou do Mercado Pago sem pagar): a página principal mostra um aviso com **Concluir pagamento** (volta para a mesma página do Mercado Pago) e **Cancelar pedido**; a página do pedido tem os mesmos botões. Cancelar devolve a reserva na hora. Se o cliente iniciar outro pagamento no cartão, o anterior é cancelado sozinho. Sem ação, a reserva vence em 1 h.
+- **Pagamento no cartão não concluído** (o cliente voltou do Mercado Pago sem pagar): a página principal e a página do pedido mostram três botões:
+  - **Concluir pagamento no cartão:** volta para a mesma página do Mercado Pago;
+  - **Prefiro pagar no PIX:** cancela o pedido no cartão (devolve a reserva), mantém os produtos na sacola e abre o checkout para pagar no PIX, que sai mais barato;
+  - **Cancelar pedido:** devolve a reserva na hora.
+
+  Se o cliente iniciar outro pagamento no cartão, o anterior é cancelado sozinho. Sem ação, a reserva vence em 1 h.
+- **Voltar sem se perder:**
+  - a página do Mercado Pago não tem botão "voltar para a loja" (é do Mercado Pago, não dá para mudar). Por isso o site abre o cartão a partir da página do pedido: a **seta voltar** do navegador cai direto no pedido, com os três botões acima;
+  - no celular, a seta **voltar** fecha a janela aberta (produto, sacola, checkout, menu) em vez de sair do site;
+  - todas as páginas têm **← Voltar para a loja** e o logo leva à página inicial.
 - O site também **lembra nome, WhatsApp e e-mail** do cliente no próprio aparelho para a próxima compra.
 
 ## 5. Painel administrativo (`/admin/`)
@@ -364,7 +410,7 @@ Para saber:
 
 ### 5.4 Proteções do painel
 
-- **Conflito:** se o site mudar por outro lugar (um `git push` do PC ou o servidor reservando estoque) enquanto o painel está aberto, o painel **não sobrescreve**. Ele mantém suas alterações e pede para recarregar.
+- **Venda durante a edição:** se o site mudar por outro lugar (o servidor baixando estoque numa venda, ou um `git push` do PC) enquanto o painel está aberto, o **Publicar junta as duas coisas**: o campo que você mexeu fica com o seu valor; o estoque que você mexeu recebe a sua diferença (ex.: +1) sobre o estoque atual; o resto fica como está no site. Se uma venda cair bem no meio da publicação, ele tenta de novo sozinho uma vez.
 - Aviso ao sair com alterações não publicadas. Há o botão **Descartar**.
 - Política de segurança (CSP) restrita: o painel só conversa com o GitHub, com o servidor e com os serviços de mapa do frete.
 
@@ -545,7 +591,7 @@ git push                                  # 4) publica
 ```
 
 - Se o `git push` for recusado, rode `git pull` e depois `git push` de novo. Acontece porque o painel ou o servidor publicaram algo nesse meio-tempo.
-- **Cache dos celulares:** CSS e JS são chamados com `?v=AAAAMMDD-N` em `index.html`, `privacidade.html`, `termos.html` e `admin/index.html`. Ao alterar um `.css` ou `.js`, aumente esse número para todo mundo receber a versão nova na hora.
+- **Cache dos celulares:** CSS e JS são chamados com `?v=AAAAMMDD-N` em `index.html`, `privacidade.html`, `termos.html` e `admin/index.html`. Também em `pedido.html`. Ao alterar um `.css` ou `.js`, aumente esse número para todo mundo receber a versão nova na hora.
 - Mudou algo em `worker/`? Faça também o `deploy` ([7.3](#73-publicar-ou-atualizar-o-servidor)).
 
 ### 9.3 Em mais de um computador
@@ -612,6 +658,7 @@ Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o pr
 ├── robots.txt · sitemap.xml
 ├── admin/                  # painel administrativo (instalável como app)
 │   ├── index.html · admin.css · admin.js
+│   ├── estudio.js          # aba Artes: gera as artes das redes no navegador (Canvas)
 │   ├── formato.js          # lê/escreve products.js e config.js (usado também pelo servidor e pelos testes)
 │   ├── sw.js               # service worker: recebe as notificações push
 │   └── manifest.webmanifest · icon-192.png · icon-512.png · apple-touch-icon.png
@@ -630,7 +677,7 @@ Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o pr
 ├── worker/                 # servidor (Cloudflare Worker)
 │   ├── wrangler.toml · package.json · definir-chaves.ps1
 │   └── src/index.js (rotas) · src/logic.js (regras de pedido) · src/push.js (notificações)
-├── ferramentas/anuncios/   # gerador de anúncios 9:16
+├── ferramentas/anuncios/   # gerador de anúncios 9:16 (anuncios.js e icones.js também são usados pela aba Artes)
 ├── scripts/atualizar-precos.js   # relatório site × planilha
 ├── tests/site.test.js · tests/worker.test.js
 ├── .github/workflows/testes.yml  # roda os testes a cada push
@@ -751,12 +798,27 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | `CHAVES_PRIVADAS*`, `.env*`, `worker/.dev.vars` | chaves |
 | `fotos-candidatas/`, `worker/node_modules/`, `worker/.wrangler/` | temporários |
 
+- **Proteções do site e do servidor:**
+  - preços, frete e estoque são sempre **recalculados no servidor** (o navegador não decide valores);
+  - limite de pedidos por aparelho: PIX manual 5/hora, PIX automático 20/hora, cartão 20/hora. Impede alguém de "prender" o estoque gerando pedidos em série;
+  - **número do pedido aleatório** (6 caracteres sorteados), impossível de adivinhar. Para acompanhar ou cancelar pelo site, também é preciso o WhatsApp da compra;
+  - **CSP** (política de segurança) em todas as páginas do site e do painel: o navegador só carrega código do próprio site e só conversa com o servidor e os serviços de mapa/CEP;
+  - todo texto vindo do catálogo é "escapado" antes de aparecer na tela (proteção contra código injetado);
+  - avisos do Mercado Pago (webhook) são conferidos com a assinatura secreta e consultados de volta no Mercado Pago antes de valer;
+  - o painel só funciona com uma chave do GitHub com permissão de escrita no repositório.
 - O site não coleta dados de cartão. A sacola fica no navegador do cliente (`localStorage`). Nome e WhatsApp do pedido ficam no servidor (KV) para a loja atender.
 - O rodapé e as páginas legais identificam o vendedor, como exige o Decreto 7.962/2013.
 
 ---
 
 ## 16. Problemas comuns e soluções
+
+| Aconteceu… | O que fazer |
+|---|---|
+| Pedido em **Conferir pagamento** | O Mercado Pago aprovou um valor diferente, ou um cartão foi aprovado depois de o pedido ser cancelado. Veja o motivo no pedido, confira no app do Mercado Pago e entregue ou devolva o valor por lá. |
+| Cliente diz que pagou, mas o pedido segue "aguardando" | Abra a página **Acompanhar pedido** desse pedido (ela consulta o Mercado Pago de novo e confirma sozinha). Se continuar aguardando, confira no app do Mercado Pago. |
+| Mudança no painel não aparece no site | Clicou em **Publicar**? Espere 1 a 2 minutos e recarregue a página (no celular, puxe para baixo). |
+| Arte do estúdio sem a promoção | A arte usa o preço publicado: publique a promoção antes de gerar. |
 
 | Sintoma | O que fazer |
 |---|---|
@@ -809,6 +871,9 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Cartão de crédito em até 12x (Checkout Pro, juros com o cliente, taxa repassada), página Acompanhar pedido, etapas de entrega e aba Clientes no painel; correção da baixa dupla de estoque no PIX automático. |
 | 21/10/2026 | Power banks fora da loja até conferência; venda com reposição pelo fornecedor (+10 por padrão). |
 | 21/10/2026 | Estúdio de artes no painel (formatos 1:1, 4:5, 9:16 e 16:9, estilos, pré-definidos, legendas e kit de abertura). |
+| 21/10/2026 | Pedido no cartão em aberto pode virar PIX; voltar do Mercado Pago cai no pedido; seta voltar do celular fecha janelas. |
+| 21/10/2026 | Estúdio: estilo ⭐ Anúncio (mesmo visual dos anúncios 9:16) nos 4 formatos, com produto recortado. |
+| 21/10/2026 | Auditoria: limite de PIX por aparelho, número de pedido mais forte, CSP no site, Publicar sem conflito com vendas, cartão aprovado depois de cancelado vai para conferência. |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.
