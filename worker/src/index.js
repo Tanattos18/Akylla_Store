@@ -809,6 +809,18 @@ async function cardWebhook(request, env, url, dataId) {
   }
   const order = pay.ref ? await getOrder(env, pay.ref) : null;
   if (!order || order.kind !== 'card') return json({ ok: true, unknown: true });
+  /* cartão aprovado depois que o pedido foi cancelado/venceu (ex.: a aba do Mercado Pago ficou aberta):
+     o dinheiro entrou, então o pedido vai para conferência e a loja é avisada (entregar ou devolver o valor no MP) */
+  if ((order.status === 'canceled' || order.status === 'expired') && pay.state === 'paid' && order.latePaymentId !== String(pay.id)) {
+    order.status = 'review';
+    order.latePaymentId = String(pay.id);
+    order.paymentId = pay.id;
+    order.reviewReason = 'Cartão aprovado (R$ ' + (pay.amountCents / 100).toFixed(2) + ') depois que o pedido foi cancelado. Confira o estoque e entregue, ou devolva o valor no Mercado Pago.';
+    order.notified = await notifyStore(env, order);
+    order.pushed = await notifyAdmins(env, pushMessage(order));
+    await saveOrder(env, order);
+    return json({ ok: true, status: order.status });
+  }
   if (order.status !== 'pending') return json({ ok: true, status: order.status });
   if (pay.state !== 'paid') return json({ ok: true, status: 'pending' });
   const result = await syncPayment(env, order, pay);

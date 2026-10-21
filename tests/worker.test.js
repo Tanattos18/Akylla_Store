@@ -476,6 +476,13 @@ test('cartão: cliente volta sem pagar, vê o link para concluir e pode cancelar
     assert.equal(canceled.data.checkoutUrl, '');
     assert.equal(canceled.data.canCancel, false);
 
+    // pagou na aba do Mercado Pago que ficou aberta, depois de cancelar: vai para conferência (não some)
+    s.cardPays.push({ id: 9100, status: 'approved', transaction_amount: created.data.total / 100, external_reference: id, installments: 1 });
+    var late = await call(worker, s.env, 'POST', '/api/webhook?data.id=9100&type=payment', { type: 'payment', data: { id: '9100' } });
+    assert.equal(late.data.status, 'review', JSON.stringify(late.data));
+    var lateTrack = await call(worker, s.env, 'GET', '/api/track?id=' + id + '&phone=62977776666');
+    assert.equal(lateTrack.data.status, 'review');
+
     // reserva devolvida: agora outro cliente consegue
     var again = await call(worker, s.env, 'POST', '/api/card-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Outra Pessoa' } });
     assert.equal(again.status, 201, JSON.stringify(again.data));
