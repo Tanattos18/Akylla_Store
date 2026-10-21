@@ -151,7 +151,7 @@ test('painel: arquivos existem, scripts compilam e a política de segurança est
   assert.match(html, /Content-Security-Policy/);
   assert.match(html, /connect-src https:\/\/api\.github\.com/);
   assert.match(html, /noindex/);
-  assert.match(read('robots.txt'), /Disallow: \/Akylla_Store\/admin\//);
+  assert.match(read('robots.txt'), /Disallow: \/admin\//);
   html.replace(/(?:src|href)="(\.\.\/assets\/[^"?#]+|[a-z]+\.(?:js|css))/g, function (_, ref) {
     assert.ok(fs.existsSync(path.join(ROOT, 'admin', ref)), 'admin/index.html: arquivo não encontrado ' + ref);
   });

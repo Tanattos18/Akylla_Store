@@ -10,7 +10,7 @@ Landing page responsiva de uma loja de eletrônicos e acessórios de informátic
 
 **Stack:** HTML5 · CSS3 · JavaScript (ES5+) · sem build · sem backend
 
-**Site publicado:** <https://tanattos18.github.io/Akylla_Store/>
+**Site publicado:** <https://akyllashop.com/>
 
 ---
 
@@ -53,7 +53,7 @@ O projeto é 100% estático — HTML, CSS e JavaScript, sem build, sem servidor 
 
 ## Painel administrativo (`/admin/`)
 
-Endereço: <https://tanattos18.github.io/Akylla_Store/admin/> (não aparece no site nem nos buscadores).
+Endereço: <https://akyllashop.com/admin/> (não aparece no site nem nos buscadores).
 
 O painel edita o site **sem servidor**: cada “Publicar” vira um commit na `main` pela API do GitHub e o GitHub Pages atualiza o site em ~1 minuto. Funciona no celular.
 
@@ -310,7 +310,7 @@ git push
 O site já está publicado em:
 
 ```text
-https://tanattos18.github.io/Akylla_Store/
+https://akyllashop.com/
 ```
 
 O deploy é feito a partir da branch `main`, pasta `/ (root)`. Cada `git push` na `main` atualiza o site em 1–2 minutos.
@@ -318,6 +318,8 @@ O deploy é feito a partir da branch `main`, pasta `/ (root)`. Cada `git push` n
 > **Cache dos navegadores:** os arquivos CSS/JS são chamados com `?v=AAAAMMDD-N` nas três páginas. Ao alterar `styles.css` ou algum `.js`, troque esse número (em `index.html`, `privacidade.html` e `termos.html`) para que celulares baixem a versão nova na hora.
 
 Configuração usada: **Settings → Pages → Deploy from a branch → main / (root)**.
+
+**Domínio próprio:** `akyllashop.com` (registrado na Hostinger). O arquivo `CNAME` na raiz liga o domínio ao GitHub Pages; o endereço antigo `tanattos18.github.io/Akylla_Store` redireciona para ele. DNS na Hostinger: registros **A** de `@` para 185.199.108.153, 185.199.109.153, 185.199.110.153 e 185.199.111.153, e **CNAME** `www` → `tanattos18.github.io`. HTTPS: **Settings → Pages → Enforce HTTPS**. Não apague o arquivo `CNAME`.
 
 Como todos os caminhos são relativos, o site funciona tanto no GitHub Pages quanto em domínio próprio. O `og:image` já aponta para a URL absoluta da capa em `index.html`.
 

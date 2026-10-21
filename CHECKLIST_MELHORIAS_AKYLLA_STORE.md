@@ -1,7 +1,7 @@
 # Akylla Store — Checklist de melhorias e prompt de execução
 
 **Repositório:** https://github.com/Tanattos18/Akylla_Store  
-**Site:** https://tanattos18.github.io/Akylla_Store/
+**Site:** https://akyllashop.com/
 
 ## Diagnóstico inicial dos links
 
@@ -29,7 +29,7 @@ Você é um engenheiro de software sênior, especialista em e-commerce estático
 PROJETO
 - Akylla Store
 - Repositório: https://github.com/Tanattos18/Akylla_Store
-- Site: https://tanattos18.github.io/Akylla_Store/
+- Site: https://akyllashop.com/
 - Stack documentada: HTML5, CSS3 e JavaScript, sem framework, build ou backend.
 - Arquivos documentados: index.html, assets/css/styles.css, assets/js/app.js, config.js, pix.js, products.js, assets/img/ e assets/vendor/qrcode.js.
 
