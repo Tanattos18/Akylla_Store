@@ -37,7 +37,7 @@ window.AKYLLA_CONFIG = {
     "bands": [
       {
         "upToKm": 15,
-        "price": 2500
+        "price": 1500
       },
       {
         "upToKm": 20,
