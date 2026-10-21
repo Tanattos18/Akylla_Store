@@ -200,6 +200,15 @@
       $('#pageTitle').hidden = false;
       renderAll();
       startAlerts();
+      if (window.AkyllaStudio) {
+        window.AkyllaStudio.init({
+          products: function () { return state.products; },
+          config: function () { return state.config; },
+          setConfig: function (key, value) { state.config[key] = value; refreshPending(); },
+          toast: toast,
+          brl: brl
+        });
+      }
     }).finally(function () { busy(''); });
   }
 
@@ -1757,6 +1766,7 @@
 
   function renderAll() {
     renderStock(); renderProducts(); renderConfig(); renderPromoForm(); renderPromoList(); renderShipForm(); renderRestock(); refreshPending();
+    if (window.AkyllaStudio) window.AkyllaStudio.refresh();
     if (!dash.orders) loadDashboard(); else renderDashboard();
     var select = $('#categorySelect');
     select.innerHTML = '';

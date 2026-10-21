@@ -329,6 +329,7 @@ O painel edita os arquivos do site e publica **num único commit** pela API do G
   - Campos: nome, nome curto, código, marca, modelo, categoria, ícone, preço, estoque, resumo, descrição, especificações, aviso de foto ilustrativa e selo **Mais vendido**.
   - **Fotos:** enviar, escolher a principal, ordenar e remover. Viram WebP 700×700 com fundo branco, convertidas no próprio navegador.
   - **Calculadora de preço:** custo ÷ (1 − margem). O custo **não é salvo**, porque o repositório é público.
+- **Artes:** estúdio de artes para Instagram, Facebook, TikTok e WhatsApp ([10.1](#101-estúdio-de-artes-no-painel-aba-artes)).
 - **Frete:** faixas por distância, cidades com valor fixo ou "a combinar", transportadora (com o % da taxa), retirada, ponto de partida e simulador de CEP. Inclui uma calculadora de transportadora com a mensagem pronta para o cliente.
 - **Loja:** nome, cidade, WhatsApp, mensagem inicial, **chave PIX** (trocar pede confirmação), recebedor, nome e cidade do QR, textos, foto da vitrine, **forma de pagamento** (PIX manual ou Mercado Pago) e **endereço do servidor**.
 
@@ -574,6 +575,30 @@ node ferramentas/anuncios/gerar.js 03 07     # só os números escolhidos
 - **Regra:** escreva só o que está na ficha do produto. Não invente característica.
 - **Stories e Reels:** o Instagram cobre o topo e o rodapé com a interface (perfil, botão de link). Confira se nada importante ficou escondido. Para o feed, o formato que mais aparece é 4:5 (1080×1350).
 
+### 10.1 Estúdio de artes no painel (aba Artes)
+
+Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o preço e a promoção atuais do catálogo.
+
+1. **Pré-definido** (opcional): um clique preenche tudo, por exemplo "Promoção — Instagram completo" ou "Oferta relâmpago — Status/Stories".
+2. **Campanha:** Promoção, Novidade, Mais vendido, Últimas unidades (com produto) ou Inauguração, Cartão em 12x, Frete (sem produto, com colagem de vários itens).
+3. **Estilo:** Laranja forte, Neon escuro, Clean claro, Foto em destaque ou Surpresa.
+4. **Composição:** Produto grande, Preço gigante, Dividido ou Surpresa.
+5. **Formatos:** ligue/desligue um por um:
+
+| Formato | Tamanho | Onde usar |
+|---|---|---|
+| 1:1 | 1080×1080 | feed, carrossel, WhatsApp |
+| 4:5 | 1080×1350 | feed do Instagram (ocupa mais tela) |
+| 9:16 | 1080×1920 | Stories, Reels, TikTok, Status |
+| 16:9 | 1920×1080 | Facebook, YouTube, capa de vídeo |
+
+6. **Gerar artes** → **Baixar** / **Compartilhar** (no celular abre direto o Instagram/WhatsApp) ou **Baixar todas**.
+7. **Legendas prontas** para Instagram, Facebook e TikTok, com emojis e hashtags, e botão **Copiar**.
+
+- **Salvar como pré-definido** guarda as escolhas atuais com um nome. Clique em **Publicar** para ficar salvo em todos os aparelhos.
+- **Kit de abertura das redes:** foto de perfil (redonda), capa do Facebook, 4 capas de destaque e bios prontas.
+- O código fica em `admin/estudio.js`.
+
 ---
 
 ## 11. Estrutura de arquivos
@@ -781,6 +806,8 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Layout: 2 produtos por linha no celular, barra fixa da sacola, 12 por página, tabela de frete recolhível, selo "Mais vendido", faixa de categorias clicável. |
 | 21/10/2026 | Avisos de pedido: som, vibração, contador e notificação push no celular e no PC; painel instalável como app. |
 | 21/10/2026 | Cartão de crédito em até 12x (Checkout Pro, juros com o cliente, taxa repassada), página Acompanhar pedido, etapas de entrega e aba Clientes no painel; correção da baixa dupla de estoque no PIX automático. |
+| 21/10/2026 | Power banks fora da loja até conferência; venda com reposição pelo fornecedor (+10 por padrão). |
+| 21/10/2026 | Estúdio de artes no painel (formatos 1:1, 4:5, 9:16 e 16:9, estilos, pré-definidos, legendas e kit de abertura). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.

@@ -6,6 +6,13 @@
   src: url("../assets/fonts/dm-sans-latin.woff2") format("woff2");
 }
 
+@font-face {
+  font-family: "Sora";
+  font-weight: 500 800;
+  font-display: swap;
+  src: url("../assets/fonts/sora-latin.woff2") format("woff2");
+}
+
 :root {
   --ink: #060913;
   --paper: #f4f5ef;
@@ -588,3 +595,27 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .restock-card form { margin-top: 0.8rem; }
 .badge-group { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
 .badge.supply { margin-left: 0.4rem; white-space: nowrap; }
+
+/* Estúdio de artes */
+.studio { display: grid; gap: 1rem; }
+.st-row { display: grid; gap: 0.45rem; }
+.st-label { font-size: 0.82rem; font-weight: 800; color: var(--muted); }
+.st-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.st-preset { position: relative; display: inline-flex; }
+.st-preset.is-user .chip { border-color: var(--brand); padding-right: 2rem; }
+.st-preset-del { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--soft); color: var(--text); font-size: 0.7rem; cursor: pointer; }
+.st-formats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; }
+.st-format { display: grid; gap: 0.15rem; padding: 0.7rem 0.8rem; border: 2px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text); text-align: left; cursor: pointer; }
+.st-format b { font-size: 1.15rem; }
+.st-format small { color: var(--muted); font-size: 0.75rem; }
+.st-format.is-active { border-color: var(--brand); background: var(--low-bg); }
+.st-format.is-active b::after { content: " ✓"; color: var(--brand-deep); }
+.st-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
+.st-previews { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin: 1rem 0; align-items: start; }
+.st-item { display: grid; gap: 0.5rem; padding: 0.7rem; border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--shadow); }
+.st-canvas { width: 100%; height: auto; border-radius: 10px; background: var(--soft); }
+.st-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.st-actions strong { flex: 1 1 100%; font-size: 0.82rem; }
+.st-captions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem; }
+.st-captions label { gap: 0.4rem; }
+.st-captions textarea { font-size: 0.85rem; min-height: 180px; }
