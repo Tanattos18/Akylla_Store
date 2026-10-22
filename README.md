@@ -650,6 +650,8 @@ Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o pr
 6. **Gerar artes** → **Baixar** / **Compartilhar** (no celular abre direto o Instagram/WhatsApp) ou **Baixar todas**.
 7. **Legendas prontas** para Instagram, Facebook e TikTok, com emojis e hashtags, e botão **Copiar**.
 
+- **🎬 Animar** (em cada arte gerada): cria a **arte animada** de 6 s em loop, no mesmo formato da arte (MP4), seguindo princípios de motion design (skill da LottieFiles, MIT): o produto entra primeiro, os blocos entram em sequência de baixo para cima (desacelerando, com leve "estouro"), o preço pulsa, o fundo "respira" com partículas, e a saída é rápida para emendar no loop. Trilha opcional (campo *Trilha da arte animada*). Ótimo para Stories, Status e anúncios — vídeo curto chama mais atenção que imagem parada. Deixe a aba visível durante os 6 s da gravação.
+- **Acabamento premium** no estilo Anúncio: vinheta nas bordas e textura fina no fundo (também nos vídeos).
 - **Salvar como pré-definido** guarda as escolhas atuais com um nome. Clique em **Publicar** para ficar salvo em todos os aparelhos.
 - **Kit de abertura das redes:** foto de perfil (redonda), capa do Facebook, 4 capas de destaque e bios prontas.
 - O código fica em `admin/estudio.js`.
@@ -991,6 +993,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Arte animada (🎬 Animar, 6 s em loop) com princípios de motion design; acabamento premium (vinheta + textura); voz: endereço reserva + suporte à voz oficial Azure (grátis). |
 | 22/10/2026 | Artes e vídeos com visual novo a cada geração (fundos, foto principal, frases, entrada do produto, cartela final); fotos sem fundo branco viram cartão. |
 | 22/10/2026 | Vídeo 2.0 (modelos, ganchos, duração, chamadas, cortes com a galeria, expressões do mascote, capa, legenda, comentário fixado, áreas seguras, Reels, desempenho), trilhas próprias com biblioteca no servidor e Vendas por origem. |
 

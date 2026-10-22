@@ -313,7 +313,7 @@
   function drawProduct(ctx, W, H, d) {
     var u = Math.min(W, H) / 1080;
     var c = d.config, p = d.product, info = d.info;
-    background(ctx, W, H, d.seed);
+    if (!d.noBg) background(ctx, W, H, d.seed);
     var M = 60 * u;
     header(ctx, u, M, M, d.logo);
     var discount = info.active ? info.percent : 0;
@@ -578,6 +578,20 @@
       for (var i = -4; i < 14; i += 1) { var x0 = i * W * 0.16; ctx.beginPath(); ctx.moveTo(x0, H); ctx.lineTo(x0 + H * 0.6, 0); ctx.stroke(); }
       ctx.restore();
     }
+    /* acabamento: vinheta nas bordas (foco no centro) + textura fina (tira o aspecto "chapado") */
+    var vg = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalAlpha = 0.06; ctx.fillStyle = ctx.createPattern(grain(), 'repeat'); ctx.fillRect(0, 0, W, H); ctx.restore();
+  }
+  var grainCanvas = null;
+  function grain() {
+    if (grainCanvas) return grainCanvas;
+    grainCanvas = document.createElement('canvas'); grainCanvas.width = grainCanvas.height = 160;
+    var g = grainCanvas.getContext('2d'), img = g.createImageData(160, 160);
+    for (var i = 0; i < img.data.length; i += 4) { var v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+    g.putImageData(img, 0, 0);
+    return grainCanvas;
   }
 
   function spaced(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; }
@@ -887,7 +901,7 @@
       var hands = [ad.hand, 'Garanta já o seu!', 'Oferta imperdível!', 'Corre que acaba!', 'O queridinho da vez!', 'Preço de inauguração!', 'Você merece esse upgrade!'];
       ad = Object.assign({}, ad, { hand: hands[Math.floor(d.variant.hand * hands.length) % hands.length] });
     }
-    adBackground(ctx, W, H, d.variant);
+    if (!d.noBg) adBackground(ctx, W, H, d.variant);
 
     if (W === 1080 && H === 1920) {
       adBrand(ctx, 60, 56, 1, d.logo);
@@ -950,7 +964,7 @@
   function drawCampaign(ctx, W, H, d) {
     var u = Math.min(W, H) / 1080;
     var c = d.config;
-    background(ctx, W, H, d.seed);
+    if (!d.noBg) background(ctx, W, H, d.seed);
     var M = 60 * u;
     header(ctx, u, M, M, d.logo);
     var wide = W > H * 1.3;
@@ -1208,7 +1222,162 @@
     };
   }
 
-  function previewItem(name, canvas, filename, fmt) {
+  /* ------------------------- arte animada (motion design) ------------------------- */
+  /*
+   * Princípios (skill de motion design da LottieFiles, MIT): personalidade "Energética";
+   * o destaque (produto) entra primeiro; os outros blocos entram em sequência, da mesma direção,
+   * com atraso total < 0,6 s; entrada desacelera (ease-out) com leve "estouro"; saída mais rápida (ease-in);
+   * três camadas: principal (produto), secundária (blocos) e ambiente (fundo respirando + partículas);
+   * ênfase no preço com um pulso. Sem movimento linear.
+   */
+  var MOTION_LEN = 6;
+  function easeOutBack(x) { x = Math.max(0, Math.min(1, x)); var c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+  function easeOutExpo(x) { x = Math.max(0, Math.min(1, x)); return x === 1 ? 1 : 1 - Math.pow(2, -10 * x); }
+  function easeInCubic(x) { x = Math.max(0, Math.min(1, x)); return x * x * x; }
+  function easeInOutSine(x) { return -(Math.cos(Math.PI * Math.max(0, Math.min(1, x))) - 1) / 2; }
+
+  /* Separa a arte (sem fundo) em faixas de elementos, de cima para baixo. */
+  function bands(fg) {
+    var W = fg.width, H = fg.height, data = fg.getContext('2d').getImageData(0, 0, W, H).data;
+    var rows = new Uint8Array(H), orange = new Float32Array(H);
+    for (var y = 0; y < H; y += 1) {
+      var on = 0, or = 0;
+      for (var x = 0; x < W; x += 6) {
+        var i = (y * W + x) * 4;
+        if (data[i + 3] > 24) { on += 1; if (data[i] > 200 && data[i + 1] > 60 && data[i + 1] < 175 && data[i + 2] < 90) or += 1; }
+      }
+      rows[y] = on > 2 ? 1 : 0; orange[y] = or;
+    }
+    var out = [], start = -1, gap = 0;
+    for (y = 0; y <= H; y += 1) {
+      var filled = y < H && rows[y];
+      if (filled) { if (start < 0) start = y; gap = 0; }
+      else if (start >= 0) {
+        gap += 1;
+        if (gap > Math.max(10, H * 0.008) || y === H) { out.push([start, y - gap + 1]); start = -1; gap = 0; }
+      }
+    }
+    /* junta faixas muito finas (texto miúdo) com a vizinha */
+    var merged = [];
+    out.forEach(function (b) {
+      var last = merged[merged.length - 1];
+      if (last && (b[1] - b[0] < H * 0.03 || last[1] - last[0] < H * 0.03) && b[0] - last[1] < H * 0.04) last[1] = b[1]; else merged.push(b.slice());
+    });
+    while (merged.length > 7) {
+      var bi = 0, best = 1e9;
+      for (var k = 0; k < merged.length - 1; k += 1) { var g = merged[k + 1][0] - merged[k][1]; if (g < best) { best = g; bi = k; } }
+      merged[bi][1] = merged[bi + 1][1]; merged.splice(bi + 1, 1);
+    }
+    return merged.map(function (b) {
+      var o = 0; for (var yy = b[0]; yy < b[1]; yy += 1) o += orange[yy];
+      return { y0: Math.max(0, b[0] - 4), y1: Math.min(H, b[1] + 4), orange: o };
+    });
+  }
+
+  function motionMime() {
+    var list = ['video/mp4;codecs=avc1.640028', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    for (var i = 0; i < list.length; i += 1) if (window.MediaRecorder && MediaRecorder.isTypeSupported(list[i])) return list[i];
+    return '';
+  }
+
+  function animateArt(wrap, still, redraw, drawBg, filename) {
+    var mime = motionMime();
+    if (!mime) { api.toast('Este navegador não grava vídeo. Use o Chrome ou o Edge atualizados.', 6000); return; }
+    var W = still.width, H = still.height;
+    var fg = document.createElement('canvas'); fg.width = W; fg.height = H; redraw(fg.getContext('2d'));
+    var bg = document.createElement('canvas'); bg.width = W; bg.height = H; drawBg(bg.getContext('2d'));
+    var list = bands(fg);
+    if (!list.length) { api.toast('Não consegui separar os elementos desta arte.'); return; }
+    var hero = 0, emph = -1, area = 0, oMax = 0;
+    list.forEach(function (b, i) { if (b.y1 - b.y0 > area) { area = b.y1 - b.y0; hero = i; } });
+    list.forEach(function (b, i) { if (i !== hero && b.orange > oMax) { oMax = b.orange; emph = i; } });
+    var order = [hero].concat(list.map(function (b, i) { return i; }).filter(function (i) { return i !== hero; }));
+    var stagger = Math.min(0.11, 0.55 / Math.max(1, order.length - 1));
+    var u = Math.min(W, H) / 1080;
+    var dots = []; for (var i = 0; i < 26; i += 1) dots.push([Math.random() * W, Math.random() * H, (2 + Math.random() * 4) * u, (12 + Math.random() * 26) * u]);
+
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.className = 'st-canvas';
+    var ctx = cv.getContext('2d');
+    function frame(t) {
+      /* ambiente: fundo respirando devagar + partículas subindo */
+      var breathe = 1.03 + 0.015 * Math.sin(t * Math.PI * 2 / MOTION_LEN);
+      ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(breathe, breathe); ctx.drawImage(bg, -W / 2, -H / 2); ctx.restore();
+      ctx.fillStyle = 'rgba(255,160,60,0.28)';
+      dots.forEach(function (q) { var y = ((q[1] - q[3] * t) % H + H) % H; ctx.beginPath(); ctx.arc(q[0], y, q[2], 0, Math.PI * 2); ctx.fill(); });
+      var exit = easeInCubic((t - (MOTION_LEN - 0.45)) / 0.35);
+      order.forEach(function (bi, k) {
+        var b = list[bi], h = b.y1 - b.y0, cy = b.y0 + h / 2;
+        var start = bi === hero ? 0.12 : 0.42 + (k - 1) * stagger;
+        var p = (t - start) / (bi === hero ? 0.6 : 0.45);
+        if (p <= 0) return;
+        var a = Math.min(1, p * 2.2) * (1 - exit), dy, sc = 1;
+        if (bi === hero) {
+          sc = 0.82 + 0.18 * easeOutBack(p);
+          dy = (1 - easeOutExpo(p)) * 60 * u + Math.sin(t * 2.1) * 6 * u * Math.min(1, Math.max(0, (t - 0.9) / 0.4));
+        } else dy = (1 - easeOutExpo(p)) * 70 * u;
+        if (bi === emph) {
+          var pulse = [1.7, 3.7].reduce(function (m, at) { var q = (t - at) / 0.5; return q > 0 && q < 1 ? Math.max(m, Math.sin(q * Math.PI)) : m; }, 0);
+          sc *= 1 + 0.06 * easeInOutSine(pulse);
+        }
+        dy -= exit * 40 * u;
+        if (a <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.translate(W / 2, cy + dy); ctx.scale(sc, sc);
+        ctx.drawImage(fg, 0, b.y0, W, h, -W / 2, -h / 2, W, h);
+        ctx.restore();
+      });
+    }
+    frame(0);
+    cv.drawAt = frame; // permite conferir/regerar um quadro exato (ex.: capa da animação)
+    var box = document.createElement('div'); box.className = 'st-motion';
+    var note = document.createElement('p'); note.className = 'muted'; note.textContent = 'Gravando a arte animada (6 s)… deixe esta aba visível.';
+    box.appendChild(cv); box.appendChild(note);
+    wrap.appendChild(box);
+
+    var musicSel = ($('#stMotionMusic') || {}).value || 'none';
+    var music = musicSel !== 'none' && window.AkyllaMusic ? window.AkyllaMusic.render(window.AkyllaMusic.randomRecipe(musicSel), MOTION_LEN + 0.3, 44100) : Promise.resolve(null);
+    music.then(function (buf) {
+      var stream = cv.captureStream(30), actx = null, src = null;
+      if (buf) {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        var dest = actx.createMediaStreamDestination();
+        src = actx.createBufferSource(); src.buffer = buf; src.connect(dest);
+        stream.addTrack(dest.stream.getAudioTracks()[0]);
+      }
+      var type = mime;
+      if (buf && /mp4/.test(type)) type = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2') ? 'video/mp4;codecs=avc1,mp4a.40.2' : 'video/mp4';
+      if (buf && /webm/.test(type)) type = 'video/webm';
+      var rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8000000 });
+      var chunks = [];
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = function () {
+        if (actx) actx.close().catch(function () {});
+        var blob = new Blob(chunks, { type: type.split(';')[0] }), ext = /mp4/.test(type) ? 'mp4' : 'webm';
+        var url = URL.createObjectURL(blob);
+        var v = document.createElement('video'); v.src = url; v.controls = true; v.loop = true; v.muted = !buf; v.autoplay = true; v.playsInline = true; v.className = 'st-canvas';
+        box.replaceChild(v, cv);
+        note.textContent = '';
+        var a = document.createElement('a'); a.href = url; a.download = filename.replace(/\.png$/, '-animada.' + ext);
+        a.className = 'btn btn-primary btn-sm'; a.textContent = 'Baixar arte animada (' + ext.toUpperCase() + ')';
+        note.appendChild(a);
+      };
+      var t0 = 0;
+      /* o relógio da animação só começa quando a gravação começou de fato (sem segundos de fundo vazio no início) */
+      rec.onstart = function () {
+        t0 = performance.now();
+        if (src) src.start(actx.currentTime);
+        (function loop() {
+          var t = (performance.now() - t0) / 1000;
+          frame(Math.max(0, t));
+          if (t < MOTION_LEN) requestAnimationFrame(loop); else rec.stop();
+        })();
+      };
+      rec.start(250);
+    }).catch(function (err) { note.textContent = 'Não consegui animar: ' + err.message; });
+  }
+
+  function previewItem(name, canvas, filename, fmt, motion) {
     var wrap = document.createElement('div');
     wrap.className = 'st-item';
     canvas.className = 'st-canvas';
@@ -1227,6 +1396,12 @@
       bar.appendChild(sh);
     }
     wrap.appendChild(canvas); wrap.appendChild(bar);
+    if (motion) {
+      var mb = document.createElement('button');
+      mb.type = 'button'; mb.className = 'btn btn-ghost btn-sm'; mb.textContent = '🎬 Animar';
+      mb.addEventListener('click', function () { mb.disabled = true; animateArt(wrap, canvas, motion.redraw, motion.bg, filename); });
+      bar.appendChild(mb);
+    }
     if (fmt) {
       var pub = publishPanel(canvas, fmt);
       var pb = document.createElement('button');
@@ -1318,7 +1493,17 @@
         var name = fm.label + ' · ' + fm.hint + ' · ' + T.label;
         var file = 'akylla-' + slug(product ? product.shortName : meta.label) + '-' + fm.label.replace(':', 'x') + '.png';
         lastRender.push({ canvas: cv, file: file });
-        out.appendChild(previewItem(name, cv, file, f));
+        var styleNow = styleKey, dNow = Object.assign({}, d), fmNow = fm;
+        var draw = function (c2, noBg) {
+          var prev = T; T = STYLES[styleNow] || STYLES.laranja;
+          var d2 = Object.assign({}, dNow, { noBg: noBg });
+          try { if (product && styleNow === 'anuncio') drawAd(c2, fmNow.w, fmNow.h, d2); else if (product) drawProduct(c2, fmNow.w, fmNow.h, d2); else drawCampaign(c2, fmNow.w, fmNow.h, d2); } finally { T = prev; }
+        };
+        var drawBack = function (c2) {
+          var prev = T; T = STYLES[styleNow] || STYLES.laranja;
+          try { if (product && styleNow === 'anuncio') adBackground(c2, fmNow.w, fmNow.h, dNow.variant); else background(c2, fmNow.w, fmNow.h, dNow.seed); } finally { T = prev; }
+        };
+        out.appendChild(previewItem(name, cv, file, f, { redraw: function (c2) { draw(c2, true); }, bg: drawBack }));
       });
       var cap = captions(d);
       ['instagram', 'facebook', 'tiktok'].forEach(function (k) { $('#stCap-' + k).value = cap[k]; });

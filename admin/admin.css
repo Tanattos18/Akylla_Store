@@ -657,3 +657,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .ml-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 1px solid var(--line); border-radius: 12px; }
 .ml-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 #mlStyle { width: auto; }
+
+/* Arte animada */
+.st-motion { display: grid; gap: 0.4rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
+.st-motion .muted { margin: 0; font-size: 0.8rem; }
+.st-select { width: auto; max-width: 100%; }
