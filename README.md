@@ -634,7 +634,8 @@ Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o pr
 
 1. **Pré-definido** (opcional): um clique preenche tudo, por exemplo "Promoção — Instagram completo" ou "Oferta relâmpago — Status/Stories".
 2. **Campanha:** Promoção, Novidade, Mais vendido, Últimas unidades (com produto) ou Inauguração, Cartão em 12x, Frete (sem produto, com colagem de vários itens).
-3. **Estilo:** **⭐ Anúncio** (padrão: o mesmo visual dos anúncios 9:16, com produto recortado, ficha com ícones e faixa de preço), Laranja forte, Neon escuro, Clean claro, Foto em destaque ou Surpresa.
+3. **Variação:** 🎲 *Arte nova a cada geração* (padrão: sorteia fundo, foto principal e frase) ou *Fixa* (igual ao anúncio original).
+4. **Estilo:** **⭐ Anúncio** (padrão: o mesmo visual dos anúncios 9:16, com produto recortado, ficha com ícones e faixa de preço), Laranja forte, Neon escuro, Clean claro, Foto em destaque ou Surpresa.
    - O estilo Anúncio usa os textos de `ferramentas/anuncios/anuncios.js` (os mesmos do gerador). Produto sem anúncio cadastrado é montado com a ficha técnica dele.
 4. **Composição:** Produto grande, Preço gigante, Dividido ou Surpresa.
 5. **Formatos:** ligue/desligue um por um:
@@ -698,6 +699,10 @@ O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em portu
 | **Trilha / volume** | Sem música (adicione um som em alta no app) · nova trilha Pop, Lo-fi ou Eletrônica · trilha da biblioteca | Som em alta do próprio app ajuda no alcance; a trilha própria dá identidade |
 | **Mascote** | Tamanho (P/M/G) e lado (esquerda/direita); muda de expressão (surpreso no preço, feliz na chamada) | Esquerda evita os botões do TikTok; P deixa o produto maior |
 | **Rede / versão** | Gera o **link rastreado** (ex.: `akyllashop.com/?origem=tiktok-drone-wrj12618-a`) | Faça a versão A e a B com ganchos diferentes e compare as vendas |
+
+**Visual novo a cada geração:** cada vídeo sorteia o tema do fundo (Noite laranja, Azul noturno, Roxo neon, Grafite com faixas), a entrada do produto (zoom, esquerda, direita, caindo), a foto principal, a ordem e o ritmo dos cortes, frases do gancho/características/preço/chamada e a cartela final (anúncio, estilo do estúdio ou cartela com preço e chamada), sem repetir o tema e a cartela do vídeo anterior. O status mostra qual visual saiu; gere de novo para outro.
+
+**Formato:** sempre 9:16 (Reels/TikTok/Stories). No Instagram, ao postar pelo computador, escolha **"Original"** na tela de corte (não 1:1 nem 4:5) para não cortar o título e o preço. O campo "Rede" só monta o link rastreado.
 
 **O que sai junto com o vídeo:**
 - **Capa** (1080×1920, JPEG) com o produto, o título e o preço: botão **Baixar capa**.
@@ -973,6 +978,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Artes e vídeos com visual novo a cada geração (fundos, foto principal, frases, entrada do produto, cartela final); fotos sem fundo branco viram cartão. |
 | 22/10/2026 | Vídeo 2.0 (modelos, ganchos, duração, chamadas, cortes com a galeria, expressões do mascote, capa, legenda, comentário fixado, áreas seguras, Reels, desempenho), trilhas próprias com biblioteca no servidor e Vendas por origem. |
 
 O histórico completo está nos commits: `git log --oneline`.

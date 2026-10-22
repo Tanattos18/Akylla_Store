@@ -13,6 +13,9 @@
   var api = null, L = null, M = null; // L = peças do estúdio; M = música
   var $ = function (s) { return document.querySelector(s); };
   var busy = false, last = null, library = [];
+  function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+  function remember(key, value) { try { localStorage.setItem('akylla-vd-' + key, value); } catch (e) { /* ok */ } }
+  function recall(key) { try { return localStorage.getItem('akylla-vd-' + key) || ''; } catch (e) { return ''; } }
 
   var TAGS = { gancho: 'hook', ficha: 'spec', junto: 'combo', preco: 'price', 'preço': 'price', chamada: 'cta', fala: 'talk', oferta: 'deal', versus: 'versus' };
   var LABEL = { hook: 'gancho', spec: 'ficha', combo: 'junto', price: 'preço', cta: 'chamada', talk: 'fala', deal: 'oferta', versus: 'versus' };
@@ -45,13 +48,19 @@
   /* Gancho: [fala, título grande nos primeiros segundos] */
   function hookFor(kind, p) {
     var pr = priceOf(p), name = spokenName(p), promo = pr.price < pr.original;
-    if (kind === 'preco') return [name + ' por só ' + brl(pr.price) + '? Olha isso!', { big: brl(pr.price), small: 'no PIX', badge: promo ? '-' + pr.percent + '%' : '' }];
+    if (kind === 'preco') return [pick([name + ' por só ' + brl(pr.price) + '? Olha isso!', 'Olha o preço desse ' + name + ': ' + brl(pr.price) + '!', 'Achei ' + name + ' por ' + brl(pr.price) + ', acredita?']), { big: brl(pr.price), small: 'no PIX', badge: promo ? '-' + pr.percent + '%' : '' }];
     if (kind === 'pergunta') { var q = QUESTIONS[p.category] || 'Procurando ' + name.toLowerCase() + ' bom e barato?'; return [q + ' Olha esse ' + name + '!', { text: q }]; }
-    if (kind === 'curiosidade') return ['Você não vai acreditar no que esse ' + name + ' faz!', { text: 'Olha o que esse ' + name + ' faz… 👀' }];
+    if (kind === 'curiosidade') return [pick(['Você não vai acreditar no que esse ' + name + ' faz!', 'Olha só o que esse ' + name + ' consegue fazer!', 'Esse ' + name + ' me surpreendeu, olha só!']), { text: 'Olha o que esse ' + name + ' faz… 👀' }];
     var own = ((window.AKYLLA_ROTEIROS || {})[p.id] || [])[0];
     return [own ? own.say : 'Olha só o que chegou na Akylla Shop: ' + name + '!', { text: name.toUpperCase() }];
   }
 
+  var CTA_SAY = {
+    comente: ['Comenta EU QUERO que eu te mando o link!', 'Quer um? Comenta EU QUERO aqui embaixo!', 'Comenta EU QUERO que eu te passo tudo!'],
+    whatsapp: ['Chama no WhatsApp que a gente separa o seu!', 'Manda um oi no WhatsApp e garante o seu!', 'Pede pelo WhatsApp, a gente separa pra você!'],
+    bio: ['O link tá na bio. Corre, que o estoque é limitado!', 'Corre no link da bio antes que acabe!', 'Link na bio! Estoque limitado, hein!'],
+    salva: ['Salva esse vídeo pra não esquecer, e chama a gente no WhatsApp!', 'Salva pra lembrar e garante o seu!', 'Salva esse vídeo e manda pra quem precisa!']
+  };
   var CTAS = {
     comente: { say: 'Comenta EU QUERO que eu te mando o link!', big: 'COMENTA "EU QUERO"', small: 'que eu te mando o link 💬' },
     whatsapp: { say: 'Chama no WhatsApp que a gente separa o seu!', big: null },
@@ -60,7 +69,12 @@
   };
 
   function specLine(sp, short) { return sp[1] + (sp[2] && !short ? ': ' + sp[2] : '') + '.'; }
-  function shortOffer(p) { var pr = priceOf(p); return pr.price < pr.original ? 'De ' + brl(pr.original) + ' por só ' + brl(pr.price) + ' no PIX!' : 'Só ' + brl(pr.price) + ' no PIX!'; }
+  function shortOffer(p) {
+    var pr = priceOf(p);
+    return pr.price < pr.original
+      ? pick(['De ' + brl(pr.original) + ' por só ' + brl(pr.price) + ' no PIX!', 'Saiu de ' + brl(pr.original) + ' pra ' + brl(pr.price) + ' no PIX!'])
+      : pick(['Só ' + brl(pr.price) + ' no PIX!', 'Tudo isso por ' + brl(pr.price) + ' no PIX!']);
+  }
   function comboLine(ad) { return (ad.combo.big + ' ' + ad.combo.t2).toLowerCase().replace(/^\S/, function (m) { return m.toUpperCase(); }) + '!'; }
 
   /* Monta o roteiro conforme modelo, gancho, duração e chamada. */
@@ -96,12 +110,16 @@
         own.slice(1).forEach(function (l) { if (l.scene !== 'cta') lines.push({ scene: l.scene, spec: l.spec, say: l.say.replace('{oferta}', offerLine(p)) }); });
       } else {
         var short = o.duration === 'curto';
-        ad.specs.slice(0, nSpecs).forEach(function (sp, i) { lines.push({ scene: 'spec', spec: i, say: specLine(sp, short) }); });
+        var joins = pick([['', 'E mais: ', 'Também tem ', 'Ah, e: '], ['', 'Tem ainda ', 'Olha só: ', 'E ainda: '], ['', '', 'E mais: ', '']]);
+        ad.specs.slice(0, nSpecs).forEach(function (sp, i) {
+          var j = joins[i % joins.length], text = specLine(sp, short);
+          lines.push({ scene: 'spec', spec: i, say: j ? j + text.charAt(0).toLowerCase() + text.slice(1) : text });
+        });
         if (!short) lines.push({ scene: 'combo', say: comboLine(ad) });
         lines.push({ scene: 'price', say: short ? shortOffer(p) : offerLine(p) });
       }
     }
-    if (o.template !== 'comparativo') lines.push({ scene: 'cta', say: cta.say });
+    if (o.template !== 'comparativo') lines.push({ scene: 'cta', say: pick(CTA_SAY[o.cta] || [cta.say]) });
     return lines;
   }
 
@@ -252,9 +270,28 @@
     if (cta.big) pill(cx2, 20, 20, 940, 190, cta.big, cta.small); else L.adCta(cx2, 'whatsapp', 20, 30, 940, 170, 1.35);
     P.cta = ct;
     P.deals = o.all.map(dealCard);
-    var full = canvas(W, H); L.drawAd(full.getContext('2d'), W, H, d); P.full = full;
-    var bg = canvas(W, H); L.adBackground(bg.getContext('2d'), W, H); P.bg = bg;
+    var full = canvas(W, H), fx = full.getContext('2d'), V = o.variant;
+    if (V.ending === 'estilo') L.drawStyled(fx, W, H, d, V.endStyle, V.endLayout);
+    else if (V.ending === 'cartela') endCard(fx, P, o, d);
+    else L.drawAd(fx, W, H, d);
+    P.full = full;
+    var bg = canvas(W, H); L.adBackground(bg.getContext('2d'), W, H, V); P.bg = bg;
     return P;
+  }
+
+  /* Cartela final própria: produto grande, nome, preço e chamada. */
+  function endCard(x, P, o, d) {
+    var main = P.products[0], pr = priceOf(main.p);
+    L.adBackground(x, W, H, o.variant);
+    if (d.logo) { x.save(); x.beginPath(); x.arc(W / 2, 200, 90, 0, Math.PI * 2); x.clip(); x.drawImage(d.logoRound || d.logo, W / 2 - 90, 110, 180, 180); x.restore(); }
+    hero(x, main.hero, main.mode, W / 2, 800, 900, 640, 1, 0);
+    x.textAlign = 'center'; x.lineJoin = 'round'; x.strokeStyle = '#000';
+    var f = L.fitLines(x, spokenName(main.p).toUpperCase(), 960, 110, 60, 2, 800); L.font(x, 800, f.size); x.lineWidth = 16;
+    f.lines.forEach(function (l, i) { var y = 1250 + i * f.size * 1.05; x.strokeText(l, W / 2, y); x.fillStyle = i ? ORANGE : '#fff'; x.fillText(l, W / 2, y); });
+    pill(x, 170, 1400, 740, 170, brl(pr.price) + ' no PIX', pr.price < pr.original ? 'de ' + brl(pr.original) + ' · -' + pr.percent + '%' : 'à vista');
+    var cta = CTAS[o.cta] || CTAS.comente;
+    x.fillStyle = '#fff'; L.font(x, 800, 52); x.fillText(cta.big || 'PEÇA PELO WHATSAPP', W / 2, 1680);
+    x.fillStyle = '#ffaa46'; L.font(x, 700, 36, '"DM Sans", sans-serif'); x.fillText('akyllashop.com', W / 2, 1745);
   }
 
   /* ------------------------------ desenho ------------------------------ */
@@ -273,6 +310,7 @@
 
   function hero(ctx, im, mode, cx, cy, boxW, boxH, scale, rot, alpha) {
     if (!im || scale <= 0.01) return;
+    if (im.isPhoto) { mode = 'card'; boxW = Math.min(boxW, 620); boxH = Math.min(boxH, 620); }
     var k = Math.min(boxW / im.width, boxH / im.height) * scale;
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
@@ -291,8 +329,9 @@
   /* Foto do produto com cortes a cada ~2,4 s pela galeria (zoom lento + troca rápida). */
   function galleryShot(ctx, pp, lt, idx, cx, cy, bw, bh, scale, rot) {
     var g = pp.gallery.length ? pp.gallery : [pp.hero];
-    var cut = 2.4, k = Math.floor(Math.max(0, lt) / cut), within = Math.max(0, lt) - k * cut;
-    var im = g[(k + idx) % g.length];
+    var V = galleryShot.variant || { cut: 2.4, offset: 0 };
+    var cut = V.cut, k = Math.floor(Math.max(0, lt) / cut), within = Math.max(0, lt) - k * cut;
+    var im = g[(k + idx + V.offset) % g.length];
     hero(ctx, im, pp.mode, cx, cy, bw, bh, scale * (1 + 0.08 * (within / cut)), rot, Math.min(1, within / 0.15));
   }
 
@@ -402,7 +441,7 @@
   function drawFrame(ctx, t, S) {
     var P = S.pieces, lines = S.lines, o = S.opts, main = P.products[0];
     ctx.drawImage(P.bg, 0, 0);
-    ctx.fillStyle = 'rgba(255,150,40,0.35)';
+    ctx.fillStyle = S.variant.particles;
     S.particles.forEach(function (q) { var y = ((q[1] - q[3] * t) % H + H) % H; ctx.beginPath(); ctx.arc(q[0], y, q[2], 0, Math.PI * 2); ctx.fill(); });
     if (t > S.audio.endSpeech + 0.1) {
       var et = t - S.audio.endSpeech - 0.1;
@@ -424,7 +463,9 @@
     var fy = Math.sin(t * 2) * 14, rot = Math.sin(t * 1.3) * 2.5, punch = 1 + 0.06 * Math.max(0, 1 - lt / 0.25);
     var bw = main.mode === 'card' ? 560 : 820, bh = main.mode === 'card' ? 560 : 600;
     if (scene === 'hook') {
-      galleryShot(ctx, main, lt, 0, W / 2, (line.headline && t < 3.2 ? 800 : 660) + fy, bw, bh, 0.35 + 0.65 * easeOutBack(lt / 0.7), rot);
+      var ent = S.variant.entrance, e = easeOut(lt / 0.6), ex = W / 2, ey = (line.headline && t < 3.2 ? 800 : 660) + fy, es = 0.35 + 0.65 * easeOutBack(lt / 0.7);
+      if (ent === 'left') { ex = W / 2 - (1 - e) * 900; es = 1; } else if (ent === 'right') { ex = W / 2 + (1 - e) * 900; es = 1; } else if (ent === 'drop') { ey -= (1 - easeOutBack(lt / 0.7)) * 900; es = 1; }
+      galleryShot(ctx, main, lt, 0, ex, ey, bw, bh, es, rot + (ent === 'drop' ? (1 - e) * 20 : 0));
     } else if (scene === 'spec' || scene === 'talk') {
       galleryShot(ctx, main, lt, idx, W / 2, 600 + fy, bw, bh, 0.85 * punch, rot);
       var card = scene === 'spec' ? P.specs[Math.min(line.spec || 0, P.specs.length - 1)] : null;
@@ -623,6 +664,16 @@
     for (var i = 0; i < 40; i += 1) S.particles.push([Math.random() * W, Math.random() * H, 2 + Math.random() * 4, 15 + Math.random() * 30]);
     var recipe = recipeFor(o);
     var gap = o.duration === 'completo' ? 0.25 : 0.12;
+    /* visual novo a cada vídeo (sem repetir o último tema e a última cartela final) */
+    var V = L.randomVariant(recall('theme'));
+    V.entrance = pick(['zoom', 'left', 'right', 'drop']);
+    V.ending = pick(['anuncio', 'estilo', 'cartela'].filter(function (e) { return e !== recall('ending'); }));
+    V.endStyle = pick(['laranja', 'neon', 'clean', 'foto']);
+    V.endLayout = pick(['grande', 'preco', 'dividido']);
+    V.particles = { azul: 'rgba(120,170,255,0.35)', roxo: 'rgba(210,120,255,0.35)' }[V.theme] || 'rgba(255,150,40,0.35)';
+    galleryShot.variant = { cut: 2.0 + Math.random() * 0.8, offset: Math.floor(Math.random() * 5) };
+    remember('theme', V.theme); remember('ending', V.ending);
+    o.variant = V; S.variant = V;
 
     /* voz: 2 falas por vez, com até 3 tentativas cada (o serviço recusa muitos pedidos juntos) */
     var buffers = new Array(lines.length), next = 0, done = 0;
@@ -656,18 +707,19 @@
       status('Preparando as imagens…');
       return Promise.all([L.fontsReady(), L.loadImg('../assets/img/logo-akylla.webp'), L.loadImg('../assets/img/logo-mark.jpg')].concat(o.all.map(function (q) {
         var ad = L.adFor(q), photos = [q.image].concat(q.gallery || []);
-        return Promise.all([L.loadImg(L.imgUrl(photos[ad.hero] || q.image)), Promise.all(photos.slice(0, 5).map(function (ph) { return L.loadImg(L.imgUrl(ph)); })),
+        var heroPh = photos.filter(function (ph, i) { return !(ad.combo && ad.combo.img === i); });
+        return Promise.all([L.loadImg(L.imgUrl(pick(heroPh.length ? heroPh : [photos[ad.hero] || q.image]))), Promise.all(photos.slice(0, 5).map(function (ph) { return L.loadImg(L.imgUrl(ph)); })),
           ad.combo && ad.combo.img != null && photos[ad.combo.img] ? L.loadImg(L.imgUrl(photos[ad.combo.img])) : null]);
       })));
     }).then(function (res) {
       S.logo = res[1];
       var imgsList = res.slice(3).map(function (r) { return { hero: r[0], all: r[1].filter(Boolean), combo: r[2] }; });
-      var d = { config: config, product: o.product, campaign: 'promo', cta: 'whatsapp', title: '', logo: res[2], image: imgsList[0].hero, adHero: imgsList[0].hero, adCombo: imgsList[0].combo, info: priceOf(o.product) };
+      var d = { config: config, product: o.product, campaign: 'promo', cta: 'whatsapp', title: '', logo: res[2], logoRound: res[1], image: imgsList[0].hero, adHero: imgsList[0].hero, adCombo: imgsList[0].combo, info: priceOf(o.product), variant: o.variant, seed: Math.floor(Math.random() * 1000) };
       S.pieces = makePieces(o, d, imgsList);
       return record(actx, S, mixed, mime);
     }).then(function (blob) {
       showResult(S, o, blob, mime, recipe, lines);
-      status('Pronto! Confira o vídeo, a capa e a legenda.' + (/webm/.test(mime) ? ' (Este navegador gravou em WebM; o TikTok aceita. Para MP4 e Reels, use o Edge ou o Chrome atualizados.)' : ''));
+      status('Pronto! Visual deste vídeo: ' + L.THEMES[o.variant.theme].label + ' · entrada ' + { zoom: 'com zoom', left: 'pela esquerda', right: 'pela direita', drop: 'caindo' }[o.variant.entrance] + ' · final ' + { anuncio: 'anúncio', estilo: 'estilo ' + o.variant.endStyle, cartela: 'cartela' }[o.variant.ending] + '. Gere de novo para outro visual.' + (/webm/.test(mime) ? ' (Este navegador gravou em WebM; o TikTok aceita. Para MP4 e Reels, use o Edge ou o Chrome atualizados.)' : ''));
       api.toast('Vídeo pronto!');
     }).catch(function (err) {
       console.error('vídeo', err);

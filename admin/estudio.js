@@ -527,6 +527,16 @@
     }
     x.putImageData(data, 0, 0);
     if (maxX < 0) { cutCache[key] = cv; return cv; }
+    var removed = 0;
+    for (i = 0; i < n; i += 1) if (bg[i]) removed += 1;
+    /* quase nada saiu (foto de ambiente, sem fundo branco): usa a foto original num cartão */
+    if (removed < n * 0.04) {
+      var photo = document.createElement('canvas'); photo.width = w; photo.height = h;
+      photo.getContext('2d').drawImage(im, 0, 0);
+      photo.isPhoto = true;
+      cutCache[key] = photo;
+      return photo;
+    }
     var out = document.createElement('canvas');
     out.width = maxX - minX + 1; out.height = maxY - minY + 1;
     out.getContext('2d').drawImage(cv, -minX, -minY);
@@ -534,17 +544,40 @@
     return out;
   }
 
-  function adBackground(ctx, W, H) {
+  /* Temas de fundo (sempre escuros, para o laranja e o branco aparecerem). v = variação sorteada ou null (padrão). */
+  var THEMES = {
+    noite: { label: 'Noite laranja', stops: ['#10131c', '#07090f', '#0b0d14'], spots: ['rgba(255,138,0,0.22)', 'rgba(255,94,0,0.35)'] },
+    azul: { label: 'Azul noturno', stops: ['#0d1830', '#060b18', '#0a1226'], spots: ['rgba(56,120,255,0.28)', 'rgba(255,110,0,0.32)'] },
+    roxo: { label: 'Roxo neon', stops: ['#1b0f2e', '#0c0616', '#160a24'], spots: ['rgba(190,70,255,0.26)', 'rgba(255,94,0,0.32)'] },
+    grafite: { label: 'Grafite com faixas', stops: ['#1a1b1f', '#0b0c0e', '#141518'], spots: ['rgba(255,138,0,0.18)', 'rgba(255,94,0,0.28)'], stripes: true }
+  };
+  function randomVariant(avoid) {
+    var keys = Object.keys(THEMES).filter(function (k) { return k !== avoid; });
+    return {
+      theme: keys[Math.floor(Math.random() * keys.length)],
+      spotA: [0.15 + Math.random() * 0.6, 0.2 + Math.random() * 0.4],
+      spotB: [Math.random() < 0.5 ? 0 : 1, 0.65 + Math.random() * 0.35],
+      hand: Math.random()
+    };
+  }
+  function adBackground(ctx, W, H, v) {
+    var th = THEMES[(v && v.theme) || 'noite'] || THEMES.noite;
     var g = ctx.createLinearGradient(0, 0, W * 0.6, H);
-    g.addColorStop(0, '#10131c'); g.addColorStop(0.55, '#07090f'); g.addColorStop(1, '#0b0d14');
+    g.addColorStop(0, th.stops[0]); g.addColorStop(0.55, th.stops[1]); g.addColorStop(1, th.stops[2]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     var spot = function (x, y, r, color) {
       var rg = ctx.createRadialGradient(x, y, 0, x, y, r);
-      rg.addColorStop(0, color); rg.addColorStop(1, 'rgba(255,120,0,0)');
+      rg.addColorStop(0, color); rg.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
     };
-    spot(W * 0.34, H * 0.41, Math.max(W, H) * 0.38, 'rgba(255,138,0,0.22)');
-    spot(W, H, Math.max(W, H) * 0.33, 'rgba(255,94,0,0.35)');
+    var a = v ? v.spotA : [0.34, 0.41], b = v ? v.spotB : [1, 1];
+    spot(W * a[0], H * a[1], Math.max(W, H) * 0.38, th.spots[0]);
+    spot(W * b[0], H * b[1], Math.max(W, H) * 0.33, th.spots[1]);
+    if (th.stripes) {
+      ctx.save(); ctx.strokeStyle = 'rgba(255,138,0,0.07)'; ctx.lineWidth = Math.max(W, H) * 0.02;
+      for (var i = -4; i < 14; i += 1) { var x0 = i * W * 0.16; ctx.beginPath(); ctx.moveTo(x0, H); ctx.lineTo(x0 + H * 0.6, 0); ctx.stroke(); }
+      ctx.restore();
+    }
   }
 
   function spaced(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; }
@@ -618,6 +651,7 @@
   /* Produto recortado com brilho (ou no cartão branco, para produtos claros). */
   function adHero(ctx, im, mode, x, y, w, h, s) {
     if (!im) return;
+    if (im.isPhoto) mode = 'card';
     var sh = ctx.createRadialGradient(x + w / 2, y + h - 30 * s, 0, x + w / 2, y + h - 30 * s, w * 0.42);
     sh.addColorStop(0, 'rgba(0,0,0,0.85)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.save(); ctx.translate(0, y + h - 30 * s); ctx.scale(1, 0.12); ctx.translate(0, -(y + h - 30 * s));
@@ -849,7 +883,11 @@
     var label = adLabel(d);
     var until = d.info.active && promoOn(d.config) && untilText(d.config) ? 'Oferta válida até ' + untilText(d.config) + '!' : 'Não perca essa oportunidade!';
     var checks = (ad.checks || []).concat(['Retirada na loja ou entrega em Goiânia e região']);
-    adBackground(ctx, W, H);
+    if (d.variant) {
+      var hands = [ad.hand, 'Garanta já o seu!', 'Oferta imperdível!', 'Corre que acaba!', 'O queridinho da vez!', 'Preço de inauguração!', 'Você merece esse upgrade!'];
+      ad = Object.assign({}, ad, { hand: hands[Math.floor(d.variant.hand * hands.length) % hands.length] });
+    }
+    adBackground(ctx, W, H, d.variant);
 
     if (W === 1080 && H === 1920) {
       adBrand(ctx, 60, 56, 1, d.logo);
@@ -1219,6 +1257,14 @@
 
   function slug(t) { return String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase(); }
 
+  /* Foto principal: a do anúncio (fixa) ou sorteada entre as fotos do produto (menos a do "vem junto"). */
+  var lastTheme = null;
+  function heroPhoto(photos, ad, varied) {
+    if (!varied || photos.length < 2) return photos[ad.hero];
+    var options = photos.filter(function (ph, i) { return !(ad.combo && ad.combo.img === i); });
+    return options[Math.floor(Math.random() * options.length)];
+  }
+
   function generate() {
     var formats = selectedFormats();
     if (!formats.length) { api.toast('Escolha pelo menos um formato.'); return; }
@@ -1231,6 +1277,9 @@
     var styleSel = document.querySelector('[data-ststyle].is-active').getAttribute('data-ststyle');
     var layouts = ['grande', 'preco', 'dividido'];
     var seed = Math.floor(Math.random() * 1000);
+    var varied = !$('#stVariation') || $('#stVariation').value !== 'fixa';
+    var variant = varied ? randomVariant(lastTheme) : null;
+    if (variant) lastTheme = variant.theme;
     var out = $('#stPreviews');
     out.innerHTML = '<p class="muted">Gerando…</p>';
     var ad = product ? adFor(product) : null;
@@ -1239,11 +1288,11 @@
       .sort(function (a, b) { return (b.bestseller ? 1 : 0) - (a.bestseller ? 1 : 0) || (b.stock || 0) - (a.stock || 0); })
       .slice(0, 4).map(function (p) { return imgUrl(p.image); });
     Promise.all([fontsReady(), loadImg('../assets/img/logo-mark.jpg'), product ? loadImg(imgUrl(product.image)) : null, Promise.all(collageSrc.map(loadImg)),
-      ad ? loadImg(imgUrl(photos[ad.hero] || product.image)) : null,
+      ad ? loadImg(imgUrl(heroPhoto(photos, ad, varied) || product.image)) : null,
       ad && ad.combo && ad.combo.img != null && photos[ad.combo.img] ? loadImg(imgUrl(photos[ad.combo.img])) : null]).then(function (res) {
       var d = {
         config: config, product: product, campaign: campaign, cta: $('#stCta').value, title: $('#stTitle').value.trim(),
-        logo: res[1], image: res[2], collage: res[3], adHero: res[4], adCombo: res[5], seed: seed,
+        logo: res[1], image: res[2], collage: res[3], adHero: res[4], adCombo: res[5], seed: seed, variant: variant,
         info: product ? window.AkyllaPromo.priceFor(product, config) : null,
         kicker: meta.kicker ? meta.kicker(config) : ''
       };
@@ -1439,9 +1488,16 @@
   }
 
   /* peças compartilhadas com o vídeo do produto (estudio-video.js) */
+  /* Estilo do estúdio (Laranja, Neon, Clean, Foto) com composição escolhida, para a cartela final do vídeo. */
+  function drawStyled(ctx, W, H, d, styleKey, layout) {
+    var prev = T;
+    T = STYLES[styleKey] || STYLES.neon;
+    try { drawProduct(ctx, W, H, Object.assign({}, d, { layout: layout || 'grande', kicker: d.kicker || 'OFERTA ESPECIAL', image: d.adHero || d.image })); } finally { T = prev; }
+  }
+
   var lib = {
     adFor: adFor, cutout: cutout, adSpecs: adSpecs, adPrice: adPrice, adCombo: adCombo, adCta: adCta, adLabel: adLabel,
-    adBackground: adBackground, drawAd: drawAd, fontsReady: fontsReady, loadImg: loadImg, imgUrl: imgUrl, rr: rr, font: font, fitLines: fitLines
+    adBackground: adBackground, drawAd: drawAd, fontsReady: fontsReady, loadImg: loadImg, imgUrl: imgUrl, rr: rr, font: font, fitLines: fitLines, randomVariant: randomVariant, THEMES: THEMES, drawStyled: drawStyled
   };
 
   window.AkyllaStudio = {
