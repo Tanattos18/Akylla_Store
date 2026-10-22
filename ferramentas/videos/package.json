@@ -1,0 +1,8 @@
+{
+  "name": "akylla-videos",
+  "private": true,
+  "description": "Gerador de videos 9:16 dos produtos (personagem + voz neural pt-BR)",
+  "dependencies": {
+    "msedge-tts": "^2.1.0"
+  }
+}

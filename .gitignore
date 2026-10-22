@@ -49,3 +49,6 @@ CHAVES_PRIVADAS*
 # Anúncios gerados (ferramentas/anuncios) e arquivos de trabalho
 Banner_Itens_Loja/
 ferramentas/anuncios/.trabalho/
+
+# Vídeos gerados (ferramentas/videos): arquivos de trabalho
+ferramentas/videos/.trabalho/
