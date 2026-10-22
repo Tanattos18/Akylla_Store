@@ -971,17 +971,11 @@
 
   /* --------------------------------- kit --------------------------------- */
 
+  /* Foto de perfil: a logo oficial redonda ocupando tudo (as redes mostram o perfil em círculo). */
   function drawProfile(ctx, W, H, d) {
-    var g = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * 0.7);
-    g.addColorStop(0, '#ffa424'); g.addColorStop(1, DEEP);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    /* logo recortada em círculo (o Instagram mostra a foto de perfil redonda) */
-    ctx.save();
-    ctx.beginPath(); ctx.arc(W / 2, H / 2, W * 0.4, 0, Math.PI * 2); ctx.clip();
-    if (d.logo) { var k = Math.max(W * 0.8 / d.logo.width, H * 0.8 / d.logo.height); ctx.drawImage(d.logo, W / 2 - d.logo.width * k / 2, H / 2 - d.logo.height * k / 2, d.logo.width * k, d.logo.height * k); }
-    ctx.restore();
-    ctx.strokeStyle = INK; ctx.lineWidth = W * 0.02;
-    ctx.beginPath(); ctx.arc(W / 2, H / 2, W * 0.4, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    if (d.logo) ctx.drawImage(d.logo, 0, 0, W, H);
   }
 
   function drawCover(ctx, W, H, d) {
@@ -989,11 +983,15 @@
     background(ctx, W, H, 1);
     /* o Facebook corta as laterais no celular: conteúdo no centro */
     var cx = W / 2;
-    ctx.fillStyle = INK;
-    rr(ctx, cx - 470 * u, 90 * u, 140 * u, 140 * u, 30 * u); ctx.fill();
-    contain(ctx, d.logo, cx - 458 * u, 102 * u, 116 * u, 116 * u);
+    /* logo oficial redonda à esquerda do nome */
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx - 390 * u, 160 * u, 135 * u, 0, Math.PI * 2); ctx.clip();
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    if (d.logo) ctx.drawImage(d.logo, cx - 525 * u, 25 * u, 270 * u, 270 * u);
+    ctx.restore();
     ctx.textAlign = 'left';
-    font(ctx, 800, 110 * u); ctx.fillText('AKYLLA SHOP', cx - 300 * u, 200 * u);
+    ctx.fillStyle = T.text;
+    font(ctx, 800, 100 * u); ctx.fillText('AKYLLA SHOP', cx - 220 * u, 195 * u);
     font(ctx, 700, 46 * u, '"DM Sans", sans-serif');
     ctx.textAlign = 'center';
     ctx.fillText('Eletrônicos e acessórios em Goiânia', cx, 330 * u);
@@ -1187,7 +1185,7 @@
     var config = api.config();
     var box = $('#stKit');
     box.innerHTML = '<p class="muted">Gerando…</p>';
-    Promise.all([fontsReady(), loadImg('../assets/img/logo-mark.jpg')]).then(function (res) {
+    Promise.all([fontsReady(), loadImg('../assets/img/logo-akylla.webp')]).then(function (res) {
       T = STYLES.laranja;
       var d = { config: config, logo: res[1] };
       box.innerHTML = '';
