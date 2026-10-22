@@ -742,6 +742,14 @@ Cenas: 1) produto "decolando" com o título · 2) close com zoom lento + 2 desta
 - Textos de cada produto: `ferramentas/videos/destaques/<produto>.json` (ex.: `drone-wrj12618.json`). O preço nunca é escrito à mão: vem do catálogo.
 - Gerar: `VITRINE=<produto> CATEGORIAS=<produto> node ferramentas/videos/promo-dados.cjs`, copie `.trabalho/promo/dados.json` e rode `python ferramentas/videos/destaque.py <ffmpeg> <produto> <dados.json> <trilha.wav>`.
 
+#### Vídeo rápido (ritmo TikTok/Reels, ~15 s) — recomendado para anúncio
+
+Feito para **segurar a atenção**: gancho de curiosidade no 1º segundo ("QUANTO VOCÊ ACHA QUE CUSTA?", palavra por palavra) → 5 cortes de ~1 s (um benefício por corte, transição de chicote) → suspense "E O PREÇO..." → revelação do preço com clarão e confete → "COMENTA 'EU QUERO'" (gera comentários e alcance) → barra de progresso no topo o tempo todo.
+
+- Textos no bloco `"rapido"` de `ferramentas/videos/destaques/<produto>.json`; preço do catálogo.
+- `python ferramentas/videos/rapido.py <ffmpeg> <produto> <dados.json> <trilha.wav>` → `Banner_Itens_Loja/Videos/Rapido_<produto>_9x16.mp4` e `_4x5.mp4`.
+- **Imagens reais valem mais que qualquer efeito:** um vídeo de 10–15 s do produto em uso (filmado pela loja ou cedido pelo fornecedor) pode entrar no lugar das fotos. Vídeos de terceiros (YouTube/TikTok) não podem ser usados sem autorização.
+
 #### Voz gravada (teleprompter) — recomendado
 
 No campo **Voz**, escolha **🎙️ Gravar a voz (teleprompter)**. Aparece a lista das falas do roteiro em letra grande: em cada uma, **🎙️ Gravar** → falar → **■ Parar**; dá para **▶ Ouvir** e **Regravar**. Quando o contador mostrar "todas gravadas", clique em **Gerar vídeo**: o Aky mexe a boca com a voz gravada, com legendas e trilha. O silêncio do começo e do fim de cada fala é cortado sozinho.
@@ -1026,6 +1034,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Vídeo rápido de produto (gancho de curiosidade, cortes de 1 s, suspense, revelação do preço, barra de progresso). |
 | 22/10/2026 | Vídeo institucional da loja (9:16 e 4:5) para anúncio, com trilha própria. |
 | 22/10/2026 | Cadastro de clientes (fichas pelo WhatsApp, etiquetas, observações, segmentos, aceite de ofertas LGPD, oferta personalizada); WhatsApp obrigatório no checkout; clientes duplicados corrigidos. |
 | 22/10/2026 | Voz gravada no painel (teleprompter, fala por fala) para os vídeos. |
