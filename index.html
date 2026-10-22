@@ -50,7 +50,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-13">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261022-1">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -833,11 +833,12 @@
           <div class="mp-start" id="mpStart">
             <div class="mp-customer">
               <label>Nome completo <input id="mpName" autocomplete="name" placeholder="Como você se chama?" maxlength="80"></label>
-              <label>WhatsApp (opcional) <input id="mpPhone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(62) 90000-0000" maxlength="16"></label>
+              <label>WhatsApp com DDD <input id="mpPhone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="(62) 90000-0000" maxlength="16"></label>
             </div>
             <label class="mp-email">E-mail (opcional — o Mercado Pago envia o comprovante)
               <input id="mpEmail" type="email" autocomplete="email" inputmode="email" placeholder="voce@email.com">
             </label>
+            <label class="optin"><input type="checkbox" id="mpOptIn"> Quero receber ofertas e novidades da Akylla pelo WhatsApp e e-mail (dá para cancelar quando quiser).</label>
             <button class="btn btn-primary btn-block" type="button" id="mpCreate">Gerar PIX</button>
             <p class="mp-note">Pagamento pelo Mercado Pago. A confirmação é automática e o estoque fica reservado para você por 30 minutos.</p>
           </div>
@@ -923,8 +924,10 @@
           <h3 class="checkout-step-title" id="manualCustomerTitle"><span>3</span> Seus dados para o pedido</h3>
           <div class="mp-customer">
             <label>Nome completo <input id="manualName" autocomplete="name" placeholder="Como você se chama?" maxlength="80"></label>
-            <label>WhatsApp <input id="manualPhone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(62) 90000-0000" maxlength="16"></label>
+            <label>WhatsApp com DDD <input id="manualPhone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="(62) 90000-0000" maxlength="16"></label>
+            <label>E-mail (opcional) <input id="manualEmail" type="email" autocomplete="email" inputmode="email" placeholder="voce@email.com" maxlength="120"></label>
           </div>
+          <label class="optin"><input type="checkbox" id="manualOptIn"> Quero receber ofertas e novidades da Akylla pelo WhatsApp e e-mail (dá para cancelar quando quiser).</label>
           <p class="manual-error" id="manualError" role="alert" hidden></p>
           <p class="mp-note">Depois de pagar, toque em <strong>Enviar comprovante</strong>: seu pedido é registrado, o produto fica separado para você e a conversa abre no WhatsApp da loja para enviar o comprovante.</p>
         </section>
@@ -1000,7 +1003,7 @@
   <script src="assets/js/pix.js?v=20261021-9" defer></script>
   <script src="assets/js/promo.js?v=20261021-9" defer></script>
   <script src="assets/js/frete.js?v=20261021-9" defer></script>
-  <script src="assets/js/app.js?v=20261022-1" defer></script>
+  <script src="assets/js/app.js?v=20261022-3" defer></script>
   <script src="assets/js/mascote.js?v=20261021-1" defer></script>
 </body>
 </html>

@@ -39,6 +39,8 @@
  *   GET  /api/admin/music                painel: biblioteca de trilhas (receitas das músicas próprias)
  *   POST /api/admin/music {name, style, bpm, key, seed}   salva uma trilha · /:id/audio (WAV) amostra · /:id/delete apaga
  *   GET  /api/admin/music/:id/audio      painel: ouve a amostra
+ *   GET  /api/admin/customers            painel: cadastro de clientes (fichas pelo WhatsApp)
+ *   POST /api/admin/customers            painel: cria/edita ficha · /api/admin/customers/:tel/delete exclui
  *   POST /api/admin/tts {text, voice}    painel: voz neural pt-BR (MP3) + tempo das palavras (cabeçalho X-Words) para os vídeos
  *
  * Segredos (Cloudflare → Worker → Settings → Variables and Secrets):
@@ -58,6 +60,7 @@ import {
 import { vapidKeys, sendPush, subscriptionId } from './push.js';
 import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia, socialInsights } from './social.js';
 import { TtsError, synthesize } from './tts.js';
+import { CustomerError, upsertFromOrder, listCustomers, saveCustomer, deleteCustomer } from './customers.js';
 import { MusicError, musicList, musicSave, musicUploadAudio, musicAudio, musicDelete } from './music.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
@@ -538,6 +541,7 @@ async function createOrder(request, env) {
     id,
     status: 'pending',
     origin: cleanOrigin(body.origin),
+    marketingOptIn: body.optIn === true, // aceitou receber ofertas (LGPD)
     createdAt: now,
     expiresAt,
     lines: built.lines,
@@ -551,6 +555,7 @@ async function createOrder(request, env) {
     pix: { code: pix.code, image: pix.image ? 'data:image/png;base64,' + pix.image : '', ticketUrl: pix.ticketUrl }
   };
   await saveOrder(env, order);
+  await upsertFromOrder(env, order).catch((err) => console.error('cadastro do cliente', err)); // ficha do cliente pelo WhatsApp
   await reserve(env, order);
   return json(publicOrder(order), 201);
 }
@@ -625,6 +630,7 @@ async function createCardOrder(request, env) {
     kind: 'card',
     status: 'pending',
     origin: cleanOrigin(body.origin),
+    marketingOptIn: body.optIn === true, // aceitou receber ofertas (LGPD)
     createdAt: now,
     expiresAt,
     lines: built.lines,
@@ -642,6 +648,7 @@ async function createCardOrder(request, env) {
     preferenceId: String(pref.id || '')
   };
   await saveOrder(env, order);
+  await upsertFromOrder(env, order).catch((err) => console.error('cadastro do cliente', err)); // ficha do cliente pelo WhatsApp
   await reserve(env, order);
   return json({ ...publicOrder(order), checkoutUrl: pref.init_point }, 201);
 }
@@ -918,6 +925,8 @@ async function createManualOrder(request, env) {
     manual: true,
     status: 'awaiting',
     origin: cleanOrigin(body.origin),
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email || '')) ? String(body.email).slice(0, 120) : '',
+    marketingOptIn: body.optIn === true, // aceitou receber ofertas (LGPD)
     createdAt: now,
     autoCancelAt: now + hours * 3600 * 1000,
     lines: built.lines,
@@ -933,6 +942,7 @@ async function createManualOrder(request, env) {
   order.notified = await notifyStore(env, order);
   order.pushed = await notifyAdmins(env, pushMessage(order));
   await saveOrder(env, order);
+  await upsertFromOrder(env, order).catch((err) => console.error('cadastro do cliente', err)); // ficha do cliente pelo WhatsApp
   return json(publicOrder(order), 201);
 }
 
@@ -1041,6 +1051,20 @@ export default {
           response = new Response(r.audio, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store', 'X-Words': encodeURIComponent(JSON.stringify(r.words)) } });
         } catch (err) {
           if (!(err instanceof TtsError)) throw err;
+          response = json({ error: err.message }, err.status);
+        }
+      }
+      else if (url.pathname.startsWith('/api/admin/customers')) {
+        await requireAdmin(request, env);
+        const cm = url.pathname.match(/^\/api\/admin\/customers(?:\/(\d{10,11})\/delete)?$/);
+        try {
+          if (!cm) response = json({ error: 'Rota não encontrada.' }, 404);
+          else if (!cm[1] && request.method === 'GET') response = json(await listCustomers(env));
+          else if (!cm[1] && request.method === 'POST') response = json(await saveCustomer(env, (await request.json().catch(() => null)) || {}));
+          else if (cm[1] && request.method === 'POST') response = json(await deleteCustomer(env, cm[1]));
+          else response = json({ error: 'Rota não encontrada.' }, 404);
+        } catch (err) {
+          if (!(err instanceof CustomerError)) throw err;
           response = json({ error: err.message }, err.status);
         }
       }

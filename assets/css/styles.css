@@ -4955,3 +4955,7 @@ dialog::backdrop {
 .aky[popover]:not(:popover-open) { display: none; }
 .aky[popover].above-bar { bottom: 92px; }
 .aky[popover].at-top { top: 14px; bottom: auto; }
+
+/* Aceite de ofertas (LGPD) no checkout */
+.optin { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.6rem 0; font-size: 0.85rem; font-weight: 500; line-height: 1.35; color: inherit; cursor: pointer; }
+.optin input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--brand); }

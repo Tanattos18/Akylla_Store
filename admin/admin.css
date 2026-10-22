@@ -674,3 +674,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .vd-take.is-done .vd-take-n { background: var(--brand); color: #111; }
 .vd-take.is-rec { border-color: #e5484d; box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.25); }
 .vd-take-text { margin: 0; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+
+/* Cadastro de clientes */
+.client-tools { flex-wrap: wrap; gap: 0.5rem; }
+.client-tools select { width: auto; }
+.client-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.client-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
+.badge.tag { background: var(--soft); color: var(--text); }
+.client-notes { margin: 0.4rem 0 0; font-size: 0.85rem; color: var(--muted); }
+.client-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; margin-top: 0.8rem; }
+.client-form .full { grid-column: 1 / -1; }
+.client-form-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.btn.danger { color: #e5484d; }

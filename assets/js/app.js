@@ -136,6 +136,9 @@
     cardError: document.getElementById('cardError'),
     mpTrack: document.getElementById('mpTrack'),
     manualPhone: document.getElementById('manualPhone'),
+    manualEmail: document.getElementById('manualEmail'),
+    manualOptIn: document.getElementById('manualOptIn'),
+    mpOptIn: document.getElementById('mpOptIn'),
     manualError: document.getElementById('manualError'),
     pixLocked: document.getElementById('pixLocked'),
     checkoutSubtotal: document.getElementById('checkoutSubtotal'),
@@ -1292,7 +1295,7 @@
       nameInput: name,
       name: name ? name.value.replace(/\s+/g, ' ').trim() : '',
       phone: phone ? phone.value.trim() : '',
-      email: auto && els.mpEmail ? els.mpEmail.value.trim() : ''
+      email: auto && els.mpEmail ? els.mpEmail.value.trim() : (els.manualEmail ? els.manualEmail.value.trim() : '')
     };
   }
 
@@ -1346,6 +1349,12 @@
       if (c.nameInput) c.nameInput.focus();
       return;
     }
+    if (!validPhone(c.phone)) {
+      cardFail(PHONE_MSG + ' (campo logo acima)');
+      var ph = mpEnabled() ? els.mpPhone : els.manualPhone;
+      if (ph) ph.focus();
+      return;
+    }
     cardFail('');
     var d = state.delivery;
     cardBusy = true;
@@ -1361,6 +1370,7 @@
           complement: d.complement || ''
         },
         email: c.email,
+        optIn: !!((mpEnabled() ? els.mpOptIn : els.manualOptIn) || {}).checked,
         customer: { name: c.name, phone: c.phone },
         origin: currentOrigin()
       }
@@ -1463,6 +1473,10 @@
     }
   }
 
+  /* WhatsApp com DDD: é por ele que o cliente é identificado (aba Clientes) e avisado do pedido. */
+  var PHONE_MSG = 'Informe seu WhatsApp com DDD — é por ele que avisamos do pedido e você acompanha a compra.';
+  function validPhone(v) { var d = String(v || '').replace(/\D/g, ''); return d.length >= 10 && d.length <= 13; }
+
   function mpCreate() {
     if (state.mp.busy || !state.order) return;
     var name = els.mpName ? els.mpName.value.replace(/\s+/g, ' ').trim() : '';
@@ -1470,6 +1484,12 @@
       state.mp.error = 'Informe seu nome completo para gerar o PIX.';
       renderCheckout();
       if (els.mpName) els.mpName.focus();
+      return;
+    }
+    if (!validPhone(els.mpPhone && els.mpPhone.value)) {
+      state.mp.error = PHONE_MSG;
+      renderCheckout();
+      if (els.mpPhone) els.mpPhone.focus();
       return;
     }
     var d = state.delivery;
@@ -1488,6 +1508,7 @@
         items: state.cart.map(function (i) { return { id: i.id, qty: i.qty }; }),
         delivery: delivery,
         email: els.mpEmail ? els.mpEmail.value.trim() : '',
+        optIn: !!(els.mpOptIn && els.mpOptIn.checked),
         customer: { name: name, phone: els.mpPhone ? els.mpPhone.value : '' },
         origin: currentOrigin()
       }
@@ -2011,6 +2032,11 @@
       if (els.manualName) els.manualName.focus();
       return;
     }
+    if (!validPhone(phone)) {
+      manualFail(PHONE_MSG);
+      if (els.manualPhone) els.manualPhone.focus();
+      return;
+    }
     manualFail('');
     var customer = { name: name, phone: phone };
     var order = state.order;
@@ -2038,6 +2064,8 @@
           complement: d.complement || ''
         },
         customer: customer,
+        email: els.manualEmail ? els.manualEmail.value.trim() : '',
+        optIn: !!(els.manualOptIn && els.manualOptIn.checked),
         origin: currentOrigin()
       })
     }).then(function (res) {

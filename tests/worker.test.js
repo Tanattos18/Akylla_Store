@@ -643,3 +643,38 @@ test('trilhas: biblioteca no servidor (salvar, amostra WAV, ouvir, apagar) só c
     global.fetch = realFetch;
   }
 });
+
+test('cadastro de clientes: ficha criada pelo pedido (pelo WhatsApp), editada e excluída no painel', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var admin = { Authorization: 'Bearer gh-admin' };
+    var created = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'joas santana', phone: '+55 (62) 99165-7619' } });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    assert.equal((await call(worker, s.env, 'GET', '/api/admin/customers')).status, 401, 'só com a chave do painel');
+    var list = await call(worker, s.env, 'GET', '/api/admin/customers', null, admin);
+    var c = list.data.customers.find(function (x) { return x.phone === '62991657619'; });
+    assert.ok(c, 'ficha criada pelo WhatsApp (sem o 55)');
+    assert.equal(c.orders, 1);
+    var saved = await call(worker, s.env, 'POST', '/api/admin/customers', { phone: '62991657619', name: 'Joás Santana', email: 'joas@exemplo.com', tags: 'VIP, atacado, vip', notes: 'Prefere retirar à noite', optIn: true }, admin);
+    assert.equal(saved.status, 200, JSON.stringify(saved.data));
+    assert.deepEqual(saved.data.customer.tags, ['VIP', 'atacado'], 'etiquetas sem repetir');
+    assert.ok(saved.data.customer.optInAt, 'registra quando aceitou receber ofertas');
+    /* novo pedido não apaga o nome editado no painel */
+    await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w69-ultra', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'joas', phone: '62991657619' } });
+    c = (await call(worker, s.env, 'GET', '/api/admin/customers', null, admin)).data.customers.find(function (x) { return x.phone === '62991657619'; });
+    assert.equal(c.name, 'Joás Santana');
+    assert.equal(c.orders, 2);
+    var bad = await call(worker, s.env, 'POST', '/api/admin/customers', { phone: '123', name: 'X' }, admin);
+    assert.equal(bad.status, 400);
+    var manual = await call(worker, s.env, 'POST', '/api/admin/customers', { phone: '62988887777', name: 'Cliente da loja física' }, admin);
+    assert.equal(manual.data.customer.manual, true, 'cadastro manual (venda presencial)');
+    var del = await call(worker, s.env, 'POST', '/api/admin/customers/62988887777/delete', null, admin);
+    assert.equal(del.status, 200);
+    assert.ok(!(await call(worker, s.env, 'GET', '/api/admin/customers', null, admin)).data.customers.some(function (x) { return x.phone === '62988887777'; }));
+  } finally {
+    global.fetch = realFetch;
+  }
+});

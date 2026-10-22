@@ -1456,16 +1456,22 @@
   /* ------------------------------ clientes ------------------------------ */
   var clientSort = 'recent';
 
+  /* Nome para comparar: sem acento, sem maiúscula/minúscula e sem espaços sobrando ("joas  Santana" = "Joás Santana"). */
+  function normName(n) { return String(n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function niceName(n) { return /[A-ZÀ-Ý]/.test(n) ? n : n.replace(/(^|\s)\S/g, function (m) { return m.toUpperCase(); }); }
+
+  /*
+   * Clientes montados a partir dos pedidos. 1º) quem tem WhatsApp (mesmo número = mesmo cliente);
+   * 2º) pedidos sem WhatsApp entram no cliente com o mesmo e-mail ou o mesmo nome; se não houver, viram cliente pelo nome.
+   */
   function buildClients() {
-    var map = {};
-    (dash.orders || []).forEach(function (o) {
-      var c = o.customer || {};
-      var digits = String(c.phone || '').replace(/\D/g, '');
-      var name = String(c.name || o.customerName || '').trim();
-      if (!digits && !name) return;
-      var key = digits ? 'tel:' + digits.slice(-8) : 'nome:' + name.toLowerCase();
-      var k = map[key] || (map[key] = { name: name, phone: c.phone || '', email: o.email || '', orders: [], paid: 0, spent: 0, last: 0, first: Infinity });
-      if (name && (!k.name || name.length > k.name.length)) k.name = name;
+    var map = {}, byName = {}, byEmail = {};
+    var add = function (key, o, c, name) {
+      var k = map[key] || (map[key] = { name: '', phone: '', email: '', orders: [], paid: 0, spent: 0, last: 0, first: Infinity });
+      name = String(name || '').replace(/\s+/g, ' ').trim();
+      var cap = function (n) { return /[A-ZÀ-Ý]/.test(n); };
+      /* prefere o nome bem escrito (com maiúscula); entre dois iguais nisso, o mais completo */
+      if (name && (!k.name || (cap(name) && !cap(k.name)) || (cap(name) === cap(k.name) && name.length > k.name.length))) k.name = name;
       if (!k.phone && c.phone) k.phone = c.phone;
       if (!k.email && o.email) k.email = o.email;
       var when = o.createdAt || o.paidAt || 0;
@@ -1473,42 +1479,213 @@
       if (o.status === 'paid') { k.paid += 1; k.spent += o.total; }
       k.last = Math.max(k.last, when);
       k.first = Math.min(k.first, when);
+    };
+    var orders = dash.orders || [];
+    orders.forEach(function (o) {
+      var c = o.customer || {}, digits = String(c.phone || '').replace(/\D/g, '');
+      if (!digits) return;
+      var key = 'tel:' + digits.slice(-8), name = String(c.name || o.customerName || '').trim();
+      add(key, o, c, name);
+      if (name) byName[normName(name)] = byName[normName(name)] === undefined || byName[normName(name)] === key ? key : null; // nome repetido em números diferentes: não adivinha
+      if (o.email) byEmail[String(o.email).toLowerCase()] = key;
     });
-    return Object.keys(map).map(function (k) { return map[k]; });
+    orders.forEach(function (o) {
+      var c = o.customer || {};
+      if (String(c.phone || '').replace(/\D/g, '')) return;
+      var name = String(c.name || o.customerName || '').trim();
+      if (!name && !o.email) return;
+      var key = (o.email && byEmail[String(o.email).toLowerCase()]) || (name && byName[normName(name)]) || 'nome:' + normName(name || o.email);
+      add(key, o, c, name);
+    });
+    return Object.keys(map).map(function (k) { map[k].name = niceName(map[k].name || 'Cliente'); return map[k]; });
+  }
+
+  /* ----------------------- cadastro de clientes (fichas no servidor) ----------------------- */
+
+  var custDb = null, custLoading = false, clientSeg = 'all', editing = null;
+
+  function custKey(phone) {
+    var d = String(phone || '').replace(/\D/g, '');
+    if ((d.length === 12 || d.length === 13) && d.indexOf('55') === 0) d = d.slice(2);
+    return d.length >= 10 && d.length <= 11 ? d : '';
+  }
+
+  function custApi(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ Authorization: 'Bearer ' + state.token }, opts.body ? { 'Content-Type': 'application/json' } : {}, opts.headers || {});
+    return fetch(apiBase() + path, opts).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (d) { if (!res.ok) throw new Error(d.error || ('Erro ' + res.status)); return d; });
+    });
+  }
+
+  function loadCustomers() {
+    if (custLoading || !apiBase()) return;
+    custLoading = true;
+    custApi('/api/admin/customers', { cache: 'no-store' }).then(function (r) {
+      custDb = {};
+      (r.customers || []).forEach(function (c) { custDb[c.phone] = c; });
+    }).catch(function () { custDb = {}; }).finally(function () { custLoading = false; renderClients(); });
+  }
+
+  /* Junta os clientes dos pedidos com as fichas do cadastro (e inclui fichas sem pedido, ex.: venda presencial). */
+  function clientsWithRecords() {
+    var all = buildClients(), seen = {};
+    all.forEach(function (c) {
+      var k = custKey(c.phone);
+      var rec = k && custDb ? custDb[k] : null;
+      c.key = k;
+      c.rec = rec || null;
+      if (rec) {
+        seen[k] = true;
+        if (rec.edited && rec.name) c.name = rec.name;
+        if (rec.email) c.email = rec.email;
+      }
+    });
+    Object.keys(custDb || {}).forEach(function (k) {
+      if (seen[k]) return;
+      var rec = custDb[k];
+      all.push({ key: k, rec: rec, name: rec.name || 'Cliente', phone: k, email: rec.email || '', orders: [], paid: 0, spent: 0, last: rec.lastOrderAt || rec.createdAt || 0, first: rec.createdAt || Date.now() });
+    });
+    return all;
+  }
+
+  /* Oferta personalizada: produto da mesma linha do que o cliente já comprou (que ele ainda não tem), em promoção se houver. */
+  function offerFor(c) {
+    var bought = {}, cats = {};
+    c.orders.filter(function (o) { return o.status === 'paid'; }).forEach(function (o) {
+      (o.lines || []).forEach(function (l) {
+        bought[l.id] = true;
+        var p = state.products.find(function (x) { return x.id === l.id; });
+        if (p) cats[p.category] = (cats[p.category] || 0) + l.qty;
+      });
+    });
+    var live = state.products.filter(function (p) { return !p.hidden && sellable(p) > 0 && !bought[p.id]; });
+    var score = function (p) { var i = Promo.priceFor(p, state.config); return (cats[p.category] ? 10 : 0) + (i.active ? 3 : 0) + (p.bestseller ? 2 : 0); };
+    live.sort(function (a, b) { return score(b) - score(a); });
+    return live[0] || null;
+  }
+
+  function offerLink(c) {
+    var p = offerFor(c);
+    var digits = custKey(c.phone);
+    if (!p || !digits) return '';
+    var info = Promo.priceFor(p, state.config);
+    var first = String(c.name || '').trim().split(/\s+/)[0] || '';
+    var link = 'https://akyllashop.com/?origem=whatsapp-oferta-' + p.id.slice(0, 20);
+    var text = 'Oi' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop 🧡 ' +
+      (c.paid ? 'Como você já é nosso cliente, separei uma oferta especial: ' : 'Separei uma oferta pra você: ') +
+      p.shortName + (info.active ? ' de ' + brl(info.original) + ' por ' + brl(info.price) : ' por ' + brl(info.price)) + ' no PIX' +
+      (info.active && info.until ? ' (até ' + Promo.formatDay(info.until) + ')' : '') + '. Quer que eu separe o seu? ' + link +
+      '\n\n(Se não quiser mais receber ofertas, é só responder SAIR.)';
+    return 'https://wa.me/55' + digits + '?text=' + encodeURIComponent(text);
+  }
+
+  function segFilter(c) {
+    var rec = c.rec || {};
+    if (clientSeg === 'optin') return !!rec.optIn;
+    if (clientSeg === 'loyal') return c.paid > 1;
+    if (clientSeg === 'away') return c.paid > 0 && Date.now() - c.last > 30 * 864e5;
+    if (clientSeg === 'never') return c.paid === 0;
+    if (clientSeg.indexOf('tag:') === 0) return (rec.tags || []).some(function (t) { return t.toLowerCase() === clientSeg.slice(4); });
+    return true;
+  }
+
+  function clientForm(c, onDone) {
+    var rec = (c && c.rec) || {};
+    var f = el('form', { class: 'client-form' }, []);
+    var field = function (label, name, value, attrs) {
+      var input = el('input', Object.assign({ name: name, value: value || '' }, attrs || {}));
+      f.appendChild(el('label', {}, [label, input]));
+      return input;
+    };
+    field('Nome', 'name', c ? c.name : '', { maxlength: '80', required: 'required' });
+    var tel = field('WhatsApp com DDD', 'phone', c ? custKey(c.phone) : '', { inputmode: 'tel', maxlength: '16', required: 'required' });
+    if (c && c.key) tel.readOnly = true;
+    field('E-mail', 'email', c ? c.email : '', { type: 'email', maxlength: '120' });
+    field('Etiquetas (separe por vírgula)', 'tags', (rec.tags || []).join(', '), { placeholder: 'VIP, atacado, indicação', maxlength: '160' });
+    field('Bairro', 'district', rec.district || '', { maxlength: '60' });
+    field('Cidade', 'city', rec.city || '', { maxlength: '60' });
+    var notes = el('textarea', { name: 'notes', rows: '3', maxlength: '500', placeholder: 'Ex.: prefere retirar à noite; gosta de smartwatch' });
+    notes.value = rec.notes || '';
+    f.appendChild(el('label', { class: 'full' }, ['Observações', notes]));
+    var opt = el('input', { type: 'checkbox', name: 'optIn' });
+    opt.checked = !!rec.optIn;
+    f.appendChild(el('label', { class: 'check full' }, [opt, ' Aceita receber ofertas pelo WhatsApp e e-mail (só marque se o cliente autorizou — LGPD)']));
+    var err = el('p', { class: 'warn full', hidden: 'hidden' });
+    f.appendChild(err);
+    var actions = el('div', { class: 'client-form-actions full' }, [
+      el('button', { type: 'submit', class: 'btn btn-primary btn-sm', text: 'Salvar ficha' }),
+      el('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Cancelar', onclick: function () { editing = null; renderClients(); } })
+    ]);
+    if (c && c.rec) actions.appendChild(el('button', { type: 'button', class: 'btn btn-ghost btn-sm danger', text: 'Excluir ficha', onclick: function () {
+      if (!confirm('Excluir a ficha de ' + c.name + '? (Os pedidos continuam no histórico de vendas.)')) return;
+      custApi('/api/admin/customers/' + c.key + '/delete', { method: 'POST' }).then(function () {
+        delete custDb[c.key]; editing = null; renderClients(); toast('Ficha excluída.');
+      }).catch(function (e) { toast(e.message, 6000); });
+    } }));
+    f.appendChild(actions);
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var body = { name: f.elements.name.value, phone: f.elements.phone.value, email: f.elements.email.value, tags: f.elements.tags.value, notes: notes.value, optIn: opt.checked, city: f.elements.city.value, district: f.elements.district.value };
+      custApi('/api/admin/customers', { method: 'POST', body: JSON.stringify(body) }).then(function (r) {
+        custDb[r.customer.phone] = r.customer; editing = null; renderClients(); toast('Ficha salva.');
+        if (onDone) onDone();
+      }).catch(function (e2) { err.textContent = e2.message; err.hidden = false; });
+    });
+    return f;
   }
 
   function renderClients() {
     var list = $('#clientList');
     if (!dash.orders) { list.innerHTML = ''; list.appendChild(el('li', { class: 'empty', text: 'Carregando os pedidos…' })); loadDashboard(); return; }
-    var all = buildClients();
+    if (custDb === null) { loadCustomers(); }
+    var all = clientsWithRecords();
     var buyers = all.filter(function (c) { return c.paid > 0; });
     var repeat = buyers.filter(function (c) { return c.paid > 1; });
     var spent = buyers.reduce(function (t, c) { return t + c.spent; }, 0);
+    var optins = all.filter(function (c) { return c.rec && c.rec.optIn; });
     fill('#kpiClients', [
       kpi('Clientes', String(all.length), buyers.length + ' já compraram'),
       kpi('Voltaram a comprar', String(repeat.length), buyers.length ? Math.round(repeat.length / buyers.length * 100) + '% dos que compraram' : ''),
-      kpi('Gasto médio por cliente', buyers.length ? brl(Math.round(spent / buyers.length)) : '—', 'só pedidos pagos')
+      kpi('Gasto médio por cliente', buyers.length ? brl(Math.round(spent / buyers.length)) : '—', 'só pedidos pagos'),
+      kpi('Aceitam ofertas', String(optins.length), 'podem receber promoções (LGPD)')
     ]);
+    /* etiquetas existentes viram filtros */
+    var tagSel = $('#clientSeg');
+    if (tagSel) {
+      var tags = {};
+      all.forEach(function (c) { ((c.rec && c.rec.tags) || []).forEach(function (t) { tags[t.toLowerCase()] = t; }); });
+      Array.prototype.slice.call(tagSel.querySelectorAll('option[data-tag]')).forEach(function (o) { o.remove(); });
+      Object.keys(tags).sort().forEach(function (k) { tagSel.appendChild(el('option', { value: 'tag:' + k, 'data-tag': '1', text: '🏷️ ' + tags[k] })); });
+      tagSel.value = clientSeg;
+      if (tagSel.value !== clientSeg) { clientSeg = 'all'; tagSel.value = 'all'; }
+    }
     var q = normQuery($('#clientSearch'));
     var qd = q.replace(/\D/g, '');
     var shown = all.filter(function (c) {
+      if (!segFilter(c)) return false;
       if (!q) return true;
-      var name = c.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      return name.indexOf(q) >= 0 || (qd && String(c.phone).replace(/\D/g, '').indexOf(qd) >= 0);
+      var hay = normName([c.name, c.email, ((c.rec && c.rec.tags) || []).join(' '), c.rec && c.rec.notes].join(' '));
+      return hay.indexOf(q) >= 0 || (qd && String(c.phone).replace(/\D/g, '').indexOf(qd) >= 0);
     }).sort(function (a, b) {
       if (clientSort === 'spent') return b.spent - a.spent || b.last - a.last;
       if (clientSort === 'orders') return b.paid - a.paid || b.last - a.last;
       return b.last - a.last;
     });
+    lastShownClients = shown;
     list.innerHTML = '';
-    if (!shown.length) { list.appendChild(el('li', { class: 'empty', text: q ? 'Nenhum cliente encontrado.' : 'Os clientes aparecem aqui depois dos primeiros pedidos.' })); return; }
+    if (editing === 'new') list.appendChild(el('li', { class: 'client-card' }, [el('strong', { text: 'Novo cliente' }), clientForm(null)]));
+    if (!shown.length) { list.appendChild(el('li', { class: 'empty', text: 'Nenhum cliente neste filtro.' })); return; }
     shown.forEach(function (c) {
-      var lastOrder = c.orders.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); })[0];
-      var wa = waLink({ customer: { name: c.name, phone: c.phone }, id: lastOrder.id, total: lastOrder.total, status: 'canceled', delivery: {} });
+      var rec = c.rec || {};
+      var orders = c.orders.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+      var wa = orders[0] ? waLink({ customer: { name: c.name, phone: c.phone }, id: orders[0].id, total: orders[0].total, status: 'canceled', delivery: {} })
+        : (custKey(c.phone) ? 'https://wa.me/55' + custKey(c.phone) : '');
+      var offer = rec.optIn ? offerLink(c) : '';
       var initials = c.name.split(/\s+/).filter(Boolean).slice(0, 2).map(function (p) { return p[0].toUpperCase(); }).join('') || '?';
-      var details = el('details', { class: 'client-orders' }, [
-        el('summary', { text: 'Ver ' + c.orders.length + (c.orders.length === 1 ? ' pedido' : ' pedidos') }),
-        el('ul', {}, c.orders.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }).map(function (o) {
+      var details = orders.length ? el('details', { class: 'client-orders' }, [
+        el('summary', { text: 'Ver ' + orders.length + (orders.length === 1 ? ' pedido' : ' pedidos') }),
+        el('ul', {}, orders.map(function (o) {
           var st = STATUS[o.status] || ['', o.status];
           return el('li', {}, [
             el('strong', { text: o.id }),
@@ -1517,34 +1694,57 @@
             el('span', { class: 'client-order-total', text: brl(o.total) })
           ]);
         }))
-      ]);
-      list.appendChild(el('li', { class: 'client-card' }, [
+      ]) : el('p', { class: 'muted', text: rec.manual ? 'Cadastrado no painel (sem pedidos pelo site).' : 'Sem pedidos.' });
+      var badges = [];
+      if (c.paid > 1) badges.push(el('span', { class: 'badge ok', text: 'Cliente fiel' }));
+      else if (c.paid === 0) badges.push(el('span', { class: 'badge', text: 'Ainda não comprou' }));
+      if (rec.optIn) badges.push(el('span', { class: 'badge ok', text: '✓ Aceita ofertas' }));
+      (rec.tags || []).forEach(function (t) { badges.push(el('span', { class: 'badge tag', text: t })); });
+      var card = el('li', { class: 'client-card' }, [
         el('div', { class: 'client-top' }, [
           el('span', { class: 'avatar', text: initials }),
           el('div', { class: 'client-main' }, [
             el('strong', { text: c.name || 'Sem nome' }),
-            el('span', { class: 'muted', text: [c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato' })
+            el('span', { class: 'muted', text: [c.phone, c.email, [rec.district, rec.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'sem contato' })
           ]),
-          c.paid > 1 ? el('span', { class: 'badge ok', text: 'Cliente fiel' }) : c.paid === 0 ? el('span', { class: 'badge', text: 'Ainda não comprou' }) : null,
-          wa ? el('a', { class: 'btn btn-wa btn-sm', href: wa, target: '_blank', rel: 'noopener' }, [svgIcon('chat'), ' WhatsApp']) : null
+          el('div', { class: 'client-badges' }, badges),
+          el('div', { class: 'client-actions' }, [
+            offer ? el('a', { class: 'btn btn-primary btn-sm', href: offer, target: '_blank', rel: 'noopener', title: 'Abre o WhatsApp com uma oferta personalizada' }, ['💬 Oferta']) : null,
+            wa ? el('a', { class: 'btn btn-wa btn-sm', href: wa, target: '_blank', rel: 'noopener' }, [svgIcon('chat'), ' WhatsApp']) : null,
+            el('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Editar', onclick: function () { editing = c.key || ('n:' + c.name); renderClients(); } })
+          ])
         ]),
+        rec.notes ? el('p', { class: 'client-notes', text: '📝 ' + rec.notes }) : null,
         el('div', { class: 'client-stats' }, [
           el('div', {}, [el('span', { class: 'muted', text: 'Gastou' }), el('strong', { text: brl(c.spent) })]),
           el('div', {}, [el('span', { class: 'muted', text: 'Pedidos pagos' }), el('strong', { text: String(c.paid) })]),
-          el('div', {}, [el('span', { class: 'muted', text: 'Última compra' }), el('strong', { text: timeAgo(c.last) })]),
+          el('div', {}, [el('span', { class: 'muted', text: 'Última compra' }), el('strong', { text: c.last ? timeAgo(c.last) : '—' })]),
           el('div', {}, [el('span', { class: 'muted', text: 'Cliente desde' }), el('strong', { text: new Date(c.first).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) })])
         ]),
-        details
-      ]));
+        editing && editing === (c.key || ('n:' + c.name)) ? clientForm(c) : details
+      ]);
+      list.appendChild(card);
     });
   }
 
+  var lastShownClients = [];
+  function copyContacts(kind) {
+    var people = lastShownClients.filter(function (c) { return c.rec && c.rec.optIn; });
+    var values = people.map(function (c) { return kind === 'email' ? c.email : custKey(c.phone) ? '+55' + custKey(c.phone) : ''; }).filter(Boolean);
+    if (!values.length) { toast('Nenhum cliente deste filtro aceitou receber ofertas' + (kind === 'email' ? ' com e-mail cadastrado.' : '.'), 6000); return; }
+    var text = values.join(kind === 'email' ? '; ' : '\n');
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+      toast(values.length + (kind === 'email' ? ' e-mails copiados' : ' WhatsApps copiados') + ' (só quem aceitou ofertas).', 6000);
+    }, function () { window.prompt('Copie a lista:', text); });
+  }
+
   function exportClients() {
-    var rows = [['Nome', 'WhatsApp', 'E-mail', 'Pedidos pagos', 'Total gasto (R$)', 'Última compra', 'Primeira compra']];
-    buildClients().sort(function (a, b) { return b.spent - a.spent; }).forEach(function (c) {
-      rows.push([c.name, c.phone, c.email, c.paid, (c.spent / 100).toFixed(2).replace('.', ','), new Date(c.last).toLocaleDateString('pt-BR'), new Date(c.first).toLocaleDateString('pt-BR')]);
+    var rows = [['Nome', 'WhatsApp', 'E-mail', 'Aceita ofertas', 'Etiquetas', 'Bairro', 'Cidade', 'Observações', 'Pedidos pagos', 'Total gasto (R$)', 'Última compra', 'Cliente desde']];
+    clientsWithRecords().filter(segFilter).sort(function (a, b) { return b.spent - a.spent; }).forEach(function (c) {
+      var rec = c.rec || {};
+      rows.push([c.name, c.phone, c.email, rec.optIn ? 'sim' : 'não', (rec.tags || []).join(', '), rec.district || '', rec.city || '', rec.notes || '', c.paid, (c.spent / 100).toFixed(2).replace('.', ','), c.last ? new Date(c.last).toLocaleDateString('pt-BR') : '', new Date(c.first).toLocaleDateString('pt-BR')]);
     });
-    var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
+    var csv = '﻿' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = 'clientes-akylla-' + new Date().toISOString().slice(0, 10) + '.csv';
@@ -2285,6 +2485,10 @@
     document.querySelector('[data-tab="clientes"]').addEventListener('click', renderClients);
     $('#clientSearch').addEventListener('input', renderClients);
     $('#clientExport').addEventListener('click', exportClients);
+    $('#clientNew').addEventListener('click', function () { editing = 'new'; renderClients(); });
+    $('#clientSeg').addEventListener('change', function () { clientSeg = this.value; renderClients(); });
+    $('#clientCopyWa').addEventListener('click', function () { copyContacts('wa'); });
+    $('#clientCopyMail').addEventListener('click', function () { copyContacts('email'); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-csort]'), function (b) {
       b.addEventListener('click', function () {
         clientSort = b.getAttribute('data-csort');

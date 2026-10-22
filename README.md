@@ -370,7 +370,11 @@ O painel edita os arquivos do site e publica **num único commit** pela API do G
   - Tabela de **produtos vendidos**: quantidade, receita e estoque atual. O botão **"Marcar os 3 mais vendidos com selo"** aplica o selo *Mais vendido* no site (depois clique em Publicar).
   - Retirada × entrega e a situação da loja agora: produtos ativos, unidades e valor em estoque, esgotados, última unidade, promoção e forma de pagamento.
 - **Estoque:** botões −1 (vendi) e +1 (repus), quantidade e preço de cada produto numa lista só.
-- **Clientes:** lista montada a partir dos pedidos (mesmo WhatsApp = mesmo cliente): total gasto, pedidos pagos, última compra, cliente desde, selo **Cliente fiel** (2+ compras), histórico de pedidos, botão WhatsApp, busca, ordenar (recentes / mais gastaram / mais pedidos) e **Exportar planilha** (CSV que abre no Excel).
+- **Clientes (cadastro):** cada cliente tem uma **ficha**, identificada pelo **WhatsApp** (obrigatório no checkout). A ficha nasce sozinha no 1º pedido (nome, e-mail, bairro/cidade, data do 1º e do último pedido, origem) e você completa no painel: **Editar** (nome, e-mail, etiquetas como VIP/atacado/indicação, observações), **+ Novo cliente** (venda presencial) e **Excluir ficha** (se o cliente pedir — LGPD).
+  - Pedidos antigos sem WhatsApp entram na ficha com o mesmo nome (sem diferença de maiúscula/acento) ou o mesmo e-mail.
+  - **Segmentos:** Todos, ✓ Aceitam ofertas, ⭐ Fiéis (2+ compras), 💤 Sumidos (30+ dias), Ainda não compraram e uma opção para cada etiqueta. Ordenar por Recentes, Mais gastaram ou Mais pedidos.
+  - **Comunicação (LGPD):** o checkout tem a caixa *"Quero receber ofertas…"* (desmarcada por padrão). Só quem marcou — ou que você marcou na ficha com autorização — aparece com **✓ Aceita ofertas**. O botão **💬 Oferta** abre o WhatsApp com uma oferta personalizada (produto da mesma linha do que o cliente comprou, que ele ainda não tem, com preço atual e link rastreado `?origem=whatsapp-oferta-…`). **Copiar WhatsApps** / **Copiar e-mails** copiam só os contatos que aceitaram, do segmento escolhido. Avisos do próprio pedido (pagamento, entrega) podem ser enviados a todos.
+  - **Exportar planilha** inclui etiquetas, aceite, bairro/cidade e observações.
 - **Pedidos:** filtros Todos / Aguardando / **Para entregar** / Pagos / Cancelados, forma de pagamento em cada pedido (PIX manual, PIX Mercado Pago, Cartão Nx), **etapas** dos pedidos pagos e cartão **Avisos de pedido** ([5.2](#52-avisos-de-pedido-som-e-notificação)) e lista de pedidos com status, cliente, itens, entrega e total. Nos pedidos aguardando, há os botões **Confirmar pagamento** e **Cancelar e devolver ao estoque**.
 - **Promoção:** promoção geral (liga/desliga, texto da faixa, % e data final, margem da planilha). Cada produto pode **seguir a geral**, ter **promoção própria** ou ficar **fora**. Mostra o lucro estimado e avisa se o desconto vender abaixo do custo.
 - **Produtos:** criar, editar, duplicar e excluir. Filtros **Todos / Na loja / Fora da loja**. Produto **fora da loja** (rascunho) aparece só no painel: confira estoque, preço e fotos e use **✓ Colocar na loja** (avisa se o estoque estiver 0) ou **Tirar da loja** → **Publicar**. O Início lembra dos produtos fora da loja. Produtos novos podem entrar já fora da loja até a conferência.
@@ -492,6 +496,7 @@ Pasta `worker/`. Ele recalcula valores, reserva e devolve o estoque (por commits
 | `GET /api/track?id=…&phone=…` | página Acompanhar pedido | situação, etapas, itens e total (confere o WhatsApp) |
 | `POST /api/admin/orders/:id/stage` | painel | etapa do pedido pago (separando, pronto, enviado, entregue) |
 | `POST /api/orders`, `GET /api/orders/:id`, `POST /api/orders/:id/cancel`, `POST /api/webhook` | site / Mercado Pago | PIX automático (opcional, [7.4](#74-mercado-pago-pix-automático)) |
+| `GET/POST /api/admin/customers` · `/api/admin/customers/:tel/delete` | painel | cadastro de clientes (fichas pelo WhatsApp) |
 | `POST /api/admin/tts` | painel (vídeos) | voz neural pt-BR: devolve o MP3 e o tempo de cada palavra (cabeçalho `X-Words`) |
 | `GET/POST /api/admin/music` · `/:id/audio` · `/:id/delete` | painel | biblioteca de trilhas (receitas + amostra WAV) |
 | `GET /api/admin/social/status` · `POST /api/admin/social/media` · `POST /api/admin/social/publish` | painel | publicar arte (feed/Story) e vídeo (Reels/Página) no Instagram e no Facebook |
@@ -1001,6 +1006,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Cadastro de clientes (fichas pelo WhatsApp, etiquetas, observações, segmentos, aceite de ofertas LGPD, oferta personalizada); WhatsApp obrigatório no checkout; clientes duplicados corrigidos. |
 | 22/10/2026 | Voz gravada no painel (teleprompter, fala por fala) para os vídeos. |
 | 22/10/2026 | Arte animada (🎬 Animar, 6 s em loop) com princípios de motion design; acabamento premium (vinheta + textura); voz: endereço reserva + suporte à voz oficial Azure (grátis). |
 | 22/10/2026 | Artes e vídeos com visual novo a cada geração (fundos, foto principal, frases, entrada do produto, cartela final); fotos sem fundo branco viram cartão. |
