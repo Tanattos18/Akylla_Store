@@ -715,6 +715,19 @@ O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em portu
 
 **Medir:** as vendas que chegam pelos links rastreados aparecem no **Início → Vendas por origem**; curtidas, alcance, salvamentos e visualizações aparecem em **Artes → 📈 Desempenho dos posts** (com os melhores horários para postar).
 
+#### Voz dos vídeos: ative a voz oficial (grátis)
+
+A voz vem da Microsoft. Sem configuração, o servidor usa o serviço gratuito "não oficial" do Edge, que **passou a limitar os pedidos** (erros 429/403 em 22/10/2026) — o vídeo pode falhar com "o serviço de voz recusou a conexão". A solução estável é a **voz oficial (Azure Speech)**: mesmas vozes (Francisca, Thalita, Antônio), plano **grátis F0 com 500 mil caracteres por mês** (cada vídeo usa ~300) e uso comercial permitido.
+
+1. Crie uma conta grátis em <https://azure.microsoft.com/free> (a Microsoft pede um cartão só para confirmar identidade; o plano F0 não cobra).
+2. No portal do Azure → **Criar um recurso** → **Speech** (Serviços de Fala) → região **Brazil South** → tipo de preço **Free F0** → Criar.
+3. No recurso criado → **Chaves e ponto de extremidade** → copie a **CHAVE 1** e a **Região** (ex.: `brazilsouth`).
+4. No PowerShell, na pasta `worker` (cole quando pedir; nunca mande a chave em chat):
+   ```powershell
+   & .\definir-chaves.ps1 AZURE_SPEECH_KEY AZURE_SPEECH_REGION
+   ```
+5. Pronto: o servidor passa a usar a voz oficial sozinho. As legendas continuam palavra por palavra (o tempo de cada palavra é estimado pela duração da fala).
+
 #### Trilhas próprias (sem direito autoral) e biblioteca no servidor
 
 - As músicas são **compostas pelo próprio painel** (Web Audio): bateria, baixo, acordes e efeitos sintetizados na hora. Nada é baixado nem copiado, então não há direito autoral de terceiros. Código: `admin/estudio-musica.js`.

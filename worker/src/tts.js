@@ -6,7 +6,11 @@
  */
 
 const TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4'; // identificador público do Edge (não é segredo)
-const WSS = 'https://api.msedgeservices.com/tts/cognitiveservices/websocket/v1';
+/* dois endereços do mesmo serviço: se um recusar (429 = muitos pedidos vindos da Cloudflare), tenta o outro */
+const ENDPOINTS = [
+  (gec, id) => 'https://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=' + TOKEN + '&Sec-MS-GEC=' + gec + '&Sec-MS-GEC-Version=' + VERSION + '&ConnectionId=' + id,
+  (gec, id) => 'https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=' + TOKEN + '&Sec-MS-GEC=' + gec + '&Sec-MS-GEC-Version=' + VERSION + '&ConnectionId=' + id
+];
 const VERSION = '1-143.0.3650.96';
 const VOICES = { francisca: 'pt-BR-FranciscaNeural', thalita: 'pt-BR-ThalitaMultilingualNeural', antonio: 'pt-BR-AntonioNeural' };
 
@@ -26,15 +30,62 @@ function hex(n) { return Array.from(crypto.getRandomValues(new Uint8Array(n)), (
 
 function xml(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+function ssml(voice, rate, text) {
+  return '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="pt-BR">' +
+    '<voice name="' + voice + '"><prosody pitch="+0Hz" rate="' + rate + '" volume="+0%">' + xml(text) + '</prosody></voice></speak>';
+}
+
+/*
+ * Voz OFICIAL da Microsoft (Azure Speech, plano grátis F0: 500 mil caracteres/mês) — usada quando os segredos
+ * AZURE_SPEECH_KEY e AZURE_SPEECH_REGION existem. Mais estável. Não devolve o tempo das palavras: estimamos pela duração.
+ */
+async function azure(env, voice, rate, text) {
+  const res = await fetch('https://' + env.AZURE_SPEECH_REGION + '.tts.speech.microsoft.com/cognitiveservices/v1', {
+    method: 'POST',
+    headers: {
+      'Ocp-Apim-Subscription-Key': env.AZURE_SPEECH_KEY,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-24khz-96kbitrate-mono-mp3',
+      'User-Agent': 'akylla-shop-worker'
+    },
+    body: ssml(voice, rate, text)
+  });
+  if (!res.ok) throw new TtsError('A voz oficial (Azure) recusou o pedido (' + res.status + '). Confira a chave e a região.');
+  const audio = new Uint8Array(await res.arrayBuffer());
+  const duration = audio.length / 12000; // 96 kbit/s
+  const parts = text.split(/\s+/).filter(Boolean);
+  const weight = parts.reduce((n, w) => n + w.length + 2, 0);
+  let at = 0.05;
+  const words = parts.map((w) => {
+    const d = (duration - 0.15) * (w.length + 2) / weight;
+    const out = { text: w.replace(/[.,!?;:]+$/, ''), start: at, end: at + d };
+    at += d;
+    return out;
+  });
+  return { audio, words };
+}
+
 /* Devolve { audio: Uint8Array (MP3 24 kHz), words: [{ text, start, end }] } */
-export async function synthesize(body) {
+export async function synthesize(body, env) {
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 400);
   if (!text) throw new TtsError('Texto vazio.', 400);
   const voice = VOICES[body.voice] || VOICES.francisca;
   const rate = /^[+-]\d{1,2}%$/.test(body.rate || '') ? body.rate : '+8%';
+  if (env && env.AZURE_SPEECH_KEY && env.AZURE_SPEECH_REGION) return azure(env, voice, rate, text);
 
-  const url = WSS + '?Ocp-Apim-Subscription-Key=' + TOKEN + '&Sec-MS-GEC=' + (await secMsGec()) +
-    '&Sec-MS-GEC-Version=' + VERSION + '&ConnectionId=' + hex(16);
+  let last = null;
+  for (let i = 0; i < ENDPOINTS.length * 2; i += 1) {
+    try {
+      return await edgeOnce(ENDPOINTS[i % ENDPOINTS.length](await secMsGec(), hex(16)), voice, rate, text);
+    } catch (err) {
+      last = err;
+      await new Promise((r) => setTimeout(r, 400 + i * 500));
+    }
+  }
+  throw new TtsError((last && last.message ? last.message + ' ' : '') + 'O serviço de voz gratuito está limitando os pedidos agora. Tente em alguns minutos — ou ative a voz oficial (README, seção 10.3).');
+}
+
+async function edgeOnce(url, voice, rate, text) {
   const res = await fetch(url, {
     headers: {
       Upgrade: 'websocket',
@@ -45,7 +96,7 @@ export async function synthesize(body) {
     }
   });
   const ws = res.webSocket;
-  if (!ws) throw new TtsError('O serviço de voz recusou a conexão (' + res.status + '). Tente de novo mais tarde.');
+  if (!ws) throw new TtsError('O serviço de voz recusou a conexão (' + res.status + ').');
   ws.accept();
 
   const chunks = [];
@@ -82,8 +133,7 @@ export async function synthesize(body) {
   ws.send('X-Timestamp:' + stamp + '\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n' +
     '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}');
   ws.send('X-RequestId:' + reqId + '\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:' + stamp + '\r\nPath:ssml\r\n\r\n' +
-    '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="pt-BR">' +
-    '<voice name="' + voice + '"><prosody pitch="+0Hz" rate="' + rate + '" volume="+0%">' + xml(text) + '</prosody></voice></speak>');
+    ssml(voice, rate, text));
   await done;
   try { ws.close(); } catch (e) { /* já fechado */ }
 

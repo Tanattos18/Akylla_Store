@@ -1037,7 +1037,7 @@ export default {
       else if (url.pathname === '/api/admin/tts' && request.method === 'POST') {
         await requireAdmin(request, env);
         try {
-          const r = await synthesize((await request.json().catch(() => null)) || {});
+          const r = await synthesize((await request.json().catch(() => null)) || {}, env);
           response = new Response(r.audio, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store', 'X-Words': encodeURIComponent(JSON.stringify(r.words)) } });
         } catch (err) {
           if (!(err instanceof TtsError)) throw err;

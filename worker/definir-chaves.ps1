@@ -11,7 +11,9 @@ $todas = @(
   @{ Nome = 'CALLMEBOT_APIKEY';  Dica = 'OPCIONAL - CallMeBot apikey (alerta extra no WhatsApp). Se nao tiver, aperte Ctrl+C.' },
   @{ Nome = 'MP_ACCESS_TOKEN';   Dica = 'MERCADO PAGO - Access Token de PRODUCAO (comeca com APP_USR-).' },
   @{ Nome = 'MP_WEBHOOK_SECRET'; Dica = 'MERCADO PAGO - Assinatura secreta do Webhook (aplicacao > Webhooks).' },
-  @{ Nome = 'META_PAGE_TOKEN';   Dica = 'REDES - token da PAGINA do Facebook (README 10.2). Publica no Instagram e no Facebook pelo painel.' }
+  @{ Nome = 'META_PAGE_TOKEN';   Dica = 'REDES - token da PAGINA do Facebook (README 10.2). Publica no Instagram e no Facebook pelo painel.' },
+  @{ Nome = 'AZURE_SPEECH_KEY';    Dica = 'VOZ DOS VIDEOS - chave do Azure Speech (README 10.3, plano gratis F0).' },
+  @{ Nome = 'AZURE_SPEECH_REGION'; Dica = 'VOZ DOS VIDEOS - regiao do Azure Speech, ex.: brazilsouth' }
 )
 
 # Para cadastrar so algumas:  & .\definir-chaves.ps1 MP_ACCESS_TOKEN MP_WEBHOOK_SECRET

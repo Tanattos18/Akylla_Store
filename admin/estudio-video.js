@@ -675,7 +675,7 @@
     remember('theme', V.theme); remember('ending', V.ending);
     o.variant = V; S.variant = V;
 
-    /* voz: 2 falas por vez, com até 3 tentativas cada (o serviço recusa muitos pedidos juntos) */
+    /* voz: uma fala por vez, com até 4 tentativas e esperas crescentes (o serviço gratuito limita pedidos) */
     var buffers = new Array(lines.length), next = 0, done = 0;
     function one(i, attempt) {
       return tts(lines[i].say, o.voice, o.rate).then(function (r) {
@@ -684,14 +684,15 @@
       }).then(function (b) {
         buffers[i] = b; done += 1; status('Gerando a voz… (' + done + '/' + lines.length + ')');
       }, function (err) {
-        if (attempt >= 3) throw err;
-        return new Promise(function (r) { setTimeout(r, 1200 * attempt); }).then(function () { return one(i, attempt + 1); });
+        if (attempt >= 4) throw new Error(err.message + (/limitando|429|403/.test(err.message) ? '' : ''));
+        status('O serviço de voz pediu uma pausa; tentando de novo em ' + (3 * attempt) + ' s… (' + (i + 1) + '/' + lines.length + ')');
+        return new Promise(function (r) { setTimeout(r, 3000 * attempt); }).then(function () { return one(i, attempt + 1); });
       });
     }
     function worker() { if (next >= lines.length) return Promise.resolve(); var i = next++; return one(i, 1).then(worker); }
     status('Gerando a voz… (0/' + lines.length + ')');
     var mixed;
-    Promise.all([worker(), worker()]).then(function () {
+    worker().then(function () {
       S.audio = buildVoice(actx, buffers, lines, gap);
       status(recipe ? 'Compondo a trilha (' + M.STYLES[recipe.style].label + ')…' : 'Preparando…');
       var price = lines.find(function (l) { return l.scene === 'price'; });
