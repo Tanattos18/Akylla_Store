@@ -1236,6 +1236,23 @@
   /* ------------------------- cliente: lembrar dados e pedidos ------------------------- */
 
   var CUSTOMER_KEY = 'akylla-customer';
+  var ORIGIN_KEY = 'akylla-origem';
+
+  /* Link de vídeo/rede (?origem=tiktok-drone-a ou utm_source/utm_campaign): vale por 7 dias, o último link ganha. */
+  (function captureOrigin() {
+    try {
+      var q = new URLSearchParams(window.location.search);
+      var raw = q.get('origem') || [q.get('utm_source'), q.get('utm_campaign')].filter(Boolean).join('-');
+      var clean = String(raw || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+      if (clean) window.localStorage.setItem(ORIGIN_KEY, JSON.stringify({ v: clean, at: Date.now() }));
+    } catch (e) { /* sem armazenamento */ }
+  })();
+  function currentOrigin() {
+    try {
+      var o = JSON.parse(window.localStorage.getItem(ORIGIN_KEY) || 'null');
+      return o && Date.now() - o.at < 7 * 864e5 ? o.v : '';
+    } catch (e) { return ''; }
+  }
   var MY_ORDERS_KEY = 'akylla-my-orders';
   var CARD_PENDING_KEY = 'akylla-card-pending';
 
@@ -1344,7 +1361,8 @@
           complement: d.complement || ''
         },
         email: c.email,
-        customer: { name: c.name, phone: c.phone }
+        customer: { name: c.name, phone: c.phone },
+        origin: currentOrigin()
       }
     }); }).then(function (order) {
       rememberCustomer(c);
@@ -1470,7 +1488,8 @@
         items: state.cart.map(function (i) { return { id: i.id, qty: i.qty }; }),
         delivery: delivery,
         email: els.mpEmail ? els.mpEmail.value.trim() : '',
-        customer: { name: name, phone: els.mpPhone ? els.mpPhone.value : '' }
+        customer: { name: name, phone: els.mpPhone ? els.mpPhone.value : '' },
+        origin: currentOrigin()
       }
     }).then(function (order) {
       rememberCustomer({ name: name, phone: els.mpPhone ? els.mpPhone.value.trim() : '', email: els.mpEmail ? els.mpEmail.value.trim() : '' });
@@ -2018,7 +2037,8 @@
           number: d.quote ? d.quote.address.number : '',
           complement: d.complement || ''
         },
-        customer: customer
+        customer: customer,
+        origin: currentOrigin()
       })
     }).then(function (res) {
       return res.json().catch(function () { return {}; }).then(function (data) {

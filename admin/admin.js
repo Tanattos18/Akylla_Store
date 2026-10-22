@@ -1669,6 +1669,16 @@
         el('span', { class: 'hbar-value', text: brl(c.value) })
       ]);
     }));
+    var byOrigin = {};
+    paid.forEach(function (o) {
+      var k = o.origin || '';
+      byOrigin[k] = byOrigin[k] || { count: 0, total: 0 };
+      byOrigin[k].count += 1;
+      byOrigin[k].total += o.total;
+    });
+    table('#originTable', ['Origem', 'Pedidos', 'Faturamento', '% das vendas'], Object.keys(byOrigin).sort(function (a, b) { return byOrigin[b].total - byOrigin[a].total; }).map(function (k) {
+      return [k || 'Direto (sem link rastreado)', String(byOrigin[k].count), brl(byOrigin[k].total), revenue ? Math.round(byOrigin[k].total / revenue * 100) + '%' : '—'];
+    }), 'Nenhuma venda confirmada no período.');
     table('#catTable', ['Categoria', 'Itens', 'Total', '% das vendas'], cats.map(function (c) {
       return [c.label, c.qty, brl(c.value), products ? Math.round(c.value / products * 100) + '%' : '—'];
     }));

@@ -637,3 +637,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .vd-result { display: grid; gap: 0.6rem; justify-items: start; }
 .vd-live, .vd-video { width: 100%; max-width: 340px; aspect-ratio: 9 / 16; border-radius: 16px; background: #000; box-shadow: var(--shadow); }
 #vdScript { font-size: 0.85rem; line-height: 1.5; }
+
+/* Vídeo 2.0, trilhas e desempenho */
+.vd-deals { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; }
+.vd-media { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: flex-start; }
+.vd-frame { position: relative; width: 100%; max-width: 340px; }
+.vd-frame .vd-video { max-width: none; }
+.vd-cover { width: 160px; aspect-ratio: 9 / 16; border-radius: 12px; box-shadow: var(--shadow); object-fit: cover; }
+.vd-safe { position: absolute; inset: 0; pointer-events: none; border-radius: 16px; overflow: hidden; }
+.vd-safe[hidden] { display: none; }
+.vd-safe span { position: absolute; background: rgba(255, 40, 40, 0.28); outline: 1px dashed rgba(255, 255, 255, 0.8); }
+.vd-safe-top { left: 0; right: 0; top: 0; height: 9%; }
+.vd-safe-bottom { left: 0; right: 0; bottom: 0; height: 21%; }
+.vd-safe-side { right: 0; top: 40%; width: 15%; height: 39%; }
+.vd-after { display: grid; gap: 0.8rem; }
+.vd-after[hidden] { display: none; }
+.vd-reel { display: grid; gap: 0.4rem; padding: 0.8rem; border: 1px solid var(--line); border-radius: 14px; }
+.ml-list { display: grid; gap: 0.4rem; }
+.ml-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 1px solid var(--line); border-radius: 12px; }
+.ml-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+#mlStyle { width: auto; }

@@ -33,8 +33,12 @@
  *   POST /api/admin/push/test            painel: manda um aviso de teste para todos os aparelhos
  *   GET  /api/admin/social/status        painel: Página do Facebook e Instagram ligados (publicação nas redes)
  *   POST /api/admin/social/media         painel: envia a arte (JPEG) para publicar
- *   POST /api/admin/social/publish       painel: publica no Instagram/Facebook (feed e/ou Story)
+ *   POST /api/admin/social/publish       painel: publica no Instagram/Facebook (feed, Story, Reels e vídeo)
+ *   GET  /api/admin/social/insights      painel: desempenho das últimas publicações do Instagram
  *   GET  /api/media/:id.jpg              arte temporária (1 dia) que a Meta busca para publicar
+ *   GET  /api/admin/music                painel: biblioteca de trilhas (receitas das músicas próprias)
+ *   POST /api/admin/music {name, style, bpm, key, seed}   salva uma trilha · /:id/audio (WAV) amostra · /:id/delete apaga
+ *   GET  /api/admin/music/:id/audio      painel: ouve a amostra
  *   POST /api/admin/tts {text, voice}    painel: voz neural pt-BR (MP3) + tempo das palavras (cabeçalho X-Words) para os vídeos
  *
  * Segredos (Cloudflare → Worker → Settings → Variables and Secrets):
@@ -52,8 +56,9 @@ import {
   applySale, applyReturn, stockShortfall, centsToReais, mpDate, Formato, cleanCustomer, saleMessage
 } from './logic.js';
 import { vapidKeys, sendPush, subscriptionId } from './push.js';
-import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia } from './social.js';
+import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia, socialInsights } from './social.js';
 import { TtsError, synthesize } from './tts.js';
+import { MusicError, musicList, musicSave, musicUploadAudio, musicAudio, musicDelete } from './music.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
 const CONFIG_PATH = 'assets/js/config.js';
@@ -91,6 +96,11 @@ function utf8ToB64(text) {
   let bin = '';
   for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
   return btoa(bin);
+}
+
+/* De onde o cliente veio (ex.: "tiktok-drone-a", do link ?origem= do vídeo). Só letras, números e hífen. */
+function cleanOrigin(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
 }
 
 /* --------------------------------- GitHub --------------------------------- */
@@ -496,6 +506,7 @@ function publicOrder(order) {
     stage: order.stage || '',
     stageAt: order.stageAt || {},
     baseTotal: order.baseTotal,
+    origin: order.origin || '',
     cardFeePercent: order.cardFeePercent,
     installments: order.installments
   };
@@ -526,6 +537,7 @@ async function createOrder(request, env) {
   const order = {
     id,
     status: 'pending',
+    origin: cleanOrigin(body.origin),
     createdAt: now,
     expiresAt,
     lines: built.lines,
@@ -612,6 +624,7 @@ async function createCardOrder(request, env) {
     id,
     kind: 'card',
     status: 'pending',
+    origin: cleanOrigin(body.origin),
     createdAt: now,
     expiresAt,
     lines: built.lines,
@@ -904,6 +917,7 @@ async function createManualOrder(request, env) {
     id,
     manual: true,
     status: 'awaiting',
+    origin: cleanOrigin(body.origin),
     createdAt: now,
     autoCancelAt: now + hours * 3600 * 1000,
     lines: built.lines,
@@ -1019,7 +1033,7 @@ export default {
       else if (url.pathname === '/api/admin/push/subscribe' && request.method === 'POST') response = await pushSubscribe(request, env, false);
       else if (url.pathname === '/api/admin/push/unsubscribe' && request.method === 'POST') response = await pushSubscribe(request, env, true);
       else if (url.pathname === '/api/admin/push/test' && request.method === 'POST') response = await pushTest(request, env);
-      else if (url.pathname.startsWith('/api/media/') && request.method === 'GET') return await socialMedia(env, url.pathname.slice(11).replace(/\.jpg$/, ''));
+      else if (url.pathname.startsWith('/api/media/') && request.method === 'GET') return await socialMedia(env, url.pathname.slice(11).replace(/\.(jpg|mp4)$/, ''));
       else if (url.pathname === '/api/admin/tts' && request.method === 'POST') {
         await requireAdmin(request, env);
         try {
@@ -1030,11 +1044,28 @@ export default {
           response = json({ error: err.message }, err.status);
         }
       }
+      else if (url.pathname.startsWith('/api/admin/music')) {
+        await requireAdmin(request, env);
+        const mm = url.pathname.match(/^\/api\/admin\/music(?:\/([0-9a-f]{16})(?:\/(audio|delete))?)?$/);
+        try {
+          if (!mm) response = json({ error: 'Rota não encontrada.' }, 404);
+          else if (!mm[1] && request.method === 'GET') response = json(await musicList(env));
+          else if (!mm[1] && request.method === 'POST') response = json(await musicSave(env, (await request.json().catch(() => null)) || {}), 201);
+          else if (mm[2] === 'audio' && request.method === 'POST') response = json(await musicUploadAudio(env, mm[1], request));
+          else if (mm[2] === 'audio' && request.method === 'GET') response = await musicAudio(env, mm[1]);
+          else if (mm[2] === 'delete' && request.method === 'POST') response = json(await musicDelete(env, mm[1]));
+          else response = json({ error: 'Rota não encontrada.' }, 404);
+        } catch (err) {
+          if (!(err instanceof MusicError)) throw err;
+          response = json({ error: err.message }, err.status);
+        }
+      }
       else if (url.pathname.startsWith('/api/admin/social/')) {
         await requireAdmin(request, env);
         try {
           if (url.pathname === '/api/admin/social/status' && request.method === 'GET') response = json(await socialAccounts(env));
           else if (url.pathname === '/api/admin/social/media' && request.method === 'POST') response = json(await socialUpload(env, request));
+          else if (url.pathname === '/api/admin/social/insights' && request.method === 'GET') response = json(await socialInsights(env));
           else if (url.pathname === '/api/admin/social/publish' && request.method === 'POST') response = json(await socialPublish(env, (await request.json().catch(() => null)) || {}, url.origin));
           else response = json({ error: 'Rota não encontrada.' }, 404);
         } catch (err) {

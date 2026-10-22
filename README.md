@@ -364,6 +364,7 @@ O painel edita os arquivos do site e publica **num único commit** pela API do G
 ### 5.1 Abas
 
 - **Dashboard (abre primeiro):** mostra só as vendas **confirmadas**, com filtro de período (Hoje, 7 dias, 30 dias, Este mês, Tudo).
+  - **Vendas por origem:** pedidos e faturamento por link rastreado (`?origem=` dos vídeos, ou `utm_source`/`utm_campaign`). O site guarda a origem por 7 dias no aparelho do cliente e manda junto com o pedido; "Direto" = sem link rastreado.
   - Números: faturamento (produtos e frete), pedidos, ticket médio, itens vendidos, pedidos aguardando confirmação (com o valor reservado) e cancelados.
   - Gráfico de faturamento por dia e **total vendido por categoria**.
   - Tabela de **produtos vendidos**: quantidade, receita e estoque atual. O botão **"Marcar os 3 mais vendidos com selo"** aplica o selo *Mais vendido* no site (depois clique em Publicar).
@@ -491,6 +492,11 @@ Pasta `worker/`. Ele recalcula valores, reserva e devolve o estoque (por commits
 | `GET /api/track?id=…&phone=…` | página Acompanhar pedido | situação, etapas, itens e total (confere o WhatsApp) |
 | `POST /api/admin/orders/:id/stage` | painel | etapa do pedido pago (separando, pronto, enviado, entregue) |
 | `POST /api/orders`, `GET /api/orders/:id`, `POST /api/orders/:id/cancel`, `POST /api/webhook` | site / Mercado Pago | PIX automático (opcional, [7.4](#74-mercado-pago-pix-automático)) |
+| `POST /api/admin/tts` | painel (vídeos) | voz neural pt-BR: devolve o MP3 e o tempo de cada palavra (cabeçalho `X-Words`) |
+| `GET/POST /api/admin/music` · `/:id/audio` · `/:id/delete` | painel | biblioteca de trilhas (receitas + amostra WAV) |
+| `GET /api/admin/social/status` · `POST /api/admin/social/media` · `POST /api/admin/social/publish` | painel | publicar arte (feed/Story) e vídeo (Reels/Página) no Instagram e no Facebook |
+| `GET /api/admin/social/insights` | painel | desempenho dos últimos posts do Instagram |
+| `GET /api/media/:id.jpg` / `.mp4` | Meta | arquivo temporário (1 dia) que a Meta baixa para publicar |
 | tarefa agendada (minuto 17 de cada hora) | Cloudflare | cancela pedidos sem confirmação há 48 h e devolve o estoque |
 
 As rotas `/api/admin/*` exigem a chave do GitHub do painel com permissão de escrita no repositório.
@@ -678,17 +684,40 @@ Redes da loja: **Instagram** [@akylla.shop](https://www.instagram.com/akylla.sho
 
 ### 10.3 Vídeos com o mascote (estilo TikTok Shop)
 
-O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em português, com voz de IA natural e legendas palavra por palavra. O vídeo sai em **9:16 (1080×1920, MP4)**, pronto para TikTok, Reels, Stories e Status.
+O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em português, com voz de IA natural, legendas palavra por palavra, cortes com as fotos da galeria e **trilha própria**. Sai em **9:16 (1080×1920)**, pronto para TikTok, Reels, Stories e Status.
 
-Roteiro do vídeo: gancho → características (cada uma aparece num cartão) → o que vem junto → preço com a promoção → "Corre, estoque limitado… link na bio" → cartela final com o anúncio completo.
+**Onde:** painel → **Artes** → **🎬 Vídeo do produto (9:16)**. Escolha as opções, confira o roteiro, clique em **Gerar vídeo** e deixe a aba aberta e visível durante a gravação (leva o tempo do vídeo).
 
-**Gerar pelo painel (mais fácil):** aba **Artes** → **🎬 Vídeo do produto (9:16)** → escolha o produto e a voz → confira ou edite o roteiro → **Gerar vídeo** → espere a gravação (o tempo do vídeo, cerca de 40 s, com a aba aberta e visível) → **Baixar vídeo** ou **Compartilhar**.
+| Opção | O que faz | Dica de marketing |
+|---|---|---|
+| **Modelo** | Produto em destaque · 3 motivos pra ter · Unboxing (o que vem na caixa) · Preço do dia (2 a 4 produtos) · Comparativo A × B | Varie o modelo durante a semana para o perfil não ficar repetitivo |
+| **Gancho** (primeiros 2 s) | 💥 Preço-choque (preço gigante + selo de desconto) · ❓ Pergunta (dor do cliente) · 👀 Curiosidade · Clássico | Preço-choque costuma parar mais gente no feed |
+| **Duração** | Curto (~20 s) · Médio (~30 s) · Completo (~45 s) | Para vender, 15–30 s funciona melhor |
+| **Chamada final** | 💬 Comenta "EU QUERO" · 📲 WhatsApp · 🔗 Link na bio · 🔖 Salva esse vídeo | Comentários e salvamentos aumentam o alcance |
+| **Voz / velocidade** | Francisca, Thalita ou Antônio · normal, rápida ou bem rápida | "Rápida" é o ritmo típico do TikTok |
+| **Trilha / volume** | Sem música (adicione um som em alta no app) · nova trilha Pop, Lo-fi ou Eletrônica · trilha da biblioteca | Som em alta do próprio app ajuda no alcance; a trilha própria dá identidade |
+| **Mascote** | Tamanho (P/M/G) e lado (esquerda/direita); muda de expressão (surpreso no preço, feliz na chamada) | Esquerda evita os botões do TikTok; P deixa o produto maior |
+| **Rede / versão** | Gera o **link rastreado** (ex.: `akyllashop.com/?origem=tiktok-drone-wrj12618-a`) | Faça a versão A e a B com ganchos diferentes e compare as vendas |
 
-- A voz é feita pelo servidor da loja (`POST /api/admin/tts`) e a animação é gravada no próprio navegador. Sai em **MP4** no Chrome/Edge atualizados (WebM em navegadores antigos; o TikTok aceita os dois).
-- **Roteiro editável:** uma fala por linha. O marcador no começo escolhe a cena: `[gancho]`, `[ficha 1]` a `[ficha 6]`, `[junto]`, `[preço]`, `[chamada]`, `[fala]`. **Voltar ao roteiro padrão** desfaz as mudanças.
-- No celular também funciona, mas a gravação é mais pesada: prefira o computador.
+**O que sai junto com o vídeo:**
+- **Capa** (1080×1920, JPEG) com o produto, o título e o preço: botão **Baixar capa**.
+- **Legenda pronta** (gancho, características, preço, chamada, link rastreado e hashtags) e **comentário para fixar** no post, com botões **Copiar**.
+- **Mostrar áreas seguras**: mostra por cima do vídeo onde o TikTok/Instagram colocam botões e textos.
+- **Publicar como Reels** no Instagram e no Facebook (depois de ligar o painel à Meta, [10.2](#102-publicar-direto-nas-redes-instagram-e-facebook)). TikTok: baixe e poste pelo app.
+- **🎵 Salvar esta trilha na biblioteca**, quando o vídeo usou uma trilha nova.
 
-**Gerar pelo computador** (mesmo vídeo, em lote, sem depender do navegador):
+**Roteiro editável:** uma fala por linha; o marcador no começo escolhe a cena: `[gancho]`, `[ficha 1]` a `[ficha 6]` (`#1` mostra o número grande, usado no "3 motivos"), `[junto]`, `[preço]`, `[oferta 1]` a `[oferta 4]` (produto do Preço do dia/Comparativo), `[versus]`, `[chamada]`, `[fala]`. **Refazer roteiro com as opções** volta ao roteiro automático.
+
+**Medir:** as vendas que chegam pelos links rastreados aparecem no **Início → Vendas por origem**; curtidas, alcance, salvamentos e visualizações aparecem em **Artes → 📈 Desempenho dos posts** (com os melhores horários para postar).
+
+#### Trilhas próprias (sem direito autoral) e biblioteca no servidor
+
+- As músicas são **compostas pelo próprio painel** (Web Audio): bateria, baixo, acordes e efeitos sintetizados na hora. Nada é baixado nem copiado, então não há direito autoral de terceiros. Código: `admin/estudio-musica.js`.
+- **Estilos:** Pop animado (~118 BPM), Lo-fi suave (~84 BPM) e Eletrônica hype (~128 BPM). Cada trilha nova sorteia andamento, tom, progressão de acordes e variações de batida.
+- **Sincronia com o vídeo:** abre com um "drop" (filtro abrindo), **whoosh** em cada troca de cena, **subida** antes do preço e **impacto** na hora do preço, volume **abaixa sozinho** enquanto o Aky fala e some no final.
+- **Biblioteca de trilhas** (card **🎵 Biblioteca de trilhas da loja**): **🎲 Criar e ouvir** → gostou → **Salvar na biblioteca** (dê um nome). Fica guardada no servidor (KV) como "receita" (estilo, BPM, tom, semente) + uma amostra WAV de 20 s. Com a receita, o painel recria **a mesma música** em qualquer duração, encaixada nas cenas de cada vídeo. Na lista: **▶ Ouvir**, **Usar no vídeo**, **Apagar** (até 60 trilhas).
+
+**Gerar pelo computador** (versão básica: modelo padrão, sem trilha; útil para gerar todos de uma vez):
 
 ```bash
 cd ferramentas/videos
@@ -738,8 +767,8 @@ node gerar.mjs todos
 │   └── vendor/qrcode.js    # qrcode-generator 2.0.4 (MIT)
 ├── worker/                 # servidor (Cloudflare Worker)
 │   ├── wrangler.toml · package.json · definir-chaves.ps1
-│   └── src/index.js (rotas) · src/logic.js (regras de pedido) · src/push.js (notificações)
-├── ferramentas/videos/     # vídeos 9:16 com o mascote falando (gerar.mjs, roteiros.js, render.py); no painel: admin/estudio-video.js
+│   └── src/index.js (rotas) · logic.js (regras de pedido) · push.js (notificações) · social.js (Instagram/Facebook) · tts.js (voz) · music.js (biblioteca de trilhas)
+├── ferramentas/videos/     # vídeos 9:16 com o mascote falando (gerar.mjs, roteiros.js, render.py); no painel: admin/estudio-video.js e admin/estudio-musica.js (trilhas)
 ├── ferramentas/anuncios/   # gerador de anúncios 9:16 (anuncios.js e icones.js também são usados pela aba Artes)
 ├── scripts/atualizar-precos.js   # relatório site × planilha
 ├── tests/site.test.js · tests/worker.test.js
@@ -944,8 +973,28 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Vídeo 2.0 (modelos, ganchos, duração, chamadas, cortes com a galeria, expressões do mascote, capa, legenda, comentário fixado, áreas seguras, Reels, desempenho), trilhas próprias com biblioteca no servidor e Vendas por origem. |
 
 O histórico completo está nos commits: `git log --oneline`.
+
+### 18.1 Registro de entregas e testes (21 e 22/10/2026)
+
+Tudo abaixo foi publicado (site, painel e servidor) e passou pelos **33 testes automáticos** (`node --test tests/site.test.js tests/worker.test.js`). "Testado no navegador" = rodado de ponta a ponta numa cópia local do painel/loja.
+
+| O que foi criado | Como foi testado | Observação |
+|---|---|---|
+| Pedido no cartão em aberto pode virar **PIX**; voltar do Mercado Pago cai no pedido; seta "voltar" do celular fecha janelas | navegador (histórico/janelas) + página do pedido no ar | botão "Prefiro pagar no PIX" não foi clicado no ar (pedido real) |
+| **Estúdio de artes**: estilo ⭐ Anúncio nos 4 formatos (1:1, 4:5, 9:16, 16:9), recorte do produto, pré-definidos, legendas, kit de abertura com a logo oficial | navegador: 26 produtos × 4 formatos sem erro; comparação lado a lado com o anúncio 01 | — |
+| **Auditoria**: limite de PIX por aparelho, número de pedido de 6 caracteres sorteados, CSP nas páginas, Publicar sem conflito com vendas, cartão aprovado depois do cancelamento vai para conferência | testes automáticos (cartão tardio, origem) + teste da junção de alterações + checagem do site no ar sem erros | — |
+| Filtro **Fora da loja** com produtos zerados | painel no ar | — |
+| **Logo oficial** redonda na loja e no kit (aba do navegador sem mudança) | navegador + site no ar | prévia do link no WhatsApp/Facebook pode demorar a atualizar |
+| **Instagram/Facebook** no site, legendas e bios; **publicar arte** nas redes pelo painel | teste automático com a Meta simulada + links conferidos no ar | publicação real depende do token da Página (10.2) |
+| **Vídeos com o mascote** (computador e painel), voz neural, legendas | vídeo do drone (MP4 1080×1920) gerado no computador; vídeos gerados no painel local com voz real | voz no servidor publicado ainda não testada com a chave do painel |
+| **Aky ajudando na compra** (dicas por passo, destaque de onde tocar, pode desligar) | navegador em tamanho de celular e computador (sacola → entrega → CEP → PIX) | — |
+| **Vídeo 2.0**: 5 modelos, 4 ganchos, 3 durações, 4 chamadas, velocidade da voz, cortes com galeria, expressões, tamanho/lado do mascote, capa, legenda, comentário fixado, link rastreado, versões A/B, áreas seguras | navegador: roteiros dos 5 modelos conferidos; vídeos "Produto em destaque" (curto, preço-choque, Pop) e "Comparativo" (trilha da biblioteca) gravados e conferidos quadro a quadro | — |
+| **Trilhas próprias** (Pop, Lo-fi, Eletrônica) sincronizadas com o vídeo + **biblioteca no servidor** | 3 estilos renderizados (20 s em < 1 s, sem distorção); salvar/ouvir/usar/apagar testado no painel local e nos testes automáticos | o som em si deve ser ouvido por você para aprovar o gosto |
+| **Vendas por origem** (link rastreado → pedido → Dashboard) | teste automático (origem limpa e gravada no pedido) | — |
+| **Reels** (Instagram) e vídeo na Página (Facebook) + **Desempenho dos posts** | código pronto; sem token da Meta não há como testar de verdade | o Instagram pode recusar o MP4 gravado pelo navegador; se acontecer, baixe e poste pelo app |
 
 ---
 

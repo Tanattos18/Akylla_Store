@@ -20,6 +20,7 @@ function kvMock() {
     stale: null,
     get: async function (k, type) { var v = (this.stale && this.stale.has(k)) ? this.stale.get(k) : store.get(k); if (!v) return null; return type === 'json' ? JSON.parse(v.value) : v.value; },
     put: async function (k, value, opts) { store.set(k, { value: value, metadata: opts && opts.metadata }); },
+    getWithMetadata: async function (k) { var v = store.get(k); return v ? { value: v.value, metadata: v.metadata || null } : { value: null, metadata: null }; },
     delete: async function (k) { store.delete(k); },
     list: async function (opts) {
       return { keys: Array.from(store.entries()).filter(function (e) { return e[0].indexOf(opts.prefix) === 0; }).map(function (e) { return { name: e[0], metadata: e[1].metadata }; }) };
@@ -592,6 +593,52 @@ test('voz dos vídeos: só funciona com a chave do painel', async function () {
     assert.equal(denied.status, 401);
     var empty = await call(worker, s.env, 'POST', '/api/admin/tts', { text: '   ' }, { Authorization: 'Bearer gh-admin' });
     assert.equal(empty.status, 400, 'texto vazio');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('origem: pedido guarda de qual vídeo/rede o cliente veio (link ?origem=) e o painel recebe', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var created = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Cliente Video', phone: '62933334444' }, origin: 'TikTok-Drone-A<script>' });
+    assert.equal(created.status, 201, JSON.stringify(created.data));
+    var list = await call(worker, s.env, 'GET', '/api/admin/orders', null, { Authorization: 'Bearer gh-admin' });
+    var o = list.data.orders.find(function (x) { return x.id === created.data.id; });
+    assert.equal(o.origin, 'tiktok-drone-ascript', 'origem limpa (só letras, números e hífen)');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('trilhas: biblioteca no servidor (salvar, amostra WAV, ouvir, apagar) só com a chave do painel', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var admin = { Authorization: 'Bearer gh-admin' };
+    assert.equal((await call(worker, s.env, 'GET', '/api/admin/music')).status, 401);
+    var saved = await call(worker, s.env, 'POST', '/api/admin/music', { name: 'Pop da inauguração', style: 'pop', bpm: 118, key: 'A', seed: 4242 }, admin);
+    assert.equal(saved.status, 201, JSON.stringify(saved.data));
+    var id = saved.data.track.id;
+    var wav = new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4]);
+    var up = await worker.fetch(new Request('https://api.test/api/admin/music/' + id + '/audio', { method: 'POST', headers: { 'Content-Type': 'audio/wav', Authorization: 'Bearer gh-admin', Origin: 'https://akyllashop.com' }, body: wav }), s.env);
+    assert.equal(up.status, 200);
+    var list = await call(worker, s.env, 'GET', '/api/admin/music', null, admin);
+    assert.equal(list.data.tracks[0].name, 'Pop da inauguração');
+    assert.equal(list.data.tracks[0].seed, 4242);
+    assert.equal(list.data.tracks[0].hasAudio, true);
+    var audio = await worker.fetch(new Request('https://api.test/api/admin/music/' + id + '/audio', { headers: admin }), s.env);
+    assert.equal(audio.headers.get('Content-Type'), 'audio/wav');
+    var del = await call(worker, s.env, 'POST', '/api/admin/music/' + id + '/delete', null, admin);
+    assert.equal(del.status, 200);
+    assert.equal((await call(worker, s.env, 'GET', '/api/admin/music', null, admin)).data.tracks.length, 0);
+    var noName = await call(worker, s.env, 'POST', '/api/admin/music', { style: 'pop' }, admin);
+    assert.equal(noName.status, 400);
   } finally {
     global.fetch = realFetch;
   }
