@@ -4911,3 +4911,47 @@ dialog::backdrop {
 .footer-social svg { width: 18px; height: 18px; }
 .footer-social--menu { justify-content: center; }
 .footer-social--menu a { border-color: rgba(6, 9, 19, 0.15); }
+
+/* ---------------- Aky, o mascote ajudante da compra (assets/js/mascote.js) ---------------- */
+.aky { position: fixed; left: 14px; bottom: 16px; z-index: 60; display: flex; align-items: flex-end; gap: 8px; max-width: calc(100vw - 28px); pointer-events: none; }
+.aky[hidden] { display: none; }
+.aky.above-bar { bottom: 92px; }
+.aky.in-dialog { position: fixed; left: 12px; bottom: 12px; z-index: 5; }
+.aky > * { pointer-events: auto; }
+.aky-bot { order: 0; flex: none; width: 74px; height: 80px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 8px 16px rgba(6, 9, 19, 0.35)); animation: aky-bob 2.6s ease-in-out infinite; }
+.aky-bot svg { width: 100%; height: 100%; overflow: visible; }
+.aky-antenna { stroke: #ffd27a; stroke-width: 4; stroke-linecap: round; }
+.aky-ball { fill: #ffdc8c; animation: aky-glow 1.6s ease-in-out infinite; }
+.aky-body { fill: #ff5e00; }
+.aky-head { fill: #ff8a00; stroke: #ff5e00; stroke-width: 3; }
+.aky-face { fill: #0b0d14; }
+.aky-eyes rect { fill: #fff; transform-origin: 60px 51px; animation: aky-blink 3.4s infinite; }
+.aky-mouth { fill: #ff8a00; transform-box: fill-box; transform-origin: center; }
+.aky.is-talking .aky-mouth { animation: aky-talk 0.22s ease-in-out infinite alternate; }
+.aky-arm { stroke: #ff5e00; stroke-width: 8; stroke-linecap: round; }
+.aky-arm, .aky-hand { transform-origin: 88px 98px; animation: aky-wave 1.4s ease-in-out infinite; }
+.aky-hand { fill: #ff8a00; }
+.aky-bubble { order: 1; position: relative; max-width: 250px; margin-bottom: 26px; padding: 0.7rem 0.85rem 0.55rem; border-radius: 16px 16px 16px 4px; background: #fff; color: #07090f; box-shadow: 0 14px 34px rgba(6, 9, 19, 0.28); border: 2px solid #ff8a00; animation: aky-pop 0.35s ease-out; }
+.aky-bubble[hidden] { display: none; }
+.aky-text { margin: 0 1.1rem 0.35rem 0; font-size: 0.86rem; font-weight: 700; line-height: 1.35; }
+.aky-close { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent; color: #6b7280; font-size: 0.8rem; cursor: pointer; }
+.aky-off { padding: 0; border: 0; background: none; color: #6b7280; font-size: 0.72rem; text-decoration: underline; cursor: pointer; }
+.aky-target { position: relative; z-index: 1; animation: aky-target 1.3s ease-in-out infinite; border-radius: 14px; }
+@keyframes aky-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes aky-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes aky-talk { from { transform: scaleY(1); } to { transform: scaleY(2.6); } }
+@keyframes aky-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-22deg); } }
+@keyframes aky-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes aky-pop { from { transform: scale(0.85) translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes aky-target { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 138, 0, 0.75); } 50% { box-shadow: 0 0 0 9px rgba(255, 138, 0, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .aky-bot, .aky-ball, .aky-eyes rect, .aky-arm, .aky-hand, .aky-bubble, .aky.is-talking .aky-mouth { animation: none; }
+  .aky-target { animation: none; box-shadow: 0 0 0 4px rgba(255, 138, 0, 0.8); }
+}
+@media print { .aky { display: none; } }
+.aky.at-top { top: 14px; bottom: auto; align-items: flex-start; }
+.aky.at-top .aky-bubble { margin: 26px 0 0; border-radius: 4px 16px 16px 16px; }
+.aky[popover] { inset: auto auto 16px 14px; margin: 0; padding: 0; border: 0; background: transparent; overflow: visible; color: inherit; }
+.aky[popover]:not(:popover-open) { display: none; }
+.aky[popover].above-bar { bottom: 92px; }
+.aky[popover].at-top { top: 14px; bottom: auto; }

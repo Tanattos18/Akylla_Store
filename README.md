@@ -50,6 +50,7 @@ Pense na loja como **três peças** que conversam entre si:
 - **Vende além do estoque de casa** até o limite de reposição (padrão +10) e marca no pedido quantos você precisa comprar no fornecedor.
 - **Junta as suas edições com as vendas.** Se uma venda acontecer enquanto o painel está aberto, o **Publicar** mantém o que você editou e respeita o estoque novo, sem conflito.
 - **Cartão aprovado depois de cancelado** (o cliente pagou numa aba esquecida): o pedido vai para **Conferir pagamento** e você é avisado, para entregar ou devolver o valor.
+- **Aky ajuda na compra:** o mascote aparece no canto quando há produtos na sacola e dá a dica de cada passo (Finalizar → entrega → CEP → nome → Gerar PIX/cartão → enviar comprovante), destacando com um brilho laranja onde tocar. O cliente pode fechar o balão ou tocar em *Desligar ajudante* (fica desligado naquele aparelho). Código: `assets/js/mascote.js`.
 - **O cliente nunca fica preso:** no pedido em aberto ele pode **concluir o cartão**, **trocar para PIX** ou **cancelar**. A seta "voltar" do celular fecha janelas sem sair do site, e voltar da página do Mercado Pago cai no pedido dele.
 
 ---
@@ -941,6 +942,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Auditoria: limite de PIX por aparelho, número de pedido mais forte, CSP no site, Publicar sem conflito com vendas, cartão aprovado depois de cancelado vai para conferência. |
 | 21/10/2026 | Logo oficial redonda; Instagram @akylla.shop e Facebook no site, legendas e bios; publicar do painel direto no Instagram/Facebook (feed e Story). |
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
+| 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.
