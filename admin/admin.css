@@ -662,3 +662,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .st-motion { display: grid; gap: 0.4rem; padding-top: 0.5rem; border-top: 1px solid var(--line); }
 .st-motion .muted { margin: 0; font-size: 0.8rem; }
 .st-select { width: auto; max-width: 100%; }
+
+/* Teleprompter (voz gravada) */
+.vd-rec { display: grid; gap: 0.5rem; padding: 0.9rem; border: 2px solid var(--brand); border-radius: 16px; background: var(--low-bg); }
+.vd-rec[hidden] { display: none; }
+.vd-rec-count { margin: 0; font-weight: 800; }
+.vd-takes { display: grid; gap: 0.5rem; }
+.vd-take { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 0.7rem; align-items: center; padding: 0.7rem; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.vd-take .ml-actions { grid-column: 2; }
+.vd-take-n { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--soft); font-weight: 800; }
+.vd-take.is-done .vd-take-n { background: var(--brand); color: #111; }
+.vd-take.is-rec { border-color: #e5484d; box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.25); }
+.vd-take-text { margin: 0; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }

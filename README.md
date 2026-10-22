@@ -717,6 +717,14 @@ O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em portu
 
 **Medir:** as vendas que chegam pelos links rastreados aparecem no **Início → Vendas por origem**; curtidas, alcance, salvamentos e visualizações aparecem em **Artes → 📈 Desempenho dos posts** (com os melhores horários para postar).
 
+#### Voz gravada (teleprompter) — recomendado
+
+No campo **Voz**, escolha **🎙️ Gravar a voz (teleprompter)**. Aparece a lista das falas do roteiro em letra grande: em cada uma, **🎙️ Gravar** → falar → **■ Parar**; dá para **▶ Ouvir** e **Regravar**. Quando o contador mostrar "todas gravadas", clique em **Gerar vídeo**: o Aky mexe a boca com a voz gravada, com legendas e trilha. O silêncio do começo e do fim de cada fala é cortado sozinho.
+
+- Funciona no celular e no PC (o navegador pede para liberar o microfone na primeira vez).
+- As gravações ficam só no aparelho, enquanto a página estiver aberta (não vão para o servidor). Mudou o texto de uma fala? Grave de novo.
+- Dicas: lugar silencioso, celular a um palmo da boca, falar com energia e sorrindo (dá para "ouvir" o sorriso). Voz humana costuma gerar mais confiança e alcance que voz de IA.
+
 #### Voz dos vídeos: ative a voz oficial (grátis)
 
 A voz vem da Microsoft. Sem configuração, o servidor usa o serviço gratuito "não oficial" do Edge, que **passou a limitar os pedidos** (erros 429/403 em 22/10/2026) — o vídeo pode falhar com "o serviço de voz recusou a conexão". A solução estável é a **voz oficial (Azure Speech)**: mesmas vozes (Francisca, Thalita, Antônio), plano **grátis F0 com 500 mil caracteres por mês** (cada vídeo usa ~300) e uso comercial permitido.
@@ -993,6 +1001,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Voz gravada no painel (teleprompter, fala por fala) para os vídeos. |
 | 22/10/2026 | Arte animada (🎬 Animar, 6 s em loop) com princípios de motion design; acabamento premium (vinheta + textura); voz: endereço reserva + suporte à voz oficial Azure (grátis). |
 | 22/10/2026 | Artes e vídeos com visual novo a cada geração (fundos, foto principal, frases, entrada do produto, cartela final); fotos sem fundo branco viram cartão. |
 | 22/10/2026 | Vídeo 2.0 (modelos, ganchos, duração, chamadas, cortes com a galeria, expressões do mascote, capa, legenda, comentário fixado, áreas seguras, Reels, desempenho), trilhas próprias com biblioteca no servidor e Vendas por origem. |

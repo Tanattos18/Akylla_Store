@@ -190,6 +190,104 @@
     });
   }
 
+  /* ------------------------------ voz gravada (teleprompter) ------------------------------ */
+  /*
+   * Quem grava lê cada fala do roteiro e grava no microfone (celular ou PC). As gravações ficam só neste aparelho,
+   * na memória da página (não vão para o servidor). A legenda é distribuída pela duração da fala gravada.
+   */
+  var takes = {};   // texto da fala → { blob, url }
+  var mic = null, recorder = null, recIndex = -1;
+
+  function recMime() {
+    var list = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+    for (var i = 0; i < list.length; i += 1) if (window.MediaRecorder && MediaRecorder.isTypeSupported(list[i])) return list[i];
+    return '';
+  }
+
+  function getMic() {
+    if (mic) return Promise.resolve(mic);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.reject(new Error('Este navegador não permite gravar áudio.'));
+    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+      .then(function (st) { mic = st; return st; });
+  }
+
+  function stopRecording() { if (recorder && recorder.state !== 'inactive') recorder.stop(); }
+
+  function renderTakes() {
+    var box = $('#vdRecList'); if (!box) return;
+    var lines = parseScript($('#vdScript').value, last && last.base);
+    box.innerHTML = '';
+    var done = 0;
+    lines.forEach(function (l, i) {
+      var t = takes[l.say];
+      if (t) done += 1;
+      var row = document.createElement('div'); row.className = 'vd-take' + (t ? ' is-done' : '') + (recIndex === i ? ' is-rec' : '');
+      var n = document.createElement('span'); n.className = 'vd-take-n'; n.textContent = t ? '✓' : String(i + 1);
+      var tx = document.createElement('p'); tx.className = 'vd-take-text'; tx.textContent = l.say;
+      var acts = document.createElement('div'); acts.className = 'ml-actions';
+      var rb = button(recIndex === i ? '■ Parar' : t ? '🎙️ Regravar' : '🎙️ Gravar', recIndex === i ? 'btn-primary btn-sm' : 'btn-ghost btn-sm', function () {
+        if (recIndex === i) { stopRecording(); return; }
+        if (recIndex >= 0) { api.toast('Termine a gravação atual primeiro.'); return; }
+        getMic().then(function (st) {
+          var mime = recMime();
+          if (!mime) throw new Error('Este navegador não grava áudio.');
+          var chunks = [];
+          recorder = new MediaRecorder(st, { mimeType: mime });
+          recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+          recorder.onstop = function () {
+            var blob = new Blob(chunks, { type: mime.split(';')[0] });
+            if (takes[l.say]) URL.revokeObjectURL(takes[l.say].url);
+            takes[l.say] = { blob: blob, url: URL.createObjectURL(blob) };
+            recIndex = -1; recorder = null;
+            renderTakes();
+          };
+          recIndex = i;
+          recorder.start();
+          renderTakes();
+        }).catch(function (err) {
+          api.toast(/denied|Permission|NotAllowed/i.test(err.name + err.message) ? 'Libere o microfone para o painel (ícone de cadeado na barra de endereço) e tente de novo.' : err.message, 7000);
+        });
+      });
+      acts.appendChild(rb);
+      if (t) acts.appendChild(button('▶ Ouvir', 'btn-ghost btn-sm', function () { new Audio(t.url).play().catch(function () {}); }));
+      row.appendChild(n); row.appendChild(tx); row.appendChild(acts);
+      box.appendChild(row);
+    });
+    $('#vdRecCount').textContent = done + ' de ' + lines.length + ' falas gravadas' + (done === lines.length && lines.length ? ' ✓ pode gerar o vídeo' : '');
+  }
+
+  function syncVoiceMode() {
+    var rec = val('#vdVoice') === 'gravar';
+    $('#vdRecWrap').hidden = !rec;
+    $('#vdRateWrap').hidden = rec;
+    if (rec) renderTakes(); else stopRecording();
+  }
+
+  /* Corta o silêncio do começo e do fim da gravação (fica mais dinâmico). */
+  function trim(actx, buf) {
+    var d = buf.getChannelData(0), n = d.length, th = 0.02, a = 0, b = n - 1;
+    while (a < n && Math.abs(d[a]) < th) a += 1;
+    while (b > a && Math.abs(d[b]) < th) b -= 1;
+    a = Math.max(0, a - Math.floor(buf.sampleRate * 0.06)); b = Math.min(n - 1, b + Math.floor(buf.sampleRate * 0.12));
+    if (b - a < buf.sampleRate * 0.2) return buf;
+    var out = actx.createBuffer(1, b - a, buf.sampleRate);
+    out.getChannelData(0).set(d.subarray(a, b));
+    return out;
+  }
+
+  /* Tempo estimado de cada palavra na fala gravada (para a legenda). */
+  function estimateWords(text, duration) {
+    var parts = String(text).split(/\s+/).filter(Boolean);
+    var weight = parts.reduce(function (n, w) { return n + w.length + 2; }, 0) || 1;
+    var at = 0.05;
+    return parts.map(function (w) {
+      var dd = (duration - 0.1) * (w.length + 2) / weight;
+      var o = { text: w.replace(/[.,!?;:]+$/, ''), start: at, end: at + dd };
+      at += dd;
+      return o;
+    });
+  }
+
   /* Junta as falas com pausas e calcula o volume por quadro (boca do mascote). */
   function buildVoice(actx, parts, lines, gap) {
     var rate = actx.sampleRate, lead = 0.3, tail = 2.2;
@@ -690,7 +788,29 @@
       });
     }
     function worker() { if (next >= lines.length) return Promise.resolve(); var i = next++; return one(i, 1).then(worker); }
-    status('Gerando a voz… (0/' + lines.length + ')');
+    if (o.voice === 'gravar') {
+      var missing = lines.filter(function (l) { return !takes[l.say]; }).length;
+      if (missing) {
+        busy = false; $('#vdGenerate').disabled = false; actx.close().catch(function () {});
+        status('Faltam ' + missing + ' falas para gravar (veja a lista do teleprompter).');
+        api.toast('Grave todas as falas antes de gerar o vídeo.', 5000);
+        return;
+      }
+      /* troca o gerador de voz pelas gravações */
+      worker = function () {
+        return lines.reduce(function (chain, l, i) {
+          return chain.then(function () { return takes[l.say].blob.arrayBuffer(); })
+            .then(function (ab) { return actx.decodeAudioData(ab); })
+            .then(function (b) {
+              b = trim(actx, b);
+              buffers[i] = b;
+              l.words = estimateWords(l.say, b.duration); l.groups = groups(l.words);
+              status('Preparando as gravações… (' + (i + 1) + '/' + lines.length + ')');
+            });
+        }, Promise.resolve());
+      };
+    }
+    status(o.voice === 'gravar' ? 'Preparando as gravações…' : 'Gerando a voz… (0/' + lines.length + ')');
     var mixed;
     worker().then(function () {
       S.audio = buildVoice(actx, buffers, lines, gap);
@@ -956,7 +1076,9 @@
     loadLibrary();
     if (wired) return;
     wired = true;
-    ['#vdProduct', '#vdProductB', '#vdTemplate', '#vdHook', '#vdDuration', '#vdCta'].forEach(function (id) { $(id).addEventListener('change', rebuildScript); });
+    ['#vdProduct', '#vdProductB', '#vdTemplate', '#vdHook', '#vdDuration', '#vdCta'].forEach(function (id) { $(id).addEventListener('change', function () { rebuildScript(); if (val('#vdVoice') === 'gravar') renderTakes(); }); });
+    $('#vdVoice').addEventListener('change', syncVoiceMode);
+    $('#vdScript').addEventListener('input', function () { if (val('#vdVoice') === 'gravar') renderTakes(); });
     ['#vdNetwork', '#vdVersion'].forEach(function (id) { $(id).addEventListener('change', syncFields); });
     $('#vdReset').addEventListener('click', rebuildScript);
     $('#vdGenerate').addEventListener('click', generate);
