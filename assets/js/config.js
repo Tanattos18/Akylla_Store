@@ -38,29 +38,33 @@ window.AKYLLA_CONFIG = {
     },
     "bands": [
       {
-        "upToKm": 15,
+        "upToKm": 5,
+        "price": 1500
+      },
+      {
+        "upToKm": 10,
         "price": 2500,
         "promoPrice": 1500
       },
       {
-        "upToKm": 20,
-        "price": 2800
+        "upToKm": 15,
+        "price": 3000,
+        "promoPrice": 2000
       },
       {
-        "upToKm": 25,
-        "price": 3100
+        "upToKm": 20,
+        "price": 4000,
+        "promoPrice": 2500
       },
       {
         "upToKm": 30,
-        "price": 3400
-      },
-      {
-        "upToKm": 35,
-        "price": 3700
+        "price": 5000,
+        "promoPrice": 3000
       },
       {
         "upToKm": 40,
-        "price": 4000
+        "price": 6000,
+        "promoPrice": 3500
       }
     ],
     "extraStepKm": 5,
