@@ -492,18 +492,20 @@
     var query = normQuery($('#productSearch'));
     list.innerHTML = '';
     var counts = { all: state.products.length, live: 0, hidden: 0 };
-    state.products.forEach(function (p) { counts[p.hidden ? 'hidden' : 'live'] += 1; });
+    /* Fora da loja = escondidos do site + sem estoque em casa (0), para saber quantos estão zerados */
+    var out = function (p) { return p.hidden || !(Number(p.stock) > 0); };
+    state.products.forEach(function (p) { counts[out(p) ? 'hidden' : 'live'] += 1; });
     Object.keys(counts).forEach(function (k) { var n = document.querySelector('[data-pcount="' + k + '"]'); if (n) n.textContent = counts[k] ? String(counts[k]) : ''; });
     state.products.forEach(function (p, index) {
       if (!matches(p, query)) return;
-      if (productFilter === 'live' && p.hidden) return;
-      if (productFilter === 'hidden' && !p.hidden) return;
+      if (productFilter === 'live' && out(p)) return;
+      if (productFilter === 'hidden' && !out(p)) return;
       list.appendChild(el('li', { class: 'product-item' + (isChanged(p) ? ' is-changed' : '') }, [
         el('img', { class: 'thumb', src: photoUrl(p.image), alt: '', loading: 'lazy', width: '56', height: '56' }),
         el('div', { class: 'item-main' }, [
           el('strong', { text: p.shortName }),
           el('small', { text: brl(p.price) + saleHint(p) + ' · Cód. ' + p.code + ' · ' + (1 + (p.gallery || []).length) + ' foto(s)' }),
-          el('div', { class: 'badges' }, [stockBadge(p), p.illustrative ? el('span', { class: 'badge', text: 'Foto ilustrativa' }) : null])
+          el('div', { class: 'badges' }, [stockBadge(p), !p.hidden && !(Number(p.stock) > 0) ? el('span', { class: 'badge', text: restockOf(p) > 0 ? 'Zerado em casa · no site vendendo pela reposição' : 'Zerado · aparece Esgotado no site' }) : null, p.illustrative ? el('span', { class: 'badge', text: 'Foto ilustrativa' }) : null])
         ]),
         el('div', { class: 'item-actions' }, [
           el('button', { type: 'button', class: 'btn btn-sm ' + (p.hidden ? 'btn-live' : 'btn-ghost'), text: p.hidden ? '✓ Colocar na loja' : 'Tirar da loja', title: p.hidden ? 'Mostrar este produto no site' : 'Esconder do site (fica no painel)', onclick: function () { toggleLive(index); } }),
