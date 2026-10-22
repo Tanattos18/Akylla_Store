@@ -212,6 +212,7 @@
             opts = opts || {};
             opts.headers = Object.assign({ Authorization: 'Bearer ' + state.token }, opts.headers || {});
             return fetch(apiBase() + path, opts).then(function (res) {
+              if (opts.raw && res.ok) return res; // resposta binária (ex.: áudio da voz)
               return res.json().catch(function () { return {}; }).then(function (d) {
                 if (!res.ok) throw new Error(d.error || ('Erro ' + res.status));
                 return d;

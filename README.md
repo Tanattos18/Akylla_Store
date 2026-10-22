@@ -681,7 +681,13 @@ O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em portu
 
 Roteiro do vídeo: gancho → características (cada uma aparece num cartão) → o que vem junto → preço com a promoção → "Corre, estoque limitado… link na bio" → cartela final com o anúncio completo.
 
-**Gerar (no computador):**
+**Gerar pelo painel (mais fácil):** aba **Artes** → **🎬 Vídeo do produto (9:16)** → escolha o produto e a voz → confira ou edite o roteiro → **Gerar vídeo** → espere a gravação (o tempo do vídeo, cerca de 40 s, com a aba aberta e visível) → **Baixar vídeo** ou **Compartilhar**.
+
+- A voz é feita pelo servidor da loja (`POST /api/admin/tts`) e a animação é gravada no próprio navegador. Sai em **MP4** no Chrome/Edge atualizados (WebM em navegadores antigos; o TikTok aceita os dois).
+- **Roteiro editável:** uma fala por linha. O marcador no começo escolhe a cena: `[gancho]`, `[ficha 1]` a `[ficha 6]`, `[junto]`, `[preço]`, `[chamada]`, `[fala]`. **Voltar ao roteiro padrão** desfaz as mudanças.
+- No celular também funciona, mas a gravação é mais pesada: prefira o computador.
+
+**Gerar pelo computador** (mesmo vídeo, em lote, sem depender do navegador):
 
 ```bash
 cd ferramentas/videos
@@ -694,7 +700,7 @@ node gerar.mjs todos
 - **Saída:** `Banner_Itens_Loja/Videos/NN -Video_<produto>_9x16.mp4` (fora do GitHub). Leva cerca de 2 minutos por vídeo.
 - **Vozes:** `francisca` (padrão, feminina), `thalita` (feminina) e `antonio` (masculina). A voz precisa de internet na hora de gerar.
 - **Precisa de:** Node 18+, Python 3 com Pillow, **FFmpeg** (`winget install Gyan.FFmpeg`) e o anúncio 9:16 do mesmo número (se não existir, o gerador cria antes).
-- **O que o mascote fala:** `ferramentas/videos/roteiros.mjs`. O drone (01) tem roteiro escrito à mão. Os outros produtos usam um roteiro automático montado com os textos do anúncio. Para melhorar, copie o modelo do drone e escreva o seu. O preço entra sozinho (`{oferta}`), sempre atualizado.
+- **O que o mascote fala:** `ferramentas/videos/roteiros.js` (usado pelo painel e pelo computador). O drone (01) tem roteiro escrito à mão. Os outros produtos usam um roteiro automático montado com os textos do anúncio. Para melhorar, copie o modelo do drone e escreva o seu. O preço entra sozinho (`{oferta}`), sempre atualizado.
 - **Regras:**
   - fale só o que está na ficha do produto, sem inventar teste nem resultado;
   - o vídeo já mostra "Conteúdo criado com IA" no canto; ao postar, marque também a opção de conteúdo com IA do TikTok/Instagram;
@@ -732,7 +738,7 @@ node gerar.mjs todos
 ├── worker/                 # servidor (Cloudflare Worker)
 │   ├── wrangler.toml · package.json · definir-chaves.ps1
 │   └── src/index.js (rotas) · src/logic.js (regras de pedido) · src/push.js (notificações)
-├── ferramentas/videos/     # vídeos 9:16 com o mascote falando (gerar.mjs, roteiros.mjs, render.py)
+├── ferramentas/videos/     # vídeos 9:16 com o mascote falando (gerar.mjs, roteiros.js, render.py); no painel: admin/estudio-video.js
 ├── ferramentas/anuncios/   # gerador de anúncios 9:16 (anuncios.js e icones.js também são usados pela aba Artes)
 ├── scripts/atualizar-precos.js   # relatório site × planilha
 ├── tests/site.test.js · tests/worker.test.js
@@ -934,7 +940,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Estúdio: estilo ⭐ Anúncio (mesmo visual dos anúncios 9:16) nos 4 formatos, com produto recortado. |
 | 21/10/2026 | Auditoria: limite de PIX por aparelho, número de pedido mais forte, CSP no site, Publicar sem conflito com vendas, cartão aprovado depois de cancelado vai para conferência. |
 | 21/10/2026 | Logo oficial redonda; Instagram @akylla.shop e Facebook no site, legendas e bios; publicar do painel direto no Instagram/Facebook (feed e Story). |
-| 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final. |
+| 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.

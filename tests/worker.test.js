@@ -581,3 +581,18 @@ test('redes: painel envia a arte e publica no Instagram (feed e Story) e no Face
     global.fetch = realFetch;
   }
 });
+
+test('voz dos vídeos: só funciona com a chave do painel', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var denied = await call(worker, s.env, 'POST', '/api/admin/tts', { text: 'Oi', voice: 'francisca' });
+    assert.equal(denied.status, 401);
+    var empty = await call(worker, s.env, 'POST', '/api/admin/tts', { text: '   ' }, { Authorization: 'Bearer gh-admin' });
+    assert.equal(empty.status, 400, 'texto vazio');
+  } finally {
+    global.fetch = realFetch;
+  }
+});

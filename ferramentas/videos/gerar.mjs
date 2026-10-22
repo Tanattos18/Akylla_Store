@@ -18,7 +18,6 @@ import { execFileSync } from 'child_process';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
-import { ROTEIROS, autoRoteiro } from './roteiros.mjs';
 
 const require = createRequire(import.meta.url);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -28,6 +27,7 @@ require(path.join(ROOT, 'assets/js/config.js'));
 require(path.join(ROOT, 'assets/js/products.js'));
 const Promo = require(path.join(ROOT, 'assets/js/promo.js'));
 const ADS = require(path.join(ROOT, 'ferramentas/anuncios/anuncios.js'));
+const { ROTEIROS, autoRoteiro } = require('./roteiros.js');
 const CONFIG = window.AKYLLA_CONFIG;
 const PRODUCTS = window.AKYLLA_PRODUCTS;
 

@@ -35,6 +35,7 @@
  *   POST /api/admin/social/media         painel: envia a arte (JPEG) para publicar
  *   POST /api/admin/social/publish       painel: publica no Instagram/Facebook (feed e/ou Story)
  *   GET  /api/media/:id.jpg              arte temporária (1 dia) que a Meta busca para publicar
+ *   POST /api/admin/tts {text, voice}    painel: voz neural pt-BR (MP3) + tempo das palavras (cabeçalho X-Words) para os vídeos
  *
  * Segredos (Cloudflare → Worker → Settings → Variables and Secrets):
  *   MP_ACCESS_TOKEN     Access Token de PRODUÇÃO do Mercado Pago
@@ -52,6 +53,7 @@ import {
 } from './logic.js';
 import { vapidKeys, sendPush, subscriptionId } from './push.js';
 import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia } from './social.js';
+import { TtsError, synthesize } from './tts.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
 const CONFIG_PATH = 'assets/js/config.js';
@@ -74,6 +76,7 @@ function corsHeaders(request, env) {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '600',
+    'Access-Control-Expose-Headers': 'X-Words',
     Vary: 'Origin'
   };
 }
@@ -1017,6 +1020,16 @@ export default {
       else if (url.pathname === '/api/admin/push/unsubscribe' && request.method === 'POST') response = await pushSubscribe(request, env, true);
       else if (url.pathname === '/api/admin/push/test' && request.method === 'POST') response = await pushTest(request, env);
       else if (url.pathname.startsWith('/api/media/') && request.method === 'GET') return await socialMedia(env, url.pathname.slice(11).replace(/\.jpg$/, ''));
+      else if (url.pathname === '/api/admin/tts' && request.method === 'POST') {
+        await requireAdmin(request, env);
+        try {
+          const r = await synthesize((await request.json().catch(() => null)) || {});
+          response = new Response(r.audio, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store', 'X-Words': encodeURIComponent(JSON.stringify(r.words)) } });
+        } catch (err) {
+          if (!(err instanceof TtsError)) throw err;
+          response = json({ error: err.message }, err.status);
+        }
+      }
       else if (url.pathname.startsWith('/api/admin/social/')) {
         await requireAdmin(request, env);
         try {

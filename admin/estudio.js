@@ -1438,5 +1438,15 @@
     renderPresets();
   }
 
-  window.AkyllaStudio = { init: init, refresh: function () { if (api) { syncContacts(); fillProducts(); } } };
+  /* peças compartilhadas com o vídeo do produto (estudio-video.js) */
+  var lib = {
+    adFor: adFor, cutout: cutout, adSpecs: adSpecs, adPrice: adPrice, adCombo: adCombo, adCta: adCta, adLabel: adLabel,
+    adBackground: adBackground, drawAd: drawAd, fontsReady: fontsReady, loadImg: loadImg, imgUrl: imgUrl, rr: rr, font: font
+  };
+
+  window.AkyllaStudio = {
+    init: function (a) { init(a); if (window.AkyllaVideo) window.AkyllaVideo.init(a, lib); },
+    refresh: function () { if (api) { syncContacts(); fillProducts(); if (window.AkyllaVideo) window.AkyllaVideo.refresh(); } },
+    lib: lib
+  };
 })();
