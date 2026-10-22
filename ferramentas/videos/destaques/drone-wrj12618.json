@@ -1,0 +1,8 @@
+{
+  "produto": "drone-wrj12618",
+  "cena1": { "titulo": "NOVO DRONE PRO", "sub": "com câmera HD" },
+  "cena2": { "foto": "assets/img/products/drone-wrj12618-2.webp", "foco": [0.42, 0.4], "texto": ["CÂMERA HD", "+ SENSOR ANTI-COLISÃO"] },
+  "cena3": { "foto": "assets/img/products/drone-wrj12618.webp", "titulo": "LEVE PRA QUALQUER LUGAR", "itens": ["Dobrável e portátil", "Controle 2.4 GHz", "Bateria recarregável USB", "Ideal para iniciantes"] },
+  "cena4": { "selo": "até 31/10" },
+  "cena5": { "titulo": "GARANTA O SEU!", "chamada": "Link na bio" }
+}

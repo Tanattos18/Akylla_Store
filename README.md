@@ -735,6 +735,13 @@ python ferramentas/videos/promo.py <caminho do ffmpeg>       # gera os dois form
 - Trocar os produtos: `VITRINE=id1,id2,... CATEGORIAS=id1,...` antes do primeiro comando.
 - Trilha: `ferramentas/videos/.trabalho/promo/trilha.wav` (composta pelo painel, sem direito autoral). Gere de novo os vídeos quando o preço ou a promoção mudar.
 
+#### Vídeo de destaque de um produto (roteiro de anúncio em 5 cenas)
+
+Cenas: 1) produto "decolando" com o título · 2) close com zoom lento + 2 destaques · 3) foto + lista de benefícios · 4) preço de/por (do catálogo) + selo da promoção · 5) "Garanta o seu!", @ e "Link na bio". 22 s, 9:16 e 4:5, sem voz, trilha própria.
+
+- Textos de cada produto: `ferramentas/videos/destaques/<produto>.json` (ex.: `drone-wrj12618.json`). O preço nunca é escrito à mão: vem do catálogo.
+- Gerar: `VITRINE=<produto> CATEGORIAS=<produto> node ferramentas/videos/promo-dados.cjs`, copie `.trabalho/promo/dados.json` e rode `python ferramentas/videos/destaque.py <ffmpeg> <produto> <dados.json> <trilha.wav>`.
+
 #### Voz gravada (teleprompter) — recomendado
 
 No campo **Voz**, escolha **🎙️ Gravar a voz (teleprompter)**. Aparece a lista das falas do roteiro em letra grande: em cada uma, **🎙️ Gravar** → falar → **■ Parar**; dá para **▶ Ouvir** e **Regravar**. Quando o contador mostrar "todas gravadas", clique em **Gerar vídeo**: o Aky mexe a boca com a voz gravada, com legendas e trilha. O silêncio do começo e do fim de cada fala é cortado sozinho.
