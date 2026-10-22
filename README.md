@@ -722,6 +722,19 @@ O mascote **Aky** (robô laranja da Akylla) apresenta o produto falando em portu
 
 **Medir:** as vendas que chegam pelos links rastreados aparecem no **Início → Vendas por origem**; curtidas, alcance, salvamentos e visualizações aparecem em **Artes → 📈 Desempenho dos posts** (com os melhores horários para postar).
 
+#### Vídeo institucional da loja (para anúncio)
+
+Apresentação da loja + vitrine de 5 produtos, em **9:16** (Reels/Stories) e **4:5** (feed), 25 s, feito para ser entendido **sem som** (texto grande) com trilha própria. Roteiro: logo → categorias → 5 produtos com preço no PIX e selo de desconto → vantagens (PIX/12x, retirada grátis, entrega em Goiânia, garantia) → oferta (ex.: 10% OFF até 31/10) → "Compre agora" com site, Instagram, WhatsApp e o Aky.
+
+```bash
+node ferramentas/videos/promo-dados.cjs                      # preços atuais + fotos recortadas
+python ferramentas/videos/promo.py <caminho do ffmpeg>       # gera os dois formatos
+```
+
+- Saída: `Banner_Itens_Loja/Videos/Akylla_Institucional_9x16.mp4` e `_4x5.mp4` (fora do GitHub).
+- Trocar os produtos: `VITRINE=id1,id2,... CATEGORIAS=id1,...` antes do primeiro comando.
+- Trilha: `ferramentas/videos/.trabalho/promo/trilha.wav` (composta pelo painel, sem direito autoral). Gere de novo os vídeos quando o preço ou a promoção mudar.
+
 #### Voz gravada (teleprompter) — recomendado
 
 No campo **Voz**, escolha **🎙️ Gravar a voz (teleprompter)**. Aparece a lista das falas do roteiro em letra grande: em cada uma, **🎙️ Gravar** → falar → **■ Parar**; dá para **▶ Ouvir** e **Regravar**. Quando o contador mostrar "todas gravadas", clique em **Gerar vídeo**: o Aky mexe a boca com a voz gravada, com legendas e trilha. O silêncio do começo e do fim de cada fala é cortado sozinho.
@@ -1006,6 +1019,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Vídeos 9:16 com o mascote Aky falando em português (voz neural), legendas e cartela final — pelo computador e pelo painel (aba Artes). |
 | 21/10/2026 | Aky, o mascote, ajudando o cliente na compra (dicas por passo e destaque de onde tocar). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
+| 22/10/2026 | Vídeo institucional da loja (9:16 e 4:5) para anúncio, com trilha própria. |
 | 22/10/2026 | Cadastro de clientes (fichas pelo WhatsApp, etiquetas, observações, segmentos, aceite de ofertas LGPD, oferta personalizada); WhatsApp obrigatório no checkout; clientes duplicados corrigidos. |
 | 22/10/2026 | Voz gravada no painel (teleprompter, fala por fala) para os vídeos. |
 | 22/10/2026 | Arte animada (🎬 Animar, 6 s em loop) com princípios de motion design; acabamento premium (vinheta + textura); voz: endereço reserva + suporte à voz oficial Azure (grátis). |
