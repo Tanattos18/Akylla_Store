@@ -619,3 +619,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--brand); outline:
 .st-captions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.8rem; }
 .st-captions label { gap: 0.4rem; }
 .st-captions textarea { font-size: 0.85rem; min-height: 180px; }
+
+/* Publicar nas redes (estúdio) */
+.st-pub { display: grid; gap: 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
+.st-pub[hidden] { display: none; }
+.st-pub-targets { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.6rem; }
+.st-pub-check { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 700; }
+.st-pub-note { margin: 0; font-size: 0.75rem; }
+.st-pub-caption { font-size: 0.8rem; }
+.st-pub-result p { margin: 0.15rem 0; font-size: 0.8rem; font-weight: 700; }
+.st-pub-ok { color: var(--ok, #138a4b); }
+.st-pub-err { color: var(--danger, #c0392b); }

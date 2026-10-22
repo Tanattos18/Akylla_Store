@@ -30,6 +30,7 @@
       "@type": "Store",
       "name": "Akylla Shop",
       "url": "https://akyllashop.com/",
+      "sameAs": ["https://www.instagram.com/akylla.shop/", "https://www.facebook.com/profile.php?id=61574082533775"],
       "image": "https://akyllashop.com/assets/img/og-cover.jpg?v=logo2",
       "description": "Eletrônicos e acessórios de informática com atendimento direto em Goiânia. Pagamento via PIX.",
       "telephone": "+55 62 8151-7002",
@@ -49,7 +50,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-11">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261021-12">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -127,6 +128,9 @@
     </symbol>
     <symbol id="icon-chevron-down" viewBox="0 0 24 24">
       <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-facebook" viewBox="0 0 24 24">
+      <path d="M14 8.5h2.5V5H14c-2.2 0-3.8 1.7-3.8 3.9V11H8v3.4h2.2V21h3.5v-6.6h2.5l.5-3.4h-3V9.2c0-.4.3-.7.7-.7z" fill="currentColor"/>
     </symbol>
     <symbol id="icon-instagram" viewBox="0 0 24 24">
       <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -231,6 +235,9 @@
         </button>
         <a class="icon-btn header-whatsapp" href="https://wa.me/556281517002" data-whatsapp target="_blank" rel="noopener noreferrer" aria-label="Falar com a Akylla Shop no WhatsApp">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
+        </a>
+        <a class="icon-btn header-whatsapp header-instagram" href="https://www.instagram.com/akylla.shop/" data-instagram target="_blank" rel="noopener noreferrer" aria-label="Instagram da Akylla Shop">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-instagram"></use></svg>
         </a>
         <a class="orders-btn" href="pedido.html" aria-label="Meus pedidos: acompanhar pedido">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9 8h6M9 12h6M9 16h3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
@@ -604,6 +611,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
           <span data-whatsapp-display>(62) 8151-7002</span>
         </a>
+        <div class="footer-social" aria-label="Redes sociais">
+          <a href="https://www.instagram.com/akylla.shop/" data-instagram target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-instagram"></use></svg><span data-instagram-handle>@akylla.shop</span></a>
+          <a href="https://www.facebook.com/profile.php?id=61574082533775" data-facebook target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-facebook"></use></svg><span>Facebook</span></a>
+        </div>
       </div>
 
       <div class="footer-col">
@@ -633,6 +644,8 @@
         <ul>
           <li><a href="https://wa.me/556281517002" data-whatsapp target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
           <li><a href="pedido.html">Acompanhar meu pedido</a></li>
+          <li><a href="https://www.instagram.com/akylla.shop/" data-instagram target="_blank" rel="noopener noreferrer">Instagram</a></li>
+          <li><a href="https://www.facebook.com/profile.php?id=61574082533775" data-facebook target="_blank" rel="noopener noreferrer">Facebook</a></li>
           <li><a href="#garantia">Garantia e trocas</a></li>
           <li><a href="#garantia">Envio e entrega</a></li>
           <li><span>Goiânia/GO</span></li>
@@ -686,6 +699,10 @@
         Falar no WhatsApp
         <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
       </a>
+      <div class="footer-social footer-social--menu">
+        <a href="https://www.instagram.com/akylla.shop/" data-instagram target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-instagram"></use></svg><span data-instagram-handle>@akylla.shop</span></a>
+        <a href="https://www.facebook.com/profile.php?id=61574082533775" data-facebook target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-facebook"></use></svg><span>Facebook</span></a>
+      </div>
       <p>Atendimento direto • Goiânia/GO</p>
     </div>
   </dialog>
@@ -978,11 +995,11 @@
   </noscript>
 
   <script src="assets/vendor/qrcode.js?v=20261021-9" defer></script>
-  <script src="assets/js/config.js?v=20261021-9" defer></script>
+  <script src="assets/js/config.js?v=20261021-12" defer></script>
   <script src="assets/js/products.js?v=20261021-9" defer></script>
   <script src="assets/js/pix.js?v=20261021-9" defer></script>
   <script src="assets/js/promo.js?v=20261021-9" defer></script>
   <script src="assets/js/frete.js?v=20261021-9" defer></script>
-  <script src="assets/js/app.js?v=20261021-11" defer></script>
+  <script src="assets/js/app.js?v=20261021-12" defer></script>
 </body>
 </html>

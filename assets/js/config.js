@@ -8,6 +8,8 @@ window.AKYLLA_CONFIG = {
   "city": "Goiânia/GO",
   "whatsapp": "556281517002",
   "whatsappDisplay": "(62) 98151-7002",
+  "instagram": "akylla.shop",
+  "facebook": "https://www.facebook.com/profile.php?id=61574082533775",
   "whatsappMessage": "Olá! Vim pelo site da Akylla Shop e gostaria de tirar uma dúvida.",
   "pixKey": "7dda9a3c-400d-45de-906b-f22b2615f1d5",
   "pixHolder": "Joás Santana Nascimento",

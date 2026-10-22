@@ -40,7 +40,7 @@ Pense na loja como **três peças** que conversam entre si:
 | Repor estoque | **Estoque** → **+1 (repus)** ou digite a quantidade → **Publicar**. |
 | Colocar produto novo | **Produtos** → **+ Novo produto** → preencha, envie as fotos e salve → **Publicar**. Para conferir antes de mostrar ao cliente, deixe o produto **fora da loja** e depois use **✓ Colocar na loja**. |
 | Fazer promoção | **Promo** → ligue a promoção, escolha o % e a data final → **Publicar**. |
-| Fazer arte para Instagram/TikTok/WhatsApp | **Artes** → escolha o produto, o estilo (⭐ *Anúncio* é o padrão) e os formatos → **Gerar artes** → **Baixar** ou **Compartilhar** e copie a legenda pronta. |
+| Fazer arte para Instagram/TikTok/WhatsApp | **Artes** → escolha o produto, o estilo (⭐ *Anúncio* é o padrão) e os formatos → **Gerar artes** → **Publicar nas redes** (Instagram/Facebook direto) ou **Baixar**/**Compartilhar** e copie a legenda pronta. |
 | Ver quanto vendi | **Início** (dashboard) → escolha o período. |
 
 ### O que o sistema faz sozinho (para você não se preocupar)
@@ -646,6 +646,35 @@ Gera as artes **no próprio navegador**, sem custo e sem instalar nada, com o pr
 - **Kit de abertura das redes:** foto de perfil (redonda), capa do Facebook, 4 capas de destaque e bios prontas.
 - O código fica em `admin/estudio.js`.
 
+### 10.2 Publicar direto nas redes (Instagram e Facebook)
+
+Redes da loja: **Instagram** [@akylla.shop](https://www.instagram.com/akylla.shop/) · **Facebook** [Akylla Shop](https://www.facebook.com/profile.php?id=61574082533775). Os links ficam no topo, no rodapé e no menu do site (painel → **Loja** → campos *Instagram* e *Facebook*), e as legendas e bios do estúdio já chamam para o @akylla.shop.
+
+**No dia a dia:** aba **Artes** → **Gerar artes** → embaixo da arte, **Publicar nas redes** → marque onde (Instagram feed/Story, Facebook feed/Story) → confira a legenda → **Publicar agora**. Aparece ✓ ou o motivo do erro em cada rede, com o link do post.
+
+- 1:1, 4:5 e 16:9 → feed. **9:16 → Story** (o Instagram não aceita 9:16 no feed por esta via).
+- Story não leva legenda. No Facebook vai a legenda do Facebook; no Instagram, a que estiver na caixa.
+- Usa a API oficial da Meta, **sem custo**. O Instagram permite até 50 publicações por dia por esta via.
+- Reels/TikTok (vídeo) e TikTok em geral ainda não: baixe a arte e poste pelo app.
+
+**Ligar uma vez só (cerca de 20 minutos, feito por você, porque envolve login e chave):**
+
+1. **O Facebook precisa ser uma Página**, não um perfil pessoal. Abra o link da loja no Facebook: se aparecer "Página · …" e o botão de alternar para a Página, está certo. Se for perfil pessoal, crie uma Página (facebook.com/pages/create) com o nome Akylla Shop.
+2. **Instagram profissional ligado à Página:** no app do Instagram → Menu → *Tipo de conta e ferramentas* → *Mudar para conta profissional* → *Empresa*. Depois, na Página do Facebook → *Configurações* → *Contas vinculadas* → **Instagram** → conectar @akylla.shop.
+3. **Criar o app da Meta:** entre em <https://developers.facebook.com/apps> com o seu Facebook (o administrador da Página) → **Criar app** → caso de uso **"Gerenciar tudo na sua Página"** (e, se pedir, também o de **Instagram** com login do Facebook) → tipo **Empresa** → nome "Akylla Painel". O app pode ficar em **modo de desenvolvimento**: assim ele funciona só para você, que é administrador, e não precisa de revisão da Meta.
+4. **Gerar o token:** abra o **Explorador da API Graph** (<https://developers.facebook.com/tools/explorer>) → escolha o app → *Gerar token de acesso* (usuário) com as permissões:
+   `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic`, `instagram_content_publish`, `business_management` → aceite tudo para a Página e o Instagram da loja.
+5. **Deixar o token permanente:** copie o token → abra o **Depurador de token** (<https://developers.facebook.com/tools/debug/accesstoken>) → cole → **Estender token de acesso** → copie o token longo. Volte ao Explorador, cole esse token longo e consulte `me/accounts` → copie o `access_token` da **Página Akylla Shop**. Esse token da Página não expira (só se você trocar a senha ou remover o app).
+6. **Cadastrar no servidor** (PowerShell, na pasta `worker`), colando o token da Página quando pedir:
+   ```powershell
+   & .\definir-chaves.ps1 META_PAGE_TOKEN
+   ```
+7. No painel → **Artes** → gere uma arte → **Publicar nas redes**: deve aparecer "Publica em: Instagram @akylla.shop e Facebook …". Pronto.
+
+> **Segurança:** o token só fica como segredo na Cloudflare. Nunca cole ele em chat, print, README ou no painel. Se vazar: developers.facebook.com → app → *Configurações* → redefina a chave secreta do app e gere outro token (passos 4 a 6).
+
+**Problemas comuns:** "Instagram não está ligado à Página" → refaça o passo 2. "(#200) permissões" → faltou marcar alguma permissão no passo 4. "O Instagram recusou a imagem" → use 1:1 ou 4:5 no feed (9:16 só como Story).
+
 ---
 
 ## 11. Estrutura de arquivos
@@ -783,6 +812,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | Chave do **painel** (GitHub fine-grained, Contents RW) | só no navegador de quem usa o painel | 90 dias |
 | Chave do **servidor** (`GITHUB_TOKEN`, outra chave fine-grained) | segredo na Cloudflare | 1 ano |
 | `CALLMEBOT_APIKEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` (opcionais) | segredos na Cloudflare | até trocar |
+| `META_PAGE_TOKEN` (opcional, publicar nas redes) | segredo na Cloudflare | não expira (token da Página) |
 | Chaves das notificações (VAPID) | geradas e guardadas pelo próprio servidor (KV) | — |
 
 - **Vazou uma chave** (foi colada em chat, print ou e-mail)? Apague no site de origem (GitHub → Settings → Personal access tokens; Mercado Pago → Credenciais → renovar), gere outra e cadastre de novo (`definir-chaves.ps1` ou o painel).
@@ -842,7 +872,9 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 - [ ] Renomear o repositório para **Akylla_Shop** (Settings → General → Repository name). O painel e o servidor se ajustam ao redirecionamento. Depois, em cada computador: `git remote set-url origin https://github.com/Tanattos18/Akylla_Shop.git`, e atualize `GITHUB_REPO` no `wrangler.toml` e `REPO` no `admin/admin.js`.
 - [ ] Trocar as chaves que já foram expostas em conversa (GitHub, Mercado Pago) e cadastrar de novo.
 - [ ] CallMeBot: cadastrar a apikey quando o robô liberar vaga (opcional, porque os avisos push já cobrem isso).
-- [ ] Criar o Instagram e o Facebook da loja e colocar os links no topo e no rodapé do site.
+- [x] Instagram e Facebook da loja nos links do site, nas legendas e nas bios.
+- [ ] Ligar o painel às redes (token da Página, [10.2](#102-publicar-direto-nas-redes-instagram-e-facebook)) para publicar direto pelo painel.
+- [ ] Criar o TikTok da loja.
 - [ ] Fotos reais dos produtos que só têm foto ilustrativa ou com medidas desenhadas (W96, cabos, carregadores).
 - [ ] Logo oficial em SVG/PNG transparente.
 - [ ] Revisar garantia, entrega e trocas com contador ou advogado.
@@ -874,6 +906,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 21/10/2026 | Pedido no cartão em aberto pode virar PIX; voltar do Mercado Pago cai no pedido; seta voltar do celular fecha janelas. |
 | 21/10/2026 | Estúdio: estilo ⭐ Anúncio (mesmo visual dos anúncios 9:16) nos 4 formatos, com produto recortado. |
 | 21/10/2026 | Auditoria: limite de PIX por aparelho, número de pedido mais forte, CSP no site, Publicar sem conflito com vendas, cartão aprovado depois de cancelado vai para conferência. |
+| 21/10/2026 | Logo oficial redonda; Instagram @akylla.shop e Facebook no site, legendas e bios; publicar do painel direto no Instagram/Facebook (feed e Story). |
 | 21/10/2026 | README reescrito com o guia para criar uma loja nova a partir deste projeto. |
 
 O histórico completo está nos commits: `git log --oneline`.

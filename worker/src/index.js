@@ -31,11 +31,16 @@
  *   POST /api/admin/push/subscribe       painel: cadastra este aparelho para receber avisos
  *   POST /api/admin/push/unsubscribe     painel: descadastra este aparelho
  *   POST /api/admin/push/test            painel: manda um aviso de teste para todos os aparelhos
+ *   GET  /api/admin/social/status        painel: Página do Facebook e Instagram ligados (publicação nas redes)
+ *   POST /api/admin/social/media         painel: envia a arte (JPEG) para publicar
+ *   POST /api/admin/social/publish       painel: publica no Instagram/Facebook (feed e/ou Story)
+ *   GET  /api/media/:id.jpg              arte temporária (1 dia) que a Meta busca para publicar
  *
  * Segredos (Cloudflare → Worker → Settings → Variables and Secrets):
  *   MP_ACCESS_TOKEN     Access Token de PRODUÇÃO do Mercado Pago
  *   MP_WEBHOOK_SECRET   assinatura secreta dos webhooks do Mercado Pago
  *   GITHUB_TOKEN        chave fine-grained do GitHub (Contents: Read and write no repositório)
+ *   META_PAGE_TOKEN     token da Página do Facebook para publicar no Facebook/Instagram (opcional)
  *   CALLMEBOT_APIKEY    chave do CallMeBot para avisar as vendas no WhatsApp da loja (opcional)
  * Variáveis (wrangler.toml): GITHUB_REPO, GITHUB_BRANCH, ALLOWED_ORIGINS, PAYMENT_MINUTES, STORE_WHATSAPP,
  *   MP_API ("orders" = API de Orders do Mercado Pago, padrão; "payments" = API legada)
@@ -46,6 +51,7 @@ import {
   applySale, applyReturn, stockShortfall, centsToReais, mpDate, Formato, cleanCustomer, saleMessage
 } from './logic.js';
 import { vapidKeys, sendPush, subscriptionId } from './push.js';
+import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia } from './social.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
 const CONFIG_PATH = 'assets/js/config.js';
@@ -1010,6 +1016,19 @@ export default {
       else if (url.pathname === '/api/admin/push/subscribe' && request.method === 'POST') response = await pushSubscribe(request, env, false);
       else if (url.pathname === '/api/admin/push/unsubscribe' && request.method === 'POST') response = await pushSubscribe(request, env, true);
       else if (url.pathname === '/api/admin/push/test' && request.method === 'POST') response = await pushTest(request, env);
+      else if (url.pathname.startsWith('/api/media/') && request.method === 'GET') return await socialMedia(env, url.pathname.slice(11).replace(/\.jpg$/, ''));
+      else if (url.pathname.startsWith('/api/admin/social/')) {
+        await requireAdmin(request, env);
+        try {
+          if (url.pathname === '/api/admin/social/status' && request.method === 'GET') response = json(await socialAccounts(env));
+          else if (url.pathname === '/api/admin/social/media' && request.method === 'POST') response = json(await socialUpload(env, request));
+          else if (url.pathname === '/api/admin/social/publish' && request.method === 'POST') response = json(await socialPublish(env, (await request.json().catch(() => null)) || {}, url.origin));
+          else response = json({ error: 'Rota não encontrada.' }, 404);
+        } catch (err) {
+          if (!(err instanceof SocialError)) throw err;
+          response = json({ error: err.message }, err.status);
+        }
+      }
       else response = json({ error: 'Rota não encontrada.' }, 404);
       for (const [k, v] of Object.entries(cors)) response.headers.set(k, v);
       return response;

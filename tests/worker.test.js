@@ -526,3 +526,58 @@ test('reposição: vende além do físico até o limite, marca o que vem do forn
     global.fetch = realFetch;
   }
 });
+
+test('redes: painel envia a arte e publica no Instagram (feed e Story) e no Facebook; sem token avisa', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  var calls = [];
+  global.fetch = async function (url, opts) {
+    var u = new URL(typeof url === 'string' ? url : url.url);
+    if (u.hostname !== 'graph.facebook.com') return s.fetch(url, opts);
+    var params = opts && opts.body ? Object.fromEntries(new URLSearchParams(String(opts.body))) : Object.fromEntries(u.searchParams);
+    calls.push(u.pathname + ' ' + JSON.stringify(params));
+    var reply = function (d) { return new Response(JSON.stringify(d), { status: 200, headers: { 'Content-Type': 'application/json' } }); };
+    if (/\/me$/.test(u.pathname)) return reply({ id: 'PAGE1', name: 'Akylla Shop', instagram_business_account: { id: 'IG1', username: 'akylla.shop' } });
+    if (/\/IG1\/media$/.test(u.pathname)) return reply({ id: 'C' + calls.length });
+    if (/\/C\d+$/.test(u.pathname)) return reply({ status_code: 'FINISHED' });
+    if (/\/IG1\/media_publish$/.test(u.pathname)) return reply({ id: 'M' + calls.length });
+    if (/\/M\d+$/.test(u.pathname)) return reply({ permalink: 'https://www.instagram.com/p/x/' });
+    if (/\/PAGE1\/photos$/.test(u.pathname)) return reply({ id: 'PH1', post_id: 'PAGE1_99' });
+    if (/\/PAGE1\/photo_stories$/.test(u.pathname)) return reply({ post_id: 'ST1' });
+    return reply({ error: { message: 'rota inesperada ' + u.pathname } });
+  };
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var admin = { Authorization: 'Bearer gh-admin' };
+    var off = await call(worker, s.env, 'GET', '/api/admin/social/status', null, admin);
+    assert.equal(off.data.configured, false, 'sem token: não configurado');
+    var denied = await call(worker, s.env, 'GET', '/api/admin/social/status');
+    assert.equal(denied.status, 401, 'precisa da chave do painel');
+
+    s.env.META_PAGE_TOKEN = 'meta-test';
+    var st = await call(worker, s.env, 'GET', '/api/admin/social/status', null, admin);
+    assert.equal(st.data.instagram.username, 'akylla.shop');
+
+    var jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]);
+    var up = await worker.fetch(new Request('https://api.test/api/admin/social/media', { method: 'POST', headers: { 'Content-Type': 'image/jpeg', Authorization: 'Bearer gh-admin', Origin: 'https://akyllashop.com' }, body: jpeg }), s.env);
+    var media = await up.json();
+    assert.match(media.mediaId, /^[0-9a-f]{24}$/);
+    var img = await worker.fetch(new Request('https://api.test/api/media/' + media.mediaId + '.jpg'), s.env);
+    assert.equal(img.headers.get('Content-Type'), 'image/jpeg');
+    assert.equal(new Uint8Array(await img.arrayBuffer()).length, jpeg.length, 'Meta consegue baixar a arte');
+
+    var pub = await call(worker, s.env, 'POST', '/api/admin/social/publish', { mediaId: media.mediaId, caption: 'Oferta! #akyllashop', targets: ['instagram', 'instagram_story', 'facebook', 'facebook_story'] }, admin);
+    assert.equal(pub.status, 200, JSON.stringify(pub.data));
+    assert.equal(pub.data.results.instagram.link, 'https://www.instagram.com/p/x/');
+    assert.ok(pub.data.results.instagram_story.id);
+    assert.equal(pub.data.results.facebook.id, 'PAGE1_99');
+    assert.equal(pub.data.results.facebook_story.id, 'ST1');
+    assert.ok(calls.some(function (c) { return c.indexOf('/IG1/media ') >= 0 && c.indexOf('"media_type":"STORIES"') >= 0; }), 'Story do Instagram');
+    assert.ok(calls.some(function (c) { return c.indexOf('"image_url":"https://api.test/api/media/' + media.mediaId + '.jpg"') >= 0; }), 'Meta recebe o endereço público da arte');
+
+    var bad = await call(worker, s.env, 'POST', '/api/admin/social/publish', { mediaId: 'f'.repeat(24), targets: ['facebook'] }, admin);
+    assert.equal(bad.status, 400, 'arte inexistente');
+  } finally {
+    global.fetch = realFetch;
+  }
+});

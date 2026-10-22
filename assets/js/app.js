@@ -2185,6 +2185,16 @@
       element.textContent = String(CONFIG.year || new Date().getFullYear());
     });
 
+    /* Redes sociais (painel → Loja): sem o campo preenchido, o link some */
+    var ig = String(CONFIG.instagram || '').replace(/^@/, '').trim();
+    Array.prototype.forEach.call(document.querySelectorAll('a[data-instagram]'), function (link) {
+      if (ig) link.href = 'https://www.instagram.com/' + encodeURIComponent(ig) + '/'; else link.hidden = true;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-instagram-handle]'), function (element) { if (ig) element.textContent = '@' + ig; });
+    Array.prototype.forEach.call(document.querySelectorAll('a[data-facebook]'), function (link) {
+      if (/^https:\/\/(www\.|m\.)?facebook\.com\//.test(CONFIG.facebook || '')) link.href = CONFIG.facebook; else link.hidden = true;
+    });
+
     Array.prototype.forEach.call(document.querySelectorAll('[data-whatsapp-display]'), function (element) {
       element.textContent = CONFIG.whatsappDisplay || '';
     });

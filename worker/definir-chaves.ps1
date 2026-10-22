@@ -10,7 +10,8 @@ $todas = @(
   @{ Nome = 'GITHUB_TOKEN';      Dica = 'OBRIGATORIA - GitHub, chave "Servidor Akylla" (comeca com github_pat_). Reserva e devolve o estoque.' },
   @{ Nome = 'CALLMEBOT_APIKEY';  Dica = 'OPCIONAL - CallMeBot apikey (alerta extra no WhatsApp). Se nao tiver, aperte Ctrl+C.' },
   @{ Nome = 'MP_ACCESS_TOKEN';   Dica = 'MERCADO PAGO - Access Token de PRODUCAO (comeca com APP_USR-).' },
-  @{ Nome = 'MP_WEBHOOK_SECRET'; Dica = 'MERCADO PAGO - Assinatura secreta do Webhook (aplicacao > Webhooks).' }
+  @{ Nome = 'MP_WEBHOOK_SECRET'; Dica = 'MERCADO PAGO - Assinatura secreta do Webhook (aplicacao > Webhooks).' },
+  @{ Nome = 'META_PAGE_TOKEN';   Dica = 'REDES - token da PAGINA do Facebook (README 10.2). Publica no Instagram e no Facebook pelo painel.' }
 )
 
 # Para cadastrar so algumas:  & .\definir-chaves.ps1 MP_ACCESS_TOKEN MP_WEBHOOK_SECRET

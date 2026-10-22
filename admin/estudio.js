@@ -12,7 +12,8 @@
   var INK = '#060913';
   var ORANGE = '#ff8a00';
   var DEEP = '#ff5e00';
-  var WHATS = '(62) 8151-7002';
+  var WHATS = '(62) 98151-7002';   // atualizado com o da aba Loja ao abrir o estúdio
+  var INSTA = '@akylla.shop';       // idem (campo Instagram da aba Loja)
   var SITE = 'akyllashop.com';
 
   /*
@@ -288,7 +289,7 @@
     var h = 104 * u;
     ctx.fillStyle = T.ctaBg;
     rr(ctx, x, y, w, h, h / 2); ctx.fill();
-    var text = cta === 'site' ? 'COMPRE EM ' + SITE.toUpperCase() : cta === 'bio' ? 'LINK NA BIO · PEÇA JÁ' : 'PEÇA PELO WHATSAPP ' + WHATS;
+    var text = cta === 'site' ? 'COMPRE EM ' + SITE.toUpperCase() : cta === 'bio' ? 'LINK NA BIO · ' + INSTA.toUpperCase() : 'PEÇA PELO WHATSAPP ' + WHATS;
     var fit = fitLines(ctx, text, w - 80 * u, 38 * u, 22 * u, 1, 800);
     ctx.fillStyle = T.ctaText; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     font(ctx, 800, fit.size); ctx.fillText(fit.lines[0], x + w / 2, y + h / 2 + 2 * u);
@@ -816,7 +817,7 @@
     ctx.beginPath(); ctx.arc(18, 19, 1.6, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
     var tx = x + pad + ic + 22 * s, tw = w - (tx - x) - pad;
-    var sub = cta === 'site' ? SITE : cta === 'bio' ? 'Link na bio · ' + SITE : SITE + ' · ' + WHATS;
+    var sub = cta === 'site' ? SITE : cta === 'bio' ? 'Link na bio · ' + INSTA : SITE + ' · ' + WHATS;
     var b = fitLines(ctx, 'COMPRE AGORA', tw, 44 * s * (h / (120 * s)), 20 * s, 1, 800);
     var t = fitLines(ctx, sub, tw, 25 * s * (h / (120 * s)), 14 * s, 1, 700, '"DM Sans", sans-serif');
     var th = b.size + t.size * 1.2, ty = y + (h - th) / 2;
@@ -1033,8 +1034,8 @@
       var specs = (p.specs || []).slice(0, 4).map(function (s) { return '✅ ' + s.label + ': ' + s.value; }).join('\n');
       var price = info.active ? 'De ' + money(info.original) + ' por *' + money(info.price) + '* no PIX' + until : money(info.price) + ' no PIX';
       text = {
-        instagram: opener + '\n\n' + p.name + ' 👇\n\n' + specs + '\n\n💰 ' + price + '\n💳 ' + pay + '\n🚚 Retirada grátis ou entrega em Goiânia e região\n\n📲 Peça pelo WhatsApp ' + WHATS + ' ou pelo link na bio!\n\n' + base + ' ' + (TAGS[p.category] || ''),
-        facebook: opener + '\n\n' + p.name + '\n' + (p.summary || '') + '\n\n💰 ' + price + '\n💳 ' + pay + '\n🚚 Retirada grátis ou entrega em Goiânia e região\n\n🛒 Compre em ' + SITE + ' ou chame no WhatsApp ' + WHATS,
+        instagram: opener + '\n\n' + p.name + ' 👇\n\n' + specs + '\n\n💰 ' + price + '\n💳 ' + pay + '\n🚚 Retirada grátis ou entrega em Goiânia e região\n\n📲 Peça pelo WhatsApp ' + WHATS + ' ou pelo link na bio!\n👉 Siga ' + INSTA + ' para não perder as ofertas\n\n' + base + ' ' + (TAGS[p.category] || ''),
+        facebook: opener + '\n\n' + p.name + '\n' + (p.summary || '') + '\n\n💰 ' + price + '\n💳 ' + pay + '\n🚚 Retirada grátis ou entrega em Goiânia e região\n\n🛒 Compre em ' + SITE + ' ou chame no WhatsApp ' + WHATS + '\n📸 Instagram: ' + INSTA,
         tiktok: opener + ' ' + p.shortName + ' por ' + money(info.price) + ' no PIX' + until + ' 😱 Link na bio! ' + base + ' ' + (TAGS[p.category] || '') + ' #achadinhos'
       };
     } else {
@@ -1045,8 +1046,8 @@
       }[d.campaign];
       var body = 'Smartwatches, fones, drones, power banks, carregadores e cabos com preço justo e atendimento de verdade. 🧡\n\n💳 ' + pay + '\n🚚 Retirada grátis ou entrega em Goiânia e região\n✅ Garantia legal de 90 dias';
       text = {
-        instagram: head + '\n\n' + body + '\n\n📲 Confira tudo no link da bio ou chame no WhatsApp ' + WHATS + '\n\n' + base + ' #lojaonline #achadinhos',
-        facebook: head + '\n\n' + body + '\n\n🛒 ' + SITE + ' · WhatsApp ' + WHATS,
+        instagram: head + '\n\n' + body + '\n\n📲 Confira tudo no link da bio ou chame no WhatsApp ' + WHATS + '\n👉 Siga ' + INSTA + '\n\n' + base + ' #lojaonline #achadinhos',
+        facebook: head + '\n\n' + body + '\n\n🛒 ' + SITE + ' · WhatsApp ' + WHATS + '\n📸 Instagram: ' + INSTA,
         tiktok: head + ' 🔥 Link na bio! ' + base + ' #achadinhos #lojaonline'
       };
     }
@@ -1055,7 +1056,7 @@
 
   var BIOS = {
     instagram: '⚡ Eletrônicos e acessórios em Goiânia\n💳 PIX à vista ou cartão em até 12x\n🚚 Retirada grátis ou entrega\n👇 Compre pelo site',
-    facebook: 'Akylla Shop — smartwatches, fones, drones, power banks, carregadores e cabos em Goiânia/GO. PIX à vista ou cartão em até 12x, retirada grátis ou entrega. Compre em akyllashop.com ou pelo WhatsApp (62) 8151-7002.',
+    facebook: 'Akylla Shop — smartwatches, fones, drones, power banks, carregadores e cabos em Goiânia/GO. PIX à vista ou cartão em até 12x, retirada grátis ou entrega. Compre em akyllashop.com ou pelo WhatsApp (62) 98151-7002. Instagram: @akylla.shop',
     tiktok: '⚡ Tech com preço justo em Goiânia 🧡 PIX ou 12x · akyllashop.com'
   };
 
@@ -1081,7 +1082,95 @@
       .map(function (b) { return b.getAttribute('data-stformat'); });
   }
 
-  function previewItem(name, canvas, filename) {
+  /* ------------------------- publicar nas redes ------------------------- */
+
+  var socialStatus = null;
+  function loadSocial() {
+    if (!api.server) return Promise.resolve({ configured: false });
+    if (socialStatus) return Promise.resolve(socialStatus);
+    return api.server('/api/admin/social/status').then(function (s) { socialStatus = s; return s; })
+      .catch(function (err) { return { configured: false, error: err.message }; });
+  }
+
+  var TARGETS = [
+    ['instagram', 'Instagram · feed'], ['instagram_story', 'Instagram · Story'],
+    ['facebook', 'Facebook · feed'], ['facebook_story', 'Facebook · Story']
+  ];
+
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; }
+
+  /* Painel "Publicar nas redes" embaixo de cada arte. */
+  function publishPanel(canvas, fmt) {
+    var box = el('div', 'st-pub');
+    box.hidden = true;
+    var story = fmt === 'story';
+    var checks = {};
+    var row = el('div', 'st-pub-targets');
+    TARGETS.forEach(function (t) {
+      var lab = el('label', 'st-pub-check');
+      var cb = document.createElement('input'); cb.type = 'checkbox';
+      /* o Instagram não aceita 9:16 no feed (só como Story) */
+      if (t[0] === 'instagram' && story) { cb.disabled = true; lab.title = 'O Instagram só aceita 9:16 como Story'; }
+      cb.checked = story ? /_story$/.test(t[0]) : !/_story$/.test(t[0]);
+      checks[t[0]] = cb;
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + t[1]));
+      row.appendChild(lab);
+    });
+    var cap = document.createElement('textarea'); cap.rows = 6; cap.className = 'st-pub-caption';
+    var note = el('p', 'muted st-pub-note', 'Legenda do Instagram (no Facebook vai a legenda do Facebook). Story não leva legenda.');
+    var go = el('button', 'btn btn-primary btn-sm', 'Publicar agora');
+    go.type = 'button';
+    var out = el('div', 'st-pub-result');
+    box.appendChild(row); box.appendChild(note); box.appendChild(cap); box.appendChild(go); box.appendChild(out);
+
+    go.addEventListener('click', function () {
+      var targets = Object.keys(checks).filter(function (k) { return checks[k].checked && !checks[k].disabled; });
+      if (!targets.length) { api.toast('Marque onde publicar.'); return; }
+      var names = TARGETS.filter(function (t) { return targets.indexOf(t[0]) >= 0; }).map(function (t) { return t[1]; }).join(', ');
+      if (!confirm('Publicar esta arte agora em: ' + names + '?\n\nFica público na hora.')) return;
+      go.disabled = true; go.textContent = 'Publicando…'; out.textContent = '';
+      new Promise(function (r) { canvas.toBlob(r, 'image/jpeg', 0.92); }).then(function (blob) {
+        return api.server('/api/admin/social/media', { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+      }).then(function (m) {
+        return api.server('/api/admin/social/publish', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mediaId: m.mediaId, targets: targets, caption: cap.value, facebookCaption: ($('#stCap-facebook') || {}).value || cap.value })
+        });
+      }).then(function (r) {
+        out.textContent = '';
+        TARGETS.forEach(function (t) {
+          var res = r.results[t[0]];
+          if (!res) return;
+          var line = el('p', res.error ? 'st-pub-err' : 'st-pub-ok', (res.error ? '✖ ' : '✓ ') + t[1] + (res.error ? ': ' + res.error : ' publicado'));
+          if (res.link) { var a = el('a', '', ' — ver'); a.href = res.link; a.target = '_blank'; a.rel = 'noopener'; line.appendChild(a); }
+          out.appendChild(line);
+        });
+        api.toast(r.ok ? 'Publicado nas redes!' : 'Não consegui publicar. Veja o motivo embaixo da arte.', 6000);
+      }).catch(function (err) {
+        out.textContent = '';
+        out.appendChild(el('p', 'st-pub-err', '✖ ' + err.message));
+      }).finally(function () { go.disabled = false; go.textContent = 'Publicar agora'; });
+    });
+
+    return {
+      box: box,
+      open: function () {
+        box.hidden = !box.hidden;
+        if (box.hidden) return;
+        if (!cap.value) cap.value = ($('#stCap-instagram') || {}).value || '';
+        loadSocial().then(function (s) {
+          if (s.configured) {
+            note.textContent = 'Publica em: ' + (s.instagram ? 'Instagram @' + s.instagram.username : 'Instagram (não ligado à Página)') + ' e Facebook "' + s.facebook.name + '". Legenda do Instagram abaixo (no Facebook vai a legenda do Facebook). Story não leva legenda.';
+          } else {
+            go.disabled = true;
+            note.textContent = s.error ? 'Servidor indisponível: ' + s.error : 'Falta ligar o painel às redes (uma vez só): veja o README, seção 10.2 — "Publicar direto nas redes". Até lá, use Baixar/Compartilhar.';
+          }
+        });
+      }
+    };
+  }
+
+  function previewItem(name, canvas, filename, fmt) {
     var wrap = document.createElement('div');
     wrap.className = 'st-item';
     canvas.className = 'st-canvas';
@@ -1100,6 +1189,14 @@
       bar.appendChild(sh);
     }
     wrap.appendChild(canvas); wrap.appendChild(bar);
+    if (fmt) {
+      var pub = publishPanel(canvas, fmt);
+      var pb = document.createElement('button');
+      pb.type = 'button'; pb.className = 'btn btn-ghost btn-sm'; pb.textContent = 'Publicar nas redes';
+      pb.addEventListener('click', pub.open);
+      bar.appendChild(pb);
+      wrap.appendChild(pub.box);
+    }
     return wrap;
   }
 
@@ -1172,7 +1269,7 @@
         var name = fm.label + ' · ' + fm.hint + ' · ' + T.label;
         var file = 'akylla-' + slug(product ? product.shortName : meta.label) + '-' + fm.label.replace(':', 'x') + '.png';
         lastRender.push({ canvas: cv, file: file });
-        out.appendChild(previewItem(name, cv, file));
+        out.appendChild(previewItem(name, cv, file, f));
       });
       var cap = captions(d);
       ['instagram', 'facebook', 'tiktok'].forEach(function (k) { $('#stCap-' + k).value = cap[k]; });
@@ -1310,8 +1407,15 @@
   }
 
   var wired = false;
+  function syncContacts() {
+    var c = api.config() || {};
+    if (c.whatsappDisplay) WHATS = c.whatsappDisplay;
+    if (c.instagram) INSTA = '@' + String(c.instagram).replace(/^@/, '');
+  }
+
   function init(adminApi) {
     api = adminApi;
+    syncContacts();
     if (!$('#stCampaign')) return;
     var sel = $('#stCampaign');
     if (!wired) {
@@ -1334,5 +1438,5 @@
     renderPresets();
   }
 
-  window.AkyllaStudio = { init: init, refresh: function () { if (api) fillProducts(); } };
+  window.AkyllaStudio = { init: init, refresh: function () { if (api) { syncContacts(); fillProducts(); } } };
 })();

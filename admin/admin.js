@@ -206,7 +206,18 @@
           config: function () { return state.config; },
           setConfig: function (key, value) { state.config[key] = value; refreshPending(); },
           toast: toast,
-          brl: brl
+          brl: brl,
+          /* chamadas ao servidor com a chave do painel (publicação nas redes) */
+          server: function (path, opts) {
+            opts = opts || {};
+            opts.headers = Object.assign({ Authorization: 'Bearer ' + state.token }, opts.headers || {});
+            return fetch(apiBase() + path, opts).then(function (res) {
+              return res.json().catch(function () { return {}; }).then(function (d) {
+                if (!res.ok) throw new Error(d.error || ('Erro ' + res.status));
+                return d;
+              });
+            });
+          }
         });
       }
     }).finally(function () { busy(''); });
