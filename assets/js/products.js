@@ -1180,8 +1180,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Sem fio, com função TWS"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "smartwatch-inova-s10-ultra-plus",
@@ -1227,8 +1226,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Laranja, preto e cinza"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "carregador-inova-usb-c-20w",
@@ -1263,8 +1261,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Mais segurança e eficiência"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "mini-ventilador-inova-md122",
@@ -1303,8 +1300,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Recarregável por USB"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "capa-holografica-reforcada",
@@ -1339,8 +1335,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Aro colorido na câmera"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "capa-space-2em1",
@@ -1379,8 +1374,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Note 13 4G, Note 13 Pro 4G, Note 14 5G, Note 14 Pro 5G, Redmi 15, Note 15 5G, Note 15 Pro 5G, 12C, 14C, 15C, Realme C65, C85"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "suporte-veicular-spo12961",
@@ -1415,8 +1409,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Fácil, sem ferramentas"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "suporte-veicular-spo12879",
@@ -1451,8 +1444,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Fácil, sem ferramentas"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "camera-wifi-inova-kv725",
@@ -1495,8 +1487,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Visualize e controle pelo celular"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "cabo-rotativo-lightning-cb0399",
@@ -1538,8 +1529,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Fio de cobre, revestimento resistente"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "cabo-rotativo-usb-c-lightning-cb0401",
@@ -1581,8 +1571,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Fio de cobre, revestimento resistente"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "carregador-inova-lightning-30w-car272l",
@@ -1624,8 +1613,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Anatel"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "fonte-turbo-inova-30w-car272",
@@ -1664,8 +1652,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Anatel"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "carregador-veicular-inova-67w-md13433a",
@@ -1704,8 +1691,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Proteção eficiente"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "controle-sem-fio-inova-con12867",
@@ -1736,8 +1722,7 @@ window.AKYLLA_PRODUCTS = [
         "value": "Anatel"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   },
   {
     "id": "mini-teclado-altomex-al313",
@@ -1776,7 +1761,6 @@ window.AKYLLA_PRODUCTS = [
         "value": "TV, PC, notebook, tablet e games"
       }
     ],
-    "illustrative": true,
-    "hidden": true
+    "illustrative": true
   }
 ];
