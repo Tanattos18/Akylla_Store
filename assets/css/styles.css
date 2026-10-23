@@ -1490,6 +1490,32 @@ h3 {
   margin-top: 1.8rem;
 }
 
+.btn-more {
+  min-height: 54px;
+  padding: 0.95rem 1.6rem;
+  font-size: 0.9rem;
+  box-shadow: 0 12px 28px rgba(255, 138, 0, 0.28);
+}
+
+.btn-more svg {
+  transition: transform 0.22s ease;
+}
+
+.btn-more:hover svg {
+  transform: translateY(3px);
+}
+
+.btn-more-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--brand);
+  font-size: 0.75rem;
+}
+
 .catalog-count {
   margin: 0;
   color: var(--muted);
@@ -3741,6 +3767,10 @@ dialog::backdrop {
   .catalog-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .btn-more {
+    width: 100%;
   }
 
   .footer-grid {

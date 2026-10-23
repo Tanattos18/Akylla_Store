@@ -845,7 +845,11 @@
     Array.prototype.forEach.call(els.productGrid.querySelectorAll('img[data-photo]'), wireImageFallback);
 
     if (els.catalogEmpty) els.catalogEmpty.hidden = list.length !== 0;
-    if (els.loadMore) els.loadMore.hidden = list.length <= visible.length;
+    if (els.loadMore) {
+      els.loadMore.hidden = list.length <= visible.length;
+      var countEl = document.getElementById('loadMoreCount');
+      if (countEl) countEl.textContent = '+' + (list.length - visible.length);
+    }
 
     if (els.resultCount) {
       if (!list.length) {
