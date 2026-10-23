@@ -235,14 +235,17 @@ test('frete: cotação completa (CEP → mapa → rota) com serviços simulados'
     if (url.indexOf('osrm') >= 0) return json({ code: 'Ok', routes: [{ distance: 17340 }] });
     return Promise.reject(new Error('url inesperada ' + url));
   };
+  /* tabela fixa de exemplo: os valores reais mudam pelo painel e não devem quebrar o teste */
+  var cfg = JSON.parse(JSON.stringify(CONFIG));
+  cfg.shipping.bands = [[15, 2500], [20, 2800], [25, 3100], [30, 3400], [35, 3700], [40, 4000]].map(function (b) { return { upToKm: b[0], price: b[1] }; });
   try {
-    var q = await Frete.quote({ cep: '74230-010', number: '120' }, CONFIG);
+    var q = await Frete.quote({ cep: '74230-010', number: '120' }, cfg);
     assert.equal(q.kind, 'distance');
     assert.equal(q.km, 17.3);
     assert.equal(q.fee, 2800);
     assert.equal(q.precision, 'endereço');
-    assert.equal((await Frete.quote({ cep: '75250-000', number: '1' }, CONFIG)).fee, 2500);
-    assert.equal((await Frete.quote({ cep: '75000-000', number: '1' }, CONFIG)).kind, 'carrier', 'interior: transportadora');
+    assert.equal((await Frete.quote({ cep: '75250-000', number: '1' }, cfg)).fee, 2500);
+    assert.equal((await Frete.quote({ cep: '75000-000', number: '1' }, cfg)).kind, 'carrier', 'interior: transportadora');
     assert.deepEqual(JSON.parse(JSON.stringify(Frete.carrierTotal(4000, CONFIG))), { freight: 4000, fee: 1200, total: 5200, percent: 30 }, 'R$ 40 + 30% = R$ 52');
     await assert.rejects(Frete.quote({ cep: '123', number: '1' }, CONFIG), /8 números/);
   } finally {
