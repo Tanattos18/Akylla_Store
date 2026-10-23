@@ -1041,6 +1041,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 22/10/2026 | Arte animada (🎬 Animar, 6 s em loop) com princípios de motion design; acabamento premium (vinheta + textura); voz: endereço reserva + suporte à voz oficial Azure (grátis). |
 | 22/10/2026 | Artes e vídeos com visual novo a cada geração (fundos, foto principal, frases, entrada do produto, cartela final); fotos sem fundo branco viram cartão. |
 | 22/10/2026 | Vídeo 2.0 (modelos, ganchos, duração, chamadas, cortes com a galeria, expressões do mascote, capa, legenda, comentário fixado, áreas seguras, Reels, desempenho), trilhas próprias com biblioteca no servidor e Vendas por origem. |
+| 23/10/2026 | 16 produtos novos do fornecedor (caixa de som, S10 Ultra+, carregadores, cabos rotativos, suportes, câmera Wi-Fi, ventilador, capas, controle e mini teclado) **fora da loja** e com estoque 0, para conferência no painel. Preço = custo de atacado × 2 (margem de 50%). Fotos recortadas das artes do fornecedor (aviso de imagem ilustrativa). |
 
 O histórico completo está nos commits: `git log --oneline`.
 

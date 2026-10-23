@@ -1142,5 +1142,641 @@ window.AKYLLA_PRODUCTS = [
         "value": "A partir de 14 anos"
       }
     ]
+  },
+  {
+    "id": "caixa-som-inova-md12271",
+    "name": "Caixa de Som Inova MD-12271 RGB 20W com Rádio FM",
+    "shortName": "Caixa de Som RGB 20W",
+    "brand": "Inova",
+    "model": "MD-12271",
+    "code": "MD-12271",
+    "category": "audio",
+    "visual": "headphones",
+    "price": 19180,
+    "stock": 0,
+    "summary": "Dois alto-falantes de 4\" (10W x 2), luzes RGB com 5 modos e rádio FM.",
+    "description": "Caixa de som multimídia sem fio com dois alto-falantes de 4\" e potência de 10W x 2. As luzes RGB laterais têm 5 modos de iluminação, deixando a festa mais animada. Tem rádio FM e função TWS para ligar duas caixas juntas.",
+    "image": "assets/img/products/caixa-som-inova-md12271.webp",
+    "imageAlt": "Caixa de som Inova MD-12271 preta com luzes RGB na embalagem",
+    "specs": [
+      {
+        "label": "Potência",
+        "value": "10W x 2"
+      },
+      {
+        "label": "Alto-falantes",
+        "value": "2 de 4\""
+      },
+      {
+        "label": "Iluminação",
+        "value": "RGB com 5 modos"
+      },
+      {
+        "label": "Rádio",
+        "value": "FM"
+      },
+      {
+        "label": "Conexão",
+        "value": "Sem fio, com função TWS"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "smartwatch-inova-s10-ultra-plus",
+    "name": "Relógio Inteligente Inova S10 Ultra+",
+    "shortName": "S10 Ultra+",
+    "brand": "Inova",
+    "model": "S10 Ultra+",
+    "code": "S10 Ultra+",
+    "category": "smartwatches",
+    "visual": "watch",
+    "price": 12380,
+    "stock": 0,
+    "summary": "Tela grande, monitora atividades, batimentos e sono. Cores laranja, preto e cinza.",
+    "description": "Smartwatch S10 Ultra+ com tela grande e nítida, monitoramento de atividades, frequência cardíaca e sono, resistência à água e bateria de longa duração. Disponível nas cores laranja, preto e cinza.",
+    "image": "assets/img/products/smartwatch-inova-s10-ultra-plus.webp",
+    "imageAlt": "Relógio inteligente S10 Ultra+ laranja ao lado da caixa",
+    "gallery": [
+      "assets/img/products/smartwatch-inova-s10-ultra-plus-1.webp"
+    ],
+    "specs": [
+      {
+        "label": "Tela",
+        "value": "Grande e nítida"
+      },
+      {
+        "label": "Saúde",
+        "value": "Frequência cardíaca e sono"
+      },
+      {
+        "label": "Atividades",
+        "value": "Monitoramento de atividades"
+      },
+      {
+        "label": "Resistência",
+        "value": "Resistente à água"
+      },
+      {
+        "label": "Bateria",
+        "value": "Longa duração"
+      },
+      {
+        "label": "Cores",
+        "value": "Laranja, preto e cinza"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "carregador-inova-usb-c-20w",
+    "name": "Carregador Inova USB-C 20W com Cabo USB-C",
+    "shortName": "Carregador USB-C 20W",
+    "brand": "Inova",
+    "model": "USB-C 20W",
+    "code": "USB-C 20W",
+    "category": "carregadores",
+    "visual": "charger",
+    "price": 2800,
+    "stock": 0,
+    "summary": "Carregador turbo de 20W com saída USB-C e cabo USB-C para USB-C.",
+    "description": "Carregador completo Inova com 20W de potência, saída USB-C e cabo USB-C para USB-C incluso. Carga rápida e segura para celulares com entrada Tipo C.",
+    "image": "assets/img/products/carregador-inova-usb-c-20w.webp",
+    "imageAlt": "Carregador Inova USB-C 20W branco com cabo na embalagem",
+    "specs": [
+      {
+        "label": "Potência",
+        "value": "20W"
+      },
+      {
+        "label": "Saída",
+        "value": "USB-C"
+      },
+      {
+        "label": "Cabo",
+        "value": "USB-C para USB-C incluso"
+      },
+      {
+        "label": "Proteção",
+        "value": "Mais segurança e eficiência"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "mini-ventilador-inova-md122",
+    "name": "Mini Ventilador de Mesa Inova MD-122 com 3 Velocidades",
+    "shortName": "Mini Ventilador 3 Velocidades",
+    "brand": "Inova",
+    "model": "MD-122",
+    "code": "MD-122",
+    "category": "acessorios",
+    "visual": "bolt",
+    "price": 5900,
+    "stock": 0,
+    "summary": "3 velocidades, de pé ou preso com clipe, gira 360° e carrega por USB.",
+    "description": "Miniventilador de mesa Inova com 3 velocidades. Pode ficar de pé ou preso com o clipe (mesa, carrinho de bebê, cama), gira 360° e é recarregável por USB. Brisa forte para levar para onde for.",
+    "image": "assets/img/products/mini-ventilador-inova-md122.webp",
+    "imageAlt": "Embalagem azul do miniventilador de mesa Inova MD-122",
+    "specs": [
+      {
+        "label": "Velocidades",
+        "value": "3"
+      },
+      {
+        "label": "Uso",
+        "value": "De pé ou preso com clipe"
+      },
+      {
+        "label": "Rotação",
+        "value": "360°"
+      },
+      {
+        "label": "Hélices",
+        "value": "3 pás"
+      },
+      {
+        "label": "Carga",
+        "value": "Recarregável por USB"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "capa-holografica-reforcada",
+    "name": "Capa Holográfica Reforçada para Celular",
+    "shortName": "Capa Holográfica",
+    "brand": "So Cool",
+    "model": "Holográfica",
+    "code": "Holográfica",
+    "category": "acessorios",
+    "visual": "shield",
+    "price": 1360,
+    "stock": 0,
+    "summary": "Capa holográfica reforçada com aro colorido na câmera. Vários modelos e cores.",
+    "description": "Capa holográfica reforçada com efeito de arco-íris e aro colorido em volta da câmera. Protege contra quedas e riscos com encaixe perfeito. Cores: roxo, rosa, verde, azul, branco e cinza (conforme estoque). Informe o modelo do seu celular ao pedir.",
+    "image": "assets/img/products/capa-holografica-reforcada.webp",
+    "imageAlt": "Capas holográficas reforçadas em roxo, verde, azul, rosa, branco e cinza",
+    "specs": [
+      {
+        "label": "Modelos",
+        "value": "17e, A5, A06, A15, A16, A17, A18, A26, A36, A56, 14c, Note 14 4G, G05, G15"
+      },
+      {
+        "label": "Cores",
+        "value": "Roxo, rosa, verde, azul, branco e cinza"
+      },
+      {
+        "label": "Proteção",
+        "value": "Contra quedas e riscos"
+      },
+      {
+        "label": "Detalhe",
+        "value": "Aro colorido na câmera"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "capa-space-2em1",
+    "name": "Capa Space Collection 2 em 1 para Celular",
+    "shortName": "Capa Space 2 em 1",
+    "brand": "Space Collection",
+    "model": "2 em 1",
+    "code": "2 em 1",
+    "category": "acessorios",
+    "visual": "shield",
+    "price": 1180,
+    "stock": 0,
+    "summary": "Capa 2 em 1 (PC + TPU), proteção completa. Mais de 60 modelos de celular.",
+    "description": "Capa Space Collection 2 em 1, com parte rígida (PC) e borda flexível (TPU) para proteção completa. Disponível em várias cores e para mais de 60 modelos de iPhone, Samsung, Motorola, Xiaomi e Realme. Informe o modelo do seu celular ao pedir.",
+    "image": "assets/img/products/capa-space-2em1.webp",
+    "imageAlt": "Expositor com capas Space Collection 2 em 1 em várias cores",
+    "specs": [
+      {
+        "label": "Material",
+        "value": "PC + TPU (2 em 1)"
+      },
+      {
+        "label": "iPhone",
+        "value": "11, 13 Pro Max, 15, 15 Pro Max, 16, 16 Pro, 16 Pro Max"
+      },
+      {
+        "label": "Samsung",
+        "value": "A03 Core, A04s, A06, A07, A10, A12, A14 a A17, A23 a A27, A32, A34 a A37, A54, A56, A57, S25"
+      },
+      {
+        "label": "Motorola",
+        "value": "G04, G04s, G05, G06, G10, G14, G15, G17, G20, G22, G35, G55, G56, G67 Power, G75, G77, G84, G86"
+      },
+      {
+        "label": "Xiaomi e Realme",
+        "value": "Note 13 4G, Note 13 Pro 4G, Note 14 5G, Note 14 Pro 5G, Redmi 15, Note 15 5G, Note 15 Pro 5G, 12C, 14C, 15C, Realme C65, C85"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "suporte-veicular-spo12961",
+    "name": "Suporte Veicular com Ventosa Inova SPO-12961",
+    "shortName": "Suporte Veicular SPO-12961",
+    "brand": "Inova",
+    "model": "SPO-12961",
+    "code": "SPO-12961",
+    "category": "acessorios",
+    "visual": "charger",
+    "price": 2780,
+    "stock": 0,
+    "summary": "Ventosa adesiva, braço extensível e giro de 360°. Instalação fácil.",
+    "description": "Suporte veicular Inova com ventosa adesiva para painel ou para-brisa, braço com alongamento livre e rotação de 360°. Seguro, estável e de instalação fácil, ideal para GPS e aplicativos de corrida.",
+    "image": "assets/img/products/suporte-veicular-spo12961.webp",
+    "imageAlt": "Embalagem do suporte veicular Inova SPO-12961 com ventosa",
+    "specs": [
+      {
+        "label": "Fixação",
+        "value": "Ventosa adesiva"
+      },
+      {
+        "label": "Rotação",
+        "value": "360°"
+      },
+      {
+        "label": "Braço",
+        "value": "Alongamento livre"
+      },
+      {
+        "label": "Instalação",
+        "value": "Fácil, sem ferramentas"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "suporte-veicular-spo12879",
+    "name": "Suporte Veicular com Ventosa Inova SPO-12879",
+    "shortName": "Suporte Veicular SPO-12879",
+    "brand": "Inova",
+    "model": "SPO-12879",
+    "code": "SPO-12879",
+    "category": "acessorios",
+    "visual": "charger",
+    "price": 2800,
+    "stock": 0,
+    "summary": "Ventosa adesiva, braço extensível e giro de 360°. Instalação fácil.",
+    "description": "Suporte veicular Inova com ventosa adesiva para painel ou para-brisa, braço com alongamento livre e rotação de 360°. Seguro, estável e de instalação fácil.",
+    "image": "assets/img/products/suporte-veicular-spo12879.webp",
+    "imageAlt": "Embalagem do suporte veicular Inova SPO-12879 com ventosa",
+    "specs": [
+      {
+        "label": "Fixação",
+        "value": "Ventosa adesiva"
+      },
+      {
+        "label": "Rotação",
+        "value": "360°"
+      },
+      {
+        "label": "Braço",
+        "value": "Alongamento livre"
+      },
+      {
+        "label": "Instalação",
+        "value": "Fácil, sem ferramentas"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "camera-wifi-inova-kv725",
+    "name": "Câmera Smart Wi-Fi Inova KV-725 IP65 com Visão Noturna",
+    "shortName": "Câmera Smart Wi-Fi",
+    "brand": "Inova",
+    "model": "KV-725",
+    "code": "KV-725",
+    "category": "acessorios",
+    "visual": "shield",
+    "price": 17800,
+    "stock": 0,
+    "summary": "Wi-Fi, imagem HD, giro 360°, visão noturna, IP65 e conversa pelo celular.",
+    "description": "Câmera inteligente Inova com Wi-Fi para acompanhar tudo pelo aplicativo no celular. Imagem em alta definição, visão 360°, visão noturna, áudio bidirecional (fale e ouça pelo celular) e proteção IP65 contra água e poeira. Ideal para casa e comércio.",
+    "image": "assets/img/products/camera-wifi-inova-kv725.webp",
+    "imageAlt": "Câmera Smart Wi-Fi Inova KV-725 branca ao lado da caixa",
+    "specs": [
+      {
+        "label": "Conexão",
+        "value": "Wi-Fi"
+      },
+      {
+        "label": "Imagem",
+        "value": "Alta definição (HD)"
+      },
+      {
+        "label": "Visão",
+        "value": "360° e visão noturna"
+      },
+      {
+        "label": "Proteção",
+        "value": "IP65 (água e poeira)"
+      },
+      {
+        "label": "Áudio",
+        "value": "Bidirecional"
+      },
+      {
+        "label": "App",
+        "value": "Visualize e controle pelo celular"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "cabo-rotativo-lightning-cb0399",
+    "name": "Cabo Rotativo Basike USB para Lightning 1,2 m",
+    "shortName": "Cabo Rotativo Lightning",
+    "brand": "Basike",
+    "model": "BA-CB0399",
+    "code": "BA-CB0399",
+    "category": "cabos",
+    "visual": "cable",
+    "price": 1720,
+    "stock": 0,
+    "summary": "Conector Lightning que gira 180°, cabo trançado de 1,2 m e carga rápida.",
+    "description": "Cabo de dados Basike USB-A para Lightning (iPhone) com conector rotativo de 180°, mais prático para usar o celular enquanto carrega. Cabo resistente com revestimento trançado, fio de cobre e 1,2 m de comprimento.",
+    "image": "assets/img/products/cabo-rotativo-lightning-cb0399.webp",
+    "imageAlt": "Cabo Basike USB para Lightning com conector rotativo de 180 graus",
+    "gallery": [
+      "assets/img/products/cabo-rotativo-lightning-cb0399-1.webp"
+    ],
+    "specs": [
+      {
+        "label": "Conectores",
+        "value": "USB-A para Lightning"
+      },
+      {
+        "label": "Potência",
+        "value": "22,5W"
+      },
+      {
+        "label": "Conector",
+        "value": "Rotativo 180°"
+      },
+      {
+        "label": "Comprimento",
+        "value": "1,2 m"
+      },
+      {
+        "label": "Construção",
+        "value": "Fio de cobre, revestimento resistente"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "cabo-rotativo-usb-c-lightning-cb0401",
+    "name": "Cabo Rotativo Basike USB-C para Lightning 27W 1,2 m",
+    "shortName": "Cabo Rotativo USB-C/Lightning",
+    "brand": "Basike",
+    "model": "BA-CB0401",
+    "code": "BA-CB0401",
+    "category": "cabos",
+    "visual": "cable",
+    "price": 1900,
+    "stock": 0,
+    "summary": "USB-C para Lightning 27W, conector que gira 180° e cabo trançado de 1,2 m.",
+    "description": "Cabo de dados Basike USB-C para Lightning com carregamento rápido de 27W e conector rotativo de 180°. Revestimento resistente, fio de cobre e 1,2 m de comprimento. Use com carregadores USB-C para carregar o iPhone mais rápido.",
+    "image": "assets/img/products/cabo-rotativo-usb-c-lightning-cb0401.webp",
+    "imageAlt": "Cabo Basike USB-C para Lightning com conector rotativo carregando um celular",
+    "gallery": [
+      "assets/img/products/cabo-rotativo-usb-c-lightning-cb0401-1.webp"
+    ],
+    "specs": [
+      {
+        "label": "Conectores",
+        "value": "USB-C para Lightning"
+      },
+      {
+        "label": "Potência",
+        "value": "27W"
+      },
+      {
+        "label": "Conector",
+        "value": "Rotativo 180°"
+      },
+      {
+        "label": "Comprimento",
+        "value": "1,2 m"
+      },
+      {
+        "label": "Construção",
+        "value": "Fio de cobre, revestimento resistente"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "carregador-inova-lightning-30w-car272l",
+    "name": "Carregador Inova Turbo 30W GaN com Cabo Lightning",
+    "shortName": "Carregador 30W Lightning",
+    "brand": "Inova",
+    "model": "MD-CAR272L",
+    "code": "MD-CAR272L",
+    "category": "carregadores",
+    "visual": "charger",
+    "price": 3060,
+    "stock": 0,
+    "summary": "30W GaN, saídas USB e USB-C e cabo USB-C para Lightning incluso.",
+    "description": "Carregador completo Inova Wall Charger com 30W de potência e tecnologia GaN, saídas USB-A e USB-C e cabo USB-C para Lightning incluso. Carregamento seguro e inteligente. Homologado pela Anatel.",
+    "image": "assets/img/products/carregador-inova-lightning-30w-car272l.webp",
+    "imageAlt": "Carregador Inova 30W MD-CAR272L na embalagem com cabo Lightning",
+    "gallery": [
+      "assets/img/products/carregador-inova-lightning-30w-car272l-1.webp"
+    ],
+    "specs": [
+      {
+        "label": "Potência",
+        "value": "30W GaN"
+      },
+      {
+        "label": "Saídas",
+        "value": "USB-A e USB-C"
+      },
+      {
+        "label": "Cabo",
+        "value": "USB-C para Lightning incluso"
+      },
+      {
+        "label": "Proteção",
+        "value": "Carregamento seguro e inteligente"
+      },
+      {
+        "label": "Certificação",
+        "value": "Anatel"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "fonte-turbo-inova-30w-car272",
+    "name": "Fonte Turbo Inova 30W GaN USB e USB-C",
+    "shortName": "Fonte Turbo 30W",
+    "brand": "Inova",
+    "model": "MD-CAR272",
+    "code": "MD-CAR272",
+    "category": "carregadores",
+    "visual": "charger",
+    "price": 2580,
+    "stock": 0,
+    "summary": "Só a fonte: 30W GaN com saídas USB-A e USB-C.",
+    "description": "Fonte turbo Inova Wall Charger com 30W de potência e tecnologia GaN, saídas USB-A e USB-C. Vendida sem cabo: use o cabo que você já tem. Proteção superior e homologação Anatel.",
+    "image": "assets/img/products/fonte-turbo-inova-30w-car272.webp",
+    "imageAlt": "Fonte turbo Inova 30W MD-CAR272 na embalagem",
+    "specs": [
+      {
+        "label": "Potência",
+        "value": "30W GaN"
+      },
+      {
+        "label": "Saídas",
+        "value": "USB-A e USB-C"
+      },
+      {
+        "label": "Cabo",
+        "value": "Não acompanha"
+      },
+      {
+        "label": "Proteção",
+        "value": "Proteção superior"
+      },
+      {
+        "label": "Certificação",
+        "value": "Anatel"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "carregador-veicular-inova-67w-md13433a",
+    "name": "Carregador Veicular Inova Turbo 67,5W com Cabo Lightning",
+    "shortName": "Carregador Veicular 67,5W",
+    "brand": "Inova",
+    "model": "MD-13433A",
+    "code": "MD-13433A",
+    "category": "carregadores",
+    "visual": "charger",
+    "price": 3400,
+    "stock": 0,
+    "summary": "67,5W no carro, saídas USB-A e USB-C e cabo para iPhone.",
+    "description": "Carregador veicular Inova de 67,5W com saídas USB-A e USB-C, carga rápida e proteção eficiente. Acompanha cabo Lightning para iPhone. Corpo metálico e compatível com todos os veículos.",
+    "image": "assets/img/products/carregador-veicular-inova-67w-md13433a.webp",
+    "imageAlt": "Carregador veicular Inova 67,5W cinza ao lado da embalagem",
+    "specs": [
+      {
+        "label": "Potência",
+        "value": "67,5W"
+      },
+      {
+        "label": "Saídas",
+        "value": "USB-A e USB-C"
+      },
+      {
+        "label": "Cabo",
+        "value": "Lightning incluso"
+      },
+      {
+        "label": "Carga",
+        "value": "Rápida"
+      },
+      {
+        "label": "Proteção",
+        "value": "Proteção eficiente"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "controle-sem-fio-inova-con12867",
+    "name": "Controle de Jogo Sem Fio Inova CON-12867",
+    "shortName": "Controle Sem Fio",
+    "brand": "Inova",
+    "model": "CON-12867",
+    "code": "CON-12867",
+    "category": "acessorios",
+    "visual": "bolt",
+    "price": 11700,
+    "stock": 0,
+    "summary": "Bluetooth 5.0, compatível com celular (iOS e Android), Switch e PS3/PS4.",
+    "description": "Controle de jogo sem fio Inova com Bluetooth 5.0. Compatível com celulares iOS e Android, Nintendo Switch e PS3/PS4. Mais conforto, precisão e diversão em cada partida. Homologado pela Anatel.",
+    "image": "assets/img/products/controle-sem-fio-inova-con12867.webp",
+    "imageAlt": "Controle sem fio Inova CON-12867 preto ao lado da caixa",
+    "specs": [
+      {
+        "label": "Conexão",
+        "value": "Bluetooth 5.0"
+      },
+      {
+        "label": "Compatível",
+        "value": "iOS, Android, Switch e PS3/PS4"
+      },
+      {
+        "label": "Certificação",
+        "value": "Anatel"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
+  },
+  {
+    "id": "mini-teclado-altomex-al313",
+    "name": "Mini Teclado Sem Fio Altomex AL-313 com Touchpad e LED",
+    "shortName": "Mini Teclado Sem Fio",
+    "brand": "Altomex",
+    "model": "AL-313",
+    "code": "AL-313",
+    "category": "acessorios",
+    "visual": "bolt",
+    "price": 3180,
+    "stock": 0,
+    "summary": "Bluetooth + 2.4G, touchpad, teclas iluminadas. Para TV, PC, notebook e games.",
+    "description": "Mini teclado sem fio Altomex com conexão dupla (Bluetooth e receptor USB 2.4G), touchpad que funciona como mouse, teclas iluminadas e funções multimídia. Ideal para Smart TV, TV Box, PC, notebook, tablet e games.",
+    "image": "assets/img/products/mini-teclado-altomex-al313.webp",
+    "imageAlt": "Mini teclado sem fio Altomex AL-313 com teclas iluminadas na embalagem",
+    "specs": [
+      {
+        "label": "Conexão",
+        "value": "Bluetooth + 2.4G (receptor USB)"
+      },
+      {
+        "label": "Mouse",
+        "value": "Touchpad integrado"
+      },
+      {
+        "label": "Teclas",
+        "value": "Iluminadas"
+      },
+      {
+        "label": "Funções",
+        "value": "Multimídia"
+      },
+      {
+        "label": "Uso",
+        "value": "TV, PC, notebook, tablet e games"
+      }
+    ],
+    "illustrative": true,
+    "hidden": true
   }
 ];
