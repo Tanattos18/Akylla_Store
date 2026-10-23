@@ -152,8 +152,7 @@ window.AKYLLA_PRODUCTS = [
       "assets/img/products/hw8-pro-max-1.webp",
       "assets/img/products/hw8-pro-max-2.webp",
       "assets/img/products/hw8-pro-max-3.webp",
-      "assets/img/products/hw8-pro-max-4.webp",
-      "assets/img/products/hw8-pro-max-5.webp"
+      "assets/img/products/hw8-pro-max-4.webp"
     ],
     "specs": [
       {
@@ -897,6 +896,10 @@ window.AKYLLA_PRODUCTS = [
         "label": "Voltagem",
         "value": "Bivolt"
       }
+    ],
+    "gallery": [
+      "assets/img/products/carregador-inova-51a-tipo-c-1.webp",
+      "assets/img/products/carregador-inova-51a-tipo-c-2.webp"
     ]
   },
   {
@@ -1261,7 +1264,10 @@ window.AKYLLA_PRODUCTS = [
         "value": "Mais segurança e eficiência"
       }
     ],
-    "illustrative": true
+    "illustrative": true,
+    "gallery": [
+      "assets/img/products/carregador-inova-usb-c-20w-1.webp"
+    ]
   },
   {
     "id": "mini-ventilador-inova-md122",
@@ -1704,14 +1710,18 @@ window.AKYLLA_PRODUCTS = [
     "visual": "bolt",
     "price": 11700,
     "stock": 0,
-    "summary": "Bluetooth 5.0, compatível com celular (iOS e Android), Switch e PS3/PS4.",
-    "description": "Controle de jogo sem fio Inova com Bluetooth 5.0. Compatível com celulares iOS e Android, Nintendo Switch e PS3/PS4. Mais conforto, precisão e diversão em cada partida. Homologado pela Anatel.",
+    "summary": "Bluetooth 5.0 e suporte para celular. Compatível com iOS, Android, Switch e PS3/PS4.",
+    "description": "Controle de jogo sem fio Inova com Bluetooth 5.0 e suporte para encaixar o celular. Compatível com celulares iOS e Android, Nintendo Switch e PS3/PS4. Mais conforto, precisão e diversão em cada partida. Homologado pela Anatel.",
     "image": "assets/img/products/controle-sem-fio-inova-con12867.webp",
-    "imageAlt": "Controle sem fio Inova CON-12867 preto ao lado da caixa",
+    "imageAlt": "Controle sem fio Inova CON-12867 preto com detalhes azuis e suporte para celular",
     "specs": [
       {
         "label": "Conexão",
         "value": "Bluetooth 5.0"
+      },
+      {
+        "label": "Suporte",
+        "value": "Encaixe para celular"
       },
       {
         "label": "Compatível",
@@ -1722,7 +1732,11 @@ window.AKYLLA_PRODUCTS = [
         "value": "Anatel"
       }
     ],
-    "illustrative": true
+    "illustrative": true,
+    "gallery": [
+      "assets/img/products/controle-sem-fio-inova-con12867-1.webp",
+      "assets/img/products/controle-sem-fio-inova-con12867-2.webp"
+    ]
   },
   {
     "id": "mini-teclado-altomex-al313",
