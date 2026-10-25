@@ -79,6 +79,16 @@
     productDialogThumbs: document.getElementById('productDialogThumbs'),
     productDialogWa: document.getElementById('productDialogWa'),
     productDialogNote: document.getElementById('productDialogNote'),
+    productDialogPrev: document.getElementById('productDialogPrev'),
+    productDialogNext: document.getElementById('productDialogNext'),
+    productDialogCount: document.getElementById('productDialogCount'),
+    productDialogCard: document.getElementById('productDialogCard'),
+    productDialogQty: document.getElementById('productDialogQty'),
+    productDialogQtyMinus: document.getElementById('productDialogQtyMinus'),
+    productDialogQtyPlus: document.getElementById('productDialogQtyPlus'),
+    productDialogQtyRow: document.getElementById('productDialogQtyRow'),
+    productDialogRelated: document.getElementById('productDialogRelated'),
+    productDialogRelatedList: document.getElementById('productDialogRelatedList'),
     checkoutDialog: document.getElementById('checkoutDialog'),
     checkoutItems: document.getElementById('checkoutItems'),
     checkoutTotal: document.getElementById('checkoutTotal'),
@@ -405,8 +415,7 @@
   function cardBadges(product) {
     var html = '';
     if (product.bestseller) html += '<span class="stock-badge stock-badge--best">Mais vendido</span>';
-    var info = stockInfo(product);
-    if (info && (info.tone === 'out' || (maxQty(product) === 1 && !restockOn(product)))) html += stockBadge(product);
+    if (stockInfo(product)) html += stockBadge(product);
     return html ? '    <div class="card-badges">' + html + '</div>' : '';
   }
 
@@ -416,9 +425,10 @@
     }, 0);
   }
 
-  function addToCart(id) {
+  function addToCart(id, amount) {
     var product = productById(id);
     if (!product) return;
+    amount = Math.max(1, Math.floor(amount || 1));
 
     var entry = state.cart.find(function (item) {
       return item.id === id;
@@ -434,15 +444,18 @@
       return;
     }
 
+    var current = entry ? entry.qty : 0;
+    var added = Math.min(amount, limit - current);
     if (entry) {
-      entry.qty += 1;
+      entry.qty += added;
     } else {
-      state.cart.push({ id: id, qty: 1 });
+      state.cart.push({ id: id, qty: added });
     }
 
     saveCart();
     renderCart();
-    toast(product.shortName + ' adicionado à sacola.');
+    toast((added > 1 ? added + ' × ' : '') + product.shortName + (added > 1 ? ' adicionados' : ' adicionado') + ' à sacola.' +
+      (added < amount ? ' Temos só ' + limit + ' unidades.' : ''));
   }
 
   function changeQuantity(id, delta) {
@@ -565,6 +578,16 @@
         els.productDialogOld.querySelector('.discount-badge').textContent = '-' + percentText(dialogInfo.percent);
       }
     }
+    if (els.productDialogCard) {
+      var card = cardConfig();
+      els.productDialogCard.hidden = !card.enabled;
+      els.productDialogCard.textContent = card.enabled ? 'ou ' + formatBRL(cardTotalFor(dialogInfo.price)) + ' em até ' + card.max + 'x' : '';
+      els.productDialogCard.title = card.enabled ? 'No cartão de crédito, pelo Mercado Pago' : '';
+    }
+    dialogQty = 1;
+    renderDialogQty(product);
+    selectProductTab('desc');
+    renderRelated(product);
     if (els.productDialogUntil) {
       var untilText = dialogInfo.active ? promoUntilText(dialogInfo) : '';
       els.productDialogUntil.hidden = !untilText;
@@ -642,6 +665,54 @@
         thumb.setAttribute('aria-pressed', i === index ? 'true' : 'false');
       });
     }
+    if (els.productDialogCount) els.productDialogCount.textContent = (index + 1) + ' / ' + photos.length;
+  }
+
+  /* Quantidade escolhida no modal (vale para "Comprar agora" e "Adicionar à sacola"). */
+  var dialogQty = 1;
+  function renderDialogQty(product) {
+    var limit = maxQty(product);
+    dialogQty = Math.max(1, Math.min(dialogQty, Math.max(1, limit)));
+    if (els.productDialogQtyRow) els.productDialogQtyRow.hidden = limit < 1;
+    if (els.productDialogQty) els.productDialogQty.textContent = String(dialogQty);
+    if (els.productDialogQtyMinus) els.productDialogQtyMinus.disabled = dialogQty <= 1;
+    if (els.productDialogQtyPlus) els.productDialogQtyPlus.disabled = dialogQty >= limit;
+  }
+
+  /* Abas Descrição / Especificações. */
+  function selectProductTab(which) {
+    [['desc', 'tabDesc', 'panelDesc'], ['specs', 'tabSpecs', 'panelSpecs']].forEach(function (t) {
+      var tab = document.getElementById(t[1]);
+      var panel = document.getElementById(t[2]);
+      var on = t[0] === which;
+      if (tab) {
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        tab.tabIndex = on ? 0 : -1;
+      }
+      if (panel) panel.hidden = !on;
+    });
+  }
+
+  /* "Quem viu este produto também gostou": mesma categoria primeiro, depois os demais com estoque. */
+  function renderRelated(product) {
+    if (!els.productDialogRelated || !els.productDialogRelatedList) return;
+    var others = PRODUCTS.filter(function (p) { return p.id !== product.id && maxQty(p) > 0; });
+    var same = others.filter(function (p) { return p.category === product.category; });
+    var rest = others.filter(function (p) { return p.category !== product.category; });
+    var list = same.concat(rest).slice(0, 8);
+    els.productDialogRelated.hidden = !list.length;
+    els.productDialogRelatedList.innerHTML = list.map(function (p) {
+      var info = priceInfo(p);
+      return '<button class="related-card" type="button" data-related="' + escapeHTML(p.id) + '">' +
+        '<span class="related-media" data-media>' +
+        (p.image ? '<img src="' + escapeHTML(p.image) + '" alt="" loading="lazy" decoding="async" width="700" height="700" data-photo>' : '') +
+        '</span>' +
+        '<span class="related-name">' + escapeHTML(p.shortName) + '</span>' +
+        '<span class="related-price">' + (info.active ? '<s>' + formatBRL(info.original) + '</s> ' : '') + '<strong>' + formatBRL(info.price) + '</strong></span>' +
+        '</button>';
+    }).join('');
+    Array.prototype.forEach.call(els.productDialogRelatedList.querySelectorAll('img[data-photo]'), wireImageFallback);
+    els.productDialogRelatedList.scrollLeft = 0;
   }
 
   function renderDialogThumbs(product) {
@@ -649,6 +720,9 @@
     var photos = productPhotos(product);
     var multiple = photos.length > 1;
     els.productDialogThumbs.hidden = !multiple;
+    [els.productDialogPrev, els.productDialogNext, els.productDialogCount].forEach(function (el) {
+      if (el) el.hidden = !multiple;
+    });
     if (els.productDialogMedia) els.productDialogMedia.classList.toggle('has-thumbs', multiple);
     els.productDialogThumbs.innerHTML = multiple ? photos.map(function (src, i) {
       return '<button type="button" class="product-dialog-thumb" data-photo-index="' + i + '" aria-pressed="' + (i === 0 ? 'true' : 'false') + '" aria-label="Ver foto ' + (i + 1) + ' de ' + photos.length + '">' +
@@ -734,10 +808,48 @@
       });
     }
 
+    if (els.productDialogPrev) els.productDialogPrev.addEventListener('click', function () { stepDialogPhoto(-1); });
+    if (els.productDialogNext) els.productDialogNext.addEventListener('click', function () { stepDialogPhoto(1); });
+
+    [[els.productDialogQtyMinus, -1], [els.productDialogQtyPlus, 1]].forEach(function (pair) {
+      if (!pair[0]) return;
+      pair[0].addEventListener('click', function () {
+        var product = productById(activeProductId);
+        if (!product) return;
+        dialogQty += pair[1];
+        renderDialogQty(product);
+      });
+    });
+
+    var tablist = els.productDialog.querySelector('.product-tabs');
+    if (tablist) {
+      tablist.addEventListener('click', function (event) {
+        var tab = event.target.closest('[role="tab"]');
+        if (tab) selectProductTab(tab.id === 'tabSpecs' ? 'specs' : 'desc');
+      });
+      tablist.addEventListener('keydown', function (event) {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        var next = document.getElementById('tabSpecs').getAttribute('aria-selected') === 'true' ? 'desc' : 'specs';
+        selectProductTab(next);
+        document.getElementById(next === 'specs' ? 'tabSpecs' : 'tabDesc').focus();
+      });
+    }
+
+    if (els.productDialogRelatedList) {
+      els.productDialogRelatedList.addEventListener('click', function (event) {
+        var card = event.target.closest('[data-related]');
+        if (!card) return;
+        renderProductDialog(productById(card.getAttribute('data-related')));
+        var shell = els.productDialog.querySelector('.product-dialog-shell');
+        if (shell) shell.scrollTop = 0;
+        els.productDialog.scrollTop = 0;
+      });
+    }
+
     if (els.productDialogAdd) {
       els.productDialogAdd.addEventListener('click', function () {
         if (!activeProductId) return;
-        addToCart(activeProductId);
+        addToCart(activeProductId, dialogQty);
         closeDialog(els.productDialog);
       });
     }
@@ -751,12 +863,15 @@
           toast((product ? product.shortName : 'Produto') + ' está esgotado no momento.');
           return;
         }
-        var inCart = state.cart.some(function (item) { return item.id === activeProductId; });
-        if (!inCart) {
-          state.cart.push({ id: activeProductId, qty: 1 });
-          saveCart();
-          renderCart();
+        var entry = state.cart.find(function (item) { return item.id === activeProductId; });
+        var wanted = Math.min(dialogQty, maxQty(product));
+        if (!entry) {
+          state.cart.push({ id: activeProductId, qty: wanted });
+        } else if (entry.qty < wanted) {
+          entry.qty = wanted;
         }
+        saveCart();
+        renderCart();
         closeDialog(els.productDialog);
         openCheckout();
       });
@@ -825,6 +940,7 @@
       '      <span class="price-wrap">',
       '        <span class="price-label">à vista no PIX</span>',
       priceHTML(product, true),
+      cardConfig().enabled ? '        <span class="card-installments">ou ' + cardConfig().max + 'x no cartão</span>' : '',
       '      </span>',
       '      <button class="add-btn" type="button" data-add="' + escapeHTML(product.id) + '" aria-label="' + (maxQty(product) < 1 ? productName + ' esgotado' : 'Adicionar ' + productName + ' à sacola') + '"' + (maxQty(product) < 1 ? ' disabled' : '') + '>',
       '        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>',

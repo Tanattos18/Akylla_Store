@@ -50,7 +50,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261023-1">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261025-1">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -753,6 +753,13 @@
         <img class="product-dialog-photo" id="productDialogImg" alt="" width="700" height="700" decoding="async">
         <svg class="product-dialog-icon" id="productDialogFallback" viewBox="0 0 64 64" aria-hidden="true"><use href="#icon-watch"></use></svg>
         <span class="media-note product-dialog-note" id="productDialogNote" hidden>Imagem ilustrativa</span>
+        <button class="gallery-arrow gallery-arrow--prev" type="button" id="productDialogPrev" aria-label="Foto anterior" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+        </button>
+        <button class="gallery-arrow gallery-arrow--next" type="button" id="productDialogNext" aria-label="Próxima foto" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+        </button>
+        <span class="gallery-count" id="productDialogCount" aria-hidden="true" hidden></span>
         <div class="product-dialog-thumbs" id="productDialogThumbs" role="group" aria-label="Fotos do produto" hidden></div>
       </div>
 
@@ -760,15 +767,42 @@
         <p class="product-kicker" id="productDialogBrand"></p>
         <h2 id="productDialogName"></h2>
         <p class="product-dialog-code" id="productDialogCode"></p>
-        <p class="product-dialog-desc" id="productDialogDesc"></p>
+        <div class="product-dialog-qty" id="productDialogQtyRow">
+          <span class="product-dialog-qty-label" id="productDialogQtyLabel">Quantidade</span>
+          <div class="qty-control" role="group" aria-labelledby="productDialogQtyLabel">
+            <button type="button" id="productDialogQtyMinus" aria-label="Diminuir quantidade">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-minus"></use></svg>
+            </button>
+            <span class="qty-value" id="productDialogQty" aria-live="polite">1</span>
+            <button type="button" id="productDialogQtyPlus" aria-label="Aumentar quantidade">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-plus"></use></svg>
+            </button>
+          </div>
+        </div>
 
-        <dl class="spec-list" id="productDialogSpecs"></dl>
+        <ul class="trust-row" aria-label="Vantagens">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-truck"></use></svg><span>Entrega rápida em Goiânia</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-lock"></use></svg><span>Compra segura</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-shield"></use></svg><span>Garantia de 90 dias</span></li>
+        </ul>
+
+        <div class="product-tabs" role="tablist" aria-label="Informações do produto">
+          <button class="product-tab" type="button" role="tab" id="tabDesc" aria-controls="panelDesc" aria-selected="true">Descrição</button>
+          <button class="product-tab" type="button" role="tab" id="tabSpecs" aria-controls="panelSpecs" aria-selected="false" tabindex="-1">Especificações</button>
+        </div>
+        <div class="product-tab-panel" role="tabpanel" id="panelDesc" aria-labelledby="tabDesc">
+          <p class="product-dialog-desc" id="productDialogDesc"></p>
+        </div>
+        <div class="product-tab-panel" role="tabpanel" id="panelSpecs" aria-labelledby="tabSpecs" hidden>
+          <dl class="spec-list" id="productDialogSpecs"></dl>
+        </div>
 
         <div class="product-dialog-buy">
           <span class="price-wrap">
             <span class="price-label">à vista no PIX</span>
             <span class="price-old" id="productDialogOld" hidden><span class="sr-only">De </span><s></s> <span class="discount-badge"></span></span>
             <span class="price" id="productDialogPrice">R$ 0,00</span>
+            <span class="price-card" id="productDialogCard" hidden></span>
             <span class="price-until" id="productDialogUntil" hidden></span>
             <span class="stock-badge" id="productDialogStock" hidden></span>
           </span>
@@ -785,6 +819,11 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-whatsapp"></use></svg>
           Tirar dúvida no WhatsApp
         </a>
+
+        <section class="related" id="productDialogRelated" aria-labelledby="relatedTitle" hidden>
+          <h3 id="relatedTitle">Quem viu este produto também gostou</h3>
+          <div class="related-list" id="productDialogRelatedList"></div>
+        </section>
 
         <p class="product-dialog-fine">Fotos e especificações de referência. Consulte a disponibilidade e as cores pelo WhatsApp antes de finalizar.</p>
       </div>
@@ -1003,7 +1042,7 @@
   <script src="assets/js/pix.js?v=20261021-9" defer></script>
   <script src="assets/js/promo.js?v=20261021-9" defer></script>
   <script src="assets/js/frete.js?v=20261021-9" defer></script>
-  <script src="assets/js/app.js?v=20261023-1" defer></script>
+  <script src="assets/js/app.js?v=20261025-1" defer></script>
   <script src="assets/js/mascote.js?v=20261021-1" defer></script>
 </body>
 </html>
