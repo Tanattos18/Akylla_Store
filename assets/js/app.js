@@ -324,6 +324,12 @@
     Array.prototype.filter.call(document.querySelectorAll('dialog'), function (d) { return d.open; }).forEach(function (d) { closeDialog(d); });
   });
 
+  /* conta.js (Minha conta) usa as mesmas janelas, com o botão "voltar" funcionando. */
+  window.AkyllaUI = {
+    openDialog: function (d) { openDialog(d); },
+    closeDialog: function (d) { closeDialog(d); }
+  };
+
   function closeDialog(dialog) {
     if (!dialog) return;
     if (dialog.open && typeof dialog.close === 'function') {
@@ -1492,6 +1498,7 @@
         email: c.email,
         optIn: !!((mpEnabled() ? els.mpOptIn : els.manualOptIn) || {}).checked,
         customer: { name: c.name, phone: c.phone },
+        session: window.AkyllaConta ? window.AkyllaConta.session() : '',
         origin: currentOrigin()
       }
     }); }).then(function (order) {
@@ -1630,6 +1637,7 @@
         email: els.mpEmail ? els.mpEmail.value.trim() : '',
         optIn: !!(els.mpOptIn && els.mpOptIn.checked),
         customer: { name: name, phone: els.mpPhone ? els.mpPhone.value : '' },
+        session: window.AkyllaConta ? window.AkyllaConta.session() : '',
         origin: currentOrigin()
       }
     }).then(function (order) {
@@ -2186,6 +2194,7 @@
         customer: customer,
         email: els.manualEmail ? els.manualEmail.value.trim() : '',
         optIn: !!(els.manualOptIn && els.manualOptIn.checked),
+        session: window.AkyllaConta ? window.AkyllaConta.session() : '',
         origin: currentOrigin()
       })
     }).then(function (res) {

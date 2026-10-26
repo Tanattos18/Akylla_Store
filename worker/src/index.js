@@ -62,6 +62,7 @@ import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia, 
 import { TtsError, synthesize } from './tts.js';
 import { CustomerError, upsertFromOrder, listCustomers, saveCustomer, deleteCustomer } from './customers.js';
 import { MusicError, musicList, musicSave, musicUploadAudio, musicAudio, musicDelete } from './music.js';
+import { AuthError, authConfig, startEmail, verifyEmail, googleLogin, getAccount, saveAccount, logout, deleteAccount, linkOrder } from './auth.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
 const CONFIG_PATH = 'assets/js/config.js';
@@ -556,6 +557,7 @@ async function createOrder(request, env) {
   };
   await saveOrder(env, order);
   await upsertFromOrder(env, order).catch((err) => console.error('cadastro do cliente', err)); // ficha do cliente pelo WhatsApp
+  await linkOrder(env, body.session, order).catch((err) => console.error('conta do cliente', err)); // pedido aparece em "Minha conta"
   await reserve(env, order);
   return json(publicOrder(order), 201);
 }
@@ -649,6 +651,7 @@ async function createCardOrder(request, env) {
   };
   await saveOrder(env, order);
   await upsertFromOrder(env, order).catch((err) => console.error('cadastro do cliente', err)); // ficha do cliente pelo WhatsApp
+  await linkOrder(env, body.session, order).catch((err) => console.error('conta do cliente', err)); // pedido aparece em "Minha conta"
   await reserve(env, order);
   return json({ ...publicOrder(order), checkoutUrl: pref.init_point }, 201);
 }
@@ -943,6 +946,7 @@ async function createManualOrder(request, env) {
   order.pushed = await notifyAdmins(env, pushMessage(order));
   await saveOrder(env, order);
   await upsertFromOrder(env, order).catch((err) => console.error('cadastro do cliente', err)); // ficha do cliente pelo WhatsApp
+  await linkOrder(env, body.session, order).catch((err) => console.error('conta do cliente', err)); // pedido aparece em "Minha conta"
   return json(publicOrder(order), 201);
 }
 
@@ -1081,6 +1085,22 @@ export default {
           else response = json({ error: 'Rota não encontrada.' }, 404);
         } catch (err) {
           if (!(err instanceof MusicError)) throw err;
+          response = json({ error: err.message }, err.status);
+        }
+      }
+      else if (url.pathname.startsWith('/api/auth/') || url.pathname.startsWith('/api/account')) {
+        try {
+          if (url.pathname === '/api/auth/config' && request.method === 'GET') response = json(authConfig(env));
+          else if (url.pathname === '/api/auth/email/start' && request.method === 'POST') response = json(await startEmail(request, env));
+          else if (url.pathname === '/api/auth/email/verify' && request.method === 'POST') response = json(await verifyEmail(request, env));
+          else if (url.pathname === '/api/auth/google' && request.method === 'POST') response = json(await googleLogin(request, env));
+          else if (url.pathname === '/api/auth/logout' && request.method === 'POST') response = json(await logout(request, env));
+          else if (url.pathname === '/api/account' && request.method === 'GET') response = json(await getAccount(request, env));
+          else if (url.pathname === '/api/account' && request.method === 'POST') response = json(await saveAccount(request, env));
+          else if (url.pathname === '/api/account/delete' && request.method === 'POST') response = json(await deleteAccount(request, env));
+          else response = json({ error: 'Rota não encontrada.' }, 404);
+        } catch (err) {
+          if (!(err instanceof AuthError)) throw err;
           response = json({ error: err.message }, err.status);
         }
       }

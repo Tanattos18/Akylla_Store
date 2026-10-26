@@ -13,7 +13,10 @@ $todas = @(
   @{ Nome = 'MP_WEBHOOK_SECRET'; Dica = 'MERCADO PAGO - Assinatura secreta do Webhook (aplicacao > Webhooks).' },
   @{ Nome = 'META_PAGE_TOKEN';   Dica = 'REDES - token da PAGINA do Facebook (README 10.2). Publica no Instagram e no Facebook pelo painel.' },
   @{ Nome = 'AZURE_SPEECH_KEY';    Dica = 'VOZ DOS VIDEOS - chave do Azure Speech (README 10.3, plano gratis F0).' },
-  @{ Nome = 'AZURE_SPEECH_REGION'; Dica = 'VOZ DOS VIDEOS - regiao do Azure Speech, ex.: brazilsouth' }
+  @{ Nome = 'AZURE_SPEECH_REGION'; Dica = 'VOZ DOS VIDEOS - regiao do Azure Speech, ex.: brazilsouth' },
+  @{ Nome = 'GOOGLE_CLIENT_ID';    Dica = 'CONTA DO CLIENTE - ID do cliente OAuth do Google (termina com .apps.googleusercontent.com). README 5.2.' },
+  @{ Nome = 'RESEND_API_KEY';      Dica = 'CONTA DO CLIENTE - chave da Resend (comeca com re_). Envia o codigo de acesso por e-mail. README 5.2.' },
+  @{ Nome = 'EMAIL_FROM';          Dica = 'CONTA DO CLIENTE - remetente do e-mail, ex.: Akylla Shop <contato@akyllashop.com>' }
 )
 
 # Para cadastrar so algumas:  & .\definir-chaves.ps1 MP_ACCESS_TOKEN MP_WEBHOOK_SECRET

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://akylla-shop-api.akyllashop.workers.dev https://api.akyllashop.com https://viacep.com.br https://nominatim.openstreetmap.org https://router.project-osrm.org; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://akylla-shop-api.akyllashop.workers.dev https://api.akyllashop.com https://viacep.com.br https://nominatim.openstreetmap.org https://router.project-osrm.org https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#060913">
   <title>Akylla Shop — Tecnologia e acessórios em Goiânia</title>
@@ -50,7 +50,7 @@
   </script>
   <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261025-1">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261025-2">
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -239,6 +239,10 @@
         <a class="icon-btn header-whatsapp header-instagram" href="https://www.instagram.com/akylla.shop/" data-instagram target="_blank" rel="noopener noreferrer" aria-label="Instagram da Akylla Shop">
           <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-instagram"></use></svg>
         </a>
+        <button class="account-btn" type="button" id="accountOpen" aria-haspopup="dialog" aria-controls="accountDialog" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M4 21c1.2-4 4.4-6 8-6s6.8 2 8 6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <span class="account-btn-label" id="accountLabel">Entrar</span>
+        </button>
         <a class="orders-btn" href="pedido.html" aria-label="Meus pedidos: acompanhar pedido">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9 8h6M9 12h6M9 16h3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
           <span class="orders-btn-label">Meus pedidos</span>
@@ -830,6 +834,66 @@
     </div>
   </dialog>
 
+  <!-- Conta do cliente -->
+  <dialog class="account-dialog" id="accountDialog" aria-labelledby="accountTitle">
+    <div class="account-shell">
+      <button class="icon-btn account-close" type="button" data-close-dialog="accountDialog" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-close"></use></svg>
+      </button>
+
+      <section class="account-view" id="accountLogin">
+        <p class="eyebrow">Minha conta</p>
+        <h2 id="accountTitle">Entre para comprar mais rápido</h2>
+        <p class="account-lead">Seus dados ficam salvos para a próxima compra e você acompanha todos os pedidos num lugar só. Sem senha.</p>
+
+        <div class="account-google" id="googleWrap" hidden>
+          <div id="googleButton"></div>
+        </div>
+        <p class="account-or" id="accountOr" hidden><span>ou com seu e-mail</span></p>
+
+        <form class="account-form" id="emailForm" novalidate hidden>
+          <label>E-mail <input type="email" id="loginEmail" autocomplete="email" inputmode="email" placeholder="voce@exemplo.com" required></label>
+          <button class="btn btn-primary" type="submit" id="emailSend">Receber código</button>
+        </form>
+
+        <form class="account-form" id="codeForm" novalidate hidden>
+          <p class="account-hint" id="codeHint">Enviamos um código de 6 números para o seu e-mail.</p>
+          <label>Código <input id="loginCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required></label>
+          <button class="btn btn-primary" type="submit" id="codeSend">Entrar</button>
+          <button class="account-link" type="button" id="codeBack">Usar outro e-mail ou reenviar</button>
+        </form>
+
+        <p class="account-msg" id="loginMsg" role="alert" hidden></p>
+        <p class="account-fine">Ao entrar você concorda com a <a href="privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>. Não precisa de conta para comprar.</p>
+      </section>
+
+      <section class="account-view" id="accountPanel" hidden>
+        <p class="eyebrow">Minha conta</p>
+        <h2 id="accountHello">Olá!</h2>
+        <p class="account-lead" id="accountEmail"></p>
+
+        <form class="account-form account-grid" id="profileForm" novalidate>
+          <label class="account-full">Nome <input id="profileName" autocomplete="name" maxlength="80"></label>
+          <label class="account-full">WhatsApp com DDD <input id="profilePhone" autocomplete="tel" inputmode="tel" placeholder="(62) 99999-9999"></label>
+          <label>CEP <input id="profileCep" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000"></label>
+          <label>Número <input id="profileNumber" autocomplete="off" maxlength="20"></label>
+          <label class="account-full">Complemento <input id="profileComplement" autocomplete="off" maxlength="80" placeholder="Apto, bloco, referência"></label>
+          <label class="account-check account-full"><input type="checkbox" id="profileOptIn"> Quero receber ofertas e novidades pelo WhatsApp</label>
+          <button class="btn btn-primary account-full" type="submit" id="profileSave">Salvar meus dados</button>
+        </form>
+        <p class="account-msg" id="profileMsg" role="status" hidden></p>
+
+        <h3 class="account-sub">Meus pedidos</h3>
+        <div class="account-orders" id="accountOrders"></div>
+
+        <div class="account-actions">
+          <button class="btn btn-outline" type="button" id="accountLogout">Sair</button>
+          <button class="account-link account-danger" type="button" id="accountDelete">Excluir minha conta</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
   <!-- Checkout -->
   <dialog class="checkout-dialog" id="checkoutDialog" aria-labelledby="checkoutTitle">
     <div class="checkout-shell">
@@ -1042,7 +1106,8 @@
   <script src="assets/js/pix.js?v=20261021-9" defer></script>
   <script src="assets/js/promo.js?v=20261021-9" defer></script>
   <script src="assets/js/frete.js?v=20261021-9" defer></script>
-  <script src="assets/js/app.js?v=20261025-1" defer></script>
+  <script src="assets/js/app.js?v=20261025-2" defer></script>
+  <script src="assets/js/conta.js?v=20261025-1" defer></script>
   <script src="assets/js/mascote.js?v=20261021-1" defer></script>
 </body>
 </html>

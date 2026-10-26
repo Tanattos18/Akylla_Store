@@ -420,6 +420,48 @@ Para saber:
 - Aviso ao sair com alterações não publicadas. Há o botão **Descartar**.
 - Política de segurança (CSP) restrita: o painel só conversa com o GitHub, com o servidor e com os serviços de mapa do frete.
 
+### 5.3 Conta do cliente (login sem senha)
+
+O cliente pode **entrar com o Google** ou com um **código de 6 números enviado ao e-mail**. Não existe senha. A conta é opcional: dá para comprar sem ela.
+
+**O que o cliente ganha:**
+- **Checkout preenchido:** nome, WhatsApp, e-mail, CEP, número e complemento já vêm preenchidos.
+- **Meus pedidos:** em "Minha conta", vê todos os pedidos feitos logado, com a situação, e toca para acompanhar.
+- **Ofertas:** liga ou desliga o aceite pelo WhatsApp (LGPD).
+- **Controle dos dados:** edita os dados, sai e pode **excluir a conta** sozinho.
+
+**Segurança:**
+- **Sessão:** é um código aleatório guardado só no aparelho do cliente. O servidor guarda apenas o hash dele.
+- **Código por e-mail:** vale 10 minutos e uma vez só. Depois de 5 erros, o código é descartado. Há limite de envios por e-mail e por aparelho.
+- **Login com Google:** o servidor confere a assinatura do Google, se o token é para este site e se ainda está válido.
+- **Pedidos na conta:** só aparecem os pedidos feitos com a conta logada. Digitar o WhatsApp de outra pessoa não mostra os pedidos dela.
+
+**Para ligar (uma vez):** o botão "Entrar" só aparece no site quando pelo menos um dos dois está configurado.
+
+1. **Google (grátis):**
+   1. Em [console.cloud.google.com](https://console.cloud.google.com), crie um projeto.
+   2. Em **APIs e serviços → Tela de consentimento OAuth**, escolha "Externo", nome "Akylla Shop" e o e-mail da loja.
+   3. Em **Credenciais → Criar credenciais → ID do cliente OAuth**, escolha o tipo "Aplicativo da Web".
+   4. Em **Origens JavaScript autorizadas**, coloque `https://akyllashop.com`, `https://www.akyllashop.com` e `http://127.0.0.1:8765`.
+   5. Copie o **ID do cliente** (termina com `.apps.googleusercontent.com`).
+2. **E-mail com código (grátis até 3.000 e-mails por mês):**
+   1. Crie a conta em [resend.com](https://resend.com).
+   2. Em **Domains**, adicione `akyllashop.com` e crie no DNS os registros que ela mostrar.
+   3. Em **API Keys**, crie uma chave (começa com `re_`).
+3. Cadastre as chaves no servidor. Rode o comando abaixo e cole cada uma quando ele pedir:
+
+```powershell
+cd worker
+& .\definir-chaves.ps1 GOOGLE_CLIENT_ID RESEND_API_KEY EMAIL_FROM
+```
+
+`EMAIL_FROM` é o remetente, por exemplo `Akylla Shop <contato@akyllashop.com>`.
+
+Pode ligar só o Google primeiro: o site mostra só o botão do Google.
+
+- **Arquivos:** `worker/src/auth.js` (servidor) e `assets/js/conta.js` (site).
+- **Dados (KV):** `conta:<e-mail>`, `sess:<hash>` e `otp:<e-mail>`.
+
 ---
 
 ## 6. Preços, promoções, estoque e frete
@@ -1044,6 +1086,7 @@ Rodam também no GitHub a cada push (aba **Actions**). Cobrem:
 | 23/10/2026 | 16 produtos novos do fornecedor (caixa de som, S10 Ultra+, carregadores, cabos rotativos, suportes, câmera Wi-Fi, ventilador, capas, controle e mini teclado) **fora da loja** e com estoque 0, para conferência no painel. Preço = custo de atacado × 2 (margem de 50%). Fotos recortadas das artes do fornecedor (aviso de imagem ilustrativa). |
 | 23/10/2026 | Fotos com mais destaque: zoom automático em 37 fotos (corta o branco em volta e o produto ocupa ~90% do quadro); 8 fotos novas do site oficial do fornecedor (carregador USB-C 20W, controle CON-12867 real, caixa do cabo CB0401, carregador 5.1A Tipo C); removida foto do HW8 com marca d'água de outra loja. Botão "Ver mais produtos" em laranja com contador. |
 | 25/10/2026 | Página do produto no estilo vitrine: setas e contador nas fotos, parcelamento no cartão junto do preço, seletor de quantidade (vale para Comprar agora e Sacola), selos Entrega rápida / Compra segura / Garantia de 90 dias, abas Descrição e Especificações e "Quem viu este produto também gostou". Cartões do catálogo com "Em estoque" e "ou 12x no cartão". |
+| 25/10/2026 | Preços: cabos, capas, suportes, fontes e carregadores com custo × 3; o resto com custo × 2. **Conta do cliente sem senha** (Google ou código no e-mail): checkout preenchido, "Meus pedidos" da conta, editar e excluir a conta (README 5.3). |
 
 O histórico completo está nos commits: `git log --oneline`.
 

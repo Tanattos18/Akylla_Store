@@ -678,3 +678,100 @@ test('cadastro de clientes: ficha criada pelo pedido (pelo WhatsApp), editada e 
     global.fetch = realFetch;
   }
 });
+
+test('conta do cliente: código por e-mail (tentativas, expiração), sessão, dados salvos e pedidos na conta', async function () {
+  var s = scenario();
+  s.env.AUTH_DEV = '1'; // sem Resend: o código volta na resposta (só nos testes)
+  var realFetch = global.fetch;
+  global.fetch = s.fetch;
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var cfg = await call(worker, s.env, 'GET', '/api/auth/config');
+    assert.equal(cfg.data.email, true);
+    assert.equal((await call(worker, s.env, 'POST', '/api/auth/email/start', { email: 'invalido' })).status, 400);
+    var start = await call(worker, s.env, 'POST', '/api/auth/email/start', { email: 'Cliente@Exemplo.com ' });
+    assert.equal(start.status, 200, JSON.stringify(start.data));
+    var code = start.data.devCode;
+    assert.match(code, /^\d{6}$/);
+    var other = code === '000000' ? '111111' : '000000';
+    var wrong = await call(worker, s.env, 'POST', '/api/auth/email/verify', { email: 'cliente@exemplo.com', code: other });
+    assert.equal(wrong.status, 401, 'código errado');
+    var ok = await call(worker, s.env, 'POST', '/api/auth/email/verify', { email: 'cliente@exemplo.com', code: code });
+    assert.equal(ok.status, 200, JSON.stringify(ok.data));
+    assert.match(ok.data.session, /^[0-9a-f]{64}$/);
+    assert.equal(ok.data.account.email, 'cliente@exemplo.com', 'e-mail em minúsculas');
+    assert.equal((await call(worker, s.env, 'POST', '/api/auth/email/verify', { email: 'cliente@exemplo.com', code: code })).status, 410, 'código só vale uma vez');
+    assert.ok(!Array.from(s.env.ORDERS.store.keys()).some(function (k) { return k.indexOf(ok.data.session) >= 0; }), 'o servidor guarda só o hash da sessão');
+
+    var auth = { Authorization: 'Bearer ' + ok.data.session };
+    assert.equal((await call(worker, s.env, 'GET', '/api/account')).status, 401, 'sem sessão não vê a conta');
+    var saved = await call(worker, s.env, 'POST', '/api/account', { name: 'Maria Cliente', phone: '(62) 99999-1111', address: { cep: '74740-450', number: '12', complement: 'Casa 2' }, optIn: true }, auth);
+    assert.equal(saved.status, 200, JSON.stringify(saved.data));
+    assert.equal(saved.data.account.phone, '62999991111');
+    assert.equal(saved.data.account.address.cep, '74740450');
+    assert.equal((await call(worker, s.env, 'POST', '/api/account', { phone: '123' }, auth)).status, 400);
+
+    /* pedido feito logado aparece em "Minha conta"; pedido sem sessão não */
+    var order = await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w34-plus', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Maria Cliente', phone: '62999991111' }, session: ok.data.session });
+    assert.equal(order.status, 201, JSON.stringify(order.data));
+    await call(worker, s.env, 'POST', '/api/manual-orders', { items: [{ id: 'w69-ultra', qty: 1 }], delivery: { mode: 'pickup' }, customer: { name: 'Outra pessoa', phone: '62999991111' } });
+    var acc = await call(worker, s.env, 'GET', '/api/account', null, auth);
+    assert.equal(acc.status, 200);
+    assert.equal(acc.data.orders.length, 1, 'só o pedido feito com a conta');
+    assert.equal(acc.data.orders[0].id, order.data.id);
+    assert.equal(acc.data.orders[0].items[0].qty, 1);
+
+    /* sair invalida a sessão */
+    assert.equal((await call(worker, s.env, 'POST', '/api/auth/logout', null, auth)).status, 200);
+    assert.equal((await call(worker, s.env, 'GET', '/api/account', null, auth)).status, 401);
+
+    /* 5 códigos errados queimam o código */
+    var again = await call(worker, s.env, 'POST', '/api/auth/email/start', { email: 'cliente@exemplo.com' });
+    var bad = again.data.devCode === '000000' ? '111111' : '000000';
+    var last;
+    for (var i = 0; i < 5; i += 1) last = await call(worker, s.env, 'POST', '/api/auth/email/verify', { email: 'cliente@exemplo.com', code: bad });
+    assert.equal(last.status, 429);
+    assert.equal((await call(worker, s.env, 'POST', '/api/auth/email/verify', { email: 'cliente@exemplo.com', code: again.data.devCode })).status, 410);
+
+    /* sem Resend e fora do modo de teste: avisa que não está disponível */
+    delete s.env.AUTH_DEV;
+    assert.equal((await call(worker, s.env, 'GET', '/api/auth/config')).data.email, false);
+    assert.equal((await call(worker, s.env, 'POST', '/api/auth/email/start', { email: 'x@exemplo.com' })).status, 503);
+  } finally {
+    global.fetch = realFetch;
+  }
+});
+
+test('conta do cliente: login com Google confere assinatura, destinatário e validade do token', async function () {
+  var auth = await import('../worker/src/auth.js');
+  var pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  var jwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+  jwk.kid = 'k1';
+  var b64u = function (buf) { return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  async function token(payload) {
+    var head = b64u(JSON.stringify({ alg: 'RS256', kid: 'k1' }));
+    var body = b64u(JSON.stringify(payload));
+    var sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(head + '.' + body));
+    return head + '.' + body + '.' + b64u(new Uint8Array(sig));
+  }
+  var realFetch = global.fetch;
+  global.fetch = async function (url) {
+    if (String(url).indexOf('googleapis.com/oauth2/v3/certs') >= 0) return new Response(JSON.stringify({ keys: [jwk] }), { headers: { 'Cache-Control': 'max-age=60' } });
+    throw new Error('inesperado ' + url);
+  };
+  try {
+    var now = Date.now();
+    var aud = 'cliente-123.apps.googleusercontent.com';
+    var good = { iss: 'https://accounts.google.com', aud: aud, exp: Math.floor(now / 1000) + 600, email: 'Maria@Gmail.com', email_verified: true, name: 'Maria' };
+    var info = await auth.verifyGoogleToken(await token(good), aud, now);
+    assert.equal(info.email, 'Maria@Gmail.com');
+    await assert.rejects(auth.verifyGoogleToken(await token(good), 'outro-app', now), /inválido/, 'token de outro site');
+    await assert.rejects(auth.verifyGoogleToken(await token(Object.assign({}, good, { exp: Math.floor(now / 1000) - 3600 })), aud, now), /expirou/);
+    await assert.rejects(auth.verifyGoogleToken(await token(Object.assign({}, good, { email_verified: false })), aud, now), /verificado/);
+    var forged = (await token(good)).split('.');
+    forged[1] = b64u(JSON.stringify(Object.assign({}, good, { email: 'atacante@gmail.com' })));
+    await assert.rejects(auth.verifyGoogleToken(forged.join('.'), aud, now), /inválido/, 'assinatura não bate');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
