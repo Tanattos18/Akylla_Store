@@ -11,7 +11,7 @@ window.AKYLLA_CONFIG = {
   "instagram": "akylla.shop",
   "facebook": "https://www.facebook.com/profile.php?id=61574082533775",
   "analytics": {
-    "umamiWebsiteId": ""
+    "umamiWebsiteId": "b5e473b2-ecee-410a-a581-880b6b7ec1cb"
   },
   "whatsappMessage": "Olá! Vim pelo site da Akylla Shop e gostaria de tirar uma dúvida.",
   "pixKey": "7dda9a3c-400d-45de-906b-f22b2615f1d5",
