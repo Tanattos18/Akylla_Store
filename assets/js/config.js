@@ -24,7 +24,7 @@ window.AKYLLA_CONFIG = {
     "active": true,
     "text": "Descontos de inauguração",
     "percent": 10,
-    "until": "2026-10-31"
+    "until": "2026-11-10"
   },
   "marginPercent": 50,
   "shipping": {
