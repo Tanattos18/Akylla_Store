@@ -733,6 +733,13 @@ test('conta do cliente: código por e-mail (tentativas, expiração), sessão, d
     assert.equal(last.status, 429);
     assert.equal((await call(worker, s.env, 'POST', '/api/auth/email/verify', { email: 'cliente@exemplo.com', code: again.data.devCode })).status, 410);
 
+    /* chave secreta colada no lugar do ID do Google: não é publicada */
+    s.env.GOOGLE_CLIENT_ID = 're_chave_secreta_123';
+    assert.equal((await call(worker, s.env, 'GET', '/api/auth/config')).data.google, '', 'segredo no campo errado não vaza');
+    s.env.GOOGLE_CLIENT_ID = '123456789-abc123def.apps.googleusercontent.com';
+    assert.equal((await call(worker, s.env, 'GET', '/api/auth/config')).data.google, '123456789-abc123def.apps.googleusercontent.com');
+    delete s.env.GOOGLE_CLIENT_ID;
+
     /* sem Resend e fora do modo de teste: avisa que não está disponível */
     delete s.env.AUTH_DEV;
     assert.equal((await call(worker, s.env, 'GET', '/api/auth/config')).data.email, false);

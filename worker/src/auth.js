@@ -44,9 +44,15 @@ async function limit(env, scope, key, max) {
 
 function ip(request) { return request.headers.get('CF-Connecting-IP') || 'local'; }
 
+/* Só publica o ID se ele tiver cara de ID do Google: se uma chave secreta for colada no lugar errado, ela não vaza. */
+export function googleClientId(env) {
+  const id = String(env.GOOGLE_CLIENT_ID || '').trim();
+  return /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(id) ? id : '';
+}
+
 export function authConfig(env) {
   return {
-    google: String(env.GOOGLE_CLIENT_ID || ''),
+    google: googleClientId(env),
     email: !!(env.RESEND_API_KEY && env.EMAIL_FROM) || env.AUTH_DEV === '1'
   };
 }
@@ -189,10 +195,11 @@ export async function verifyGoogleToken(token, clientId, now) {
 }
 
 export async function googleLogin(request, env) {
-  if (!env.GOOGLE_CLIENT_ID) throw new AuthError('Entrar com Google ainda não está disponível.', 503);
+  const clientId = googleClientId(env);
+  if (!clientId) throw new AuthError('Entrar com Google ainda não está disponível.', 503);
   await limit(env, 'gip', ip(request), 30);
   const body = (await request.json().catch(() => null)) || {};
-  const info = await verifyGoogleToken(body.credential, env.GOOGLE_CLIENT_ID);
+  const info = await verifyGoogleToken(body.credential, clientId);
   const email = normEmail(info.email);
   const acc = await touchAccount(env, email, { name: info.name, via: 'google' });
   return { session: await createSession(env, email), account: publicAccount(acc) };
