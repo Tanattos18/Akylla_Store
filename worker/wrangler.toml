@@ -21,6 +21,8 @@ MANUAL_ORDERS_PER_HOUR = "5"
 MP_API = "orders"
 # WhatsApp da loja que recebe o aviso de cada venda (DDI + DDD + número, só dígitos).
 STORE_WHATSAPP = "556281517002"
+# Site no Umami (contagem de visitantes). A chave UMAMI_API_KEY é segredo: definir-chaves.ps1.
+UMAMI_WEBSITE_ID = "b5e473b2-ecee-410a-a581-880b6b7ec1cb"
 
 # Pedidos e reservas de estoque. Crie com:  npx wrangler kv namespace create ORDERS
 # e cole o "id" retornado abaixo.

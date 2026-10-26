@@ -16,7 +16,8 @@ $todas = @(
   @{ Nome = 'AZURE_SPEECH_REGION'; Dica = 'VOZ DOS VIDEOS - regiao do Azure Speech, ex.: brazilsouth' },
   @{ Nome = 'GOOGLE_CLIENT_ID';    Dica = 'CONTA DO CLIENTE - ID do cliente OAuth do Google (termina com .apps.googleusercontent.com). README 5.2.' },
   @{ Nome = 'RESEND_API_KEY';      Dica = 'CONTA DO CLIENTE - chave da Resend (comeca com re_). Envia o codigo de acesso por e-mail. README 5.2.' },
-  @{ Nome = 'EMAIL_FROM';          Dica = 'CONTA DO CLIENTE - remetente do e-mail, ex.: Akylla Shop <contato@akyllashop.com>' }
+  @{ Nome = 'EMAIL_FROM';          Dica = 'CONTA DO CLIENTE - remetente do e-mail, ex.: Akylla Shop <contato@akyllashop.com>' },
+  @{ Nome = 'UMAMI_API_KEY';       Dica = 'VISITANTES - chave de API do Umami (Settings > API keys). Mostra os visitantes no Inicio do painel.' }
 )
 
 # Para cadastrar so algumas:  & .\definir-chaves.ps1 MP_ACCESS_TOKEN MP_WEBHOOK_SECRET

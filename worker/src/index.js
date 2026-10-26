@@ -62,6 +62,7 @@ import { SocialError, socialAccounts, socialUpload, socialPublish, socialMedia, 
 import { TtsError, synthesize } from './tts.js';
 import { CustomerError, upsertFromOrder, listCustomers, saveCustomer, deleteCustomer } from './customers.js';
 import { MusicError, musicList, musicSave, musicUploadAudio, musicAudio, musicDelete } from './music.js';
+import { VisitorError, visitorStats } from './visitors.js';
 import { AuthError, authConfig, startEmail, verifyEmail, googleLogin, getAccount, saveAccount, logout, deleteAccount, linkOrder } from './auth.js';
 
 const PRODUCTS_PATH = 'assets/js/products.js';
@@ -1085,6 +1086,15 @@ export default {
           else response = json({ error: 'Rota não encontrada.' }, 404);
         } catch (err) {
           if (!(err instanceof MusicError)) throw err;
+          response = json({ error: err.message }, err.status);
+        }
+      }
+      else if (url.pathname === '/api/admin/visitors' && request.method === 'GET') {
+        await requireAdmin(request, env);
+        try {
+          response = json(await visitorStats(env, url));
+        } catch (err) {
+          if (!(err instanceof VisitorError)) throw err;
           response = json({ error: err.message }, err.status);
         }
       }

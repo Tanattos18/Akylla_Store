@@ -1429,6 +1429,7 @@
     if (dash.loading) return;
     dash.loading = true;
     $('#dashNote').textContent = 'Carregando pedidos…';
+    loadVisitors();
     fetch(api + '/api/admin/orders?all=1', { headers: { Authorization: 'Bearer ' + state.token }, cache: 'no-store' })
       .then(function (res) { return res.json().then(function (d) { if (!res.ok) throw new Error(d.error || 'Erro ' + res.status); return d; }); })
       .then(function (data) {
@@ -1925,6 +1926,107 @@
     state.products.forEach(function (p) { if (ids.indexOf(p.id) >= 0) p.bestseller = true; else delete p.bestseller; });
     renderAll();
     toast('Selo aplicado em: ' + top.map(function (r) { return r.name; }).join(', ') + '. Clique em Publicar para ir ao site.', 6000);
+  }
+
+  /* ---------------- Visitantes do site (Umami, buscado pelo servidor) ---------------- */
+  var vis = { data: null, loading: false, period: '' };
+
+  function loadVisitors() {
+    if (!apiBase() || vis.loading) return;
+    vis.loading = true;
+    var period = dash.period;
+    $('#visNote').textContent = 'Carregando visitantes…';
+    custApi('/api/admin/visitors?start=' + periodStart(period), { cache: 'no-store' }).then(function (d) {
+      vis.data = d;
+      vis.period = period;
+      renderVisitors();
+    }).catch(function (err) {
+      vis.data = null;
+      fill('#kpiVisitors', []);
+      $('#visChart').innerHTML = '';
+      $('#visNote').textContent = 'Não foi possível carregar os visitantes: ' + err.message;
+    }).finally(function () {
+      vis.loading = false;
+      if (vis.period && vis.period !== dash.period) loadVisitors();
+    });
+  }
+
+  var REFERRER_NAMES = [[/instagram/, 'Instagram'], [/facebook|fb\.com|fb\.me/, 'Facebook'], [/google/, 'Google'], [/whatsapp|wa\.me/, 'WhatsApp'], [/tiktok/, 'TikTok'], [/youtube|youtu\.be/, 'YouTube'], [/bing/, 'Bing'], [/mercadolivre/, 'Mercado Livre']];
+  function referrerName(host) {
+    var h = String(host || '').toLowerCase();
+    if (!h) return 'Direto (digitou ou link salvo)';
+    for (var i = 0; i < REFERRER_NAMES.length; i++) if (REFERRER_NAMES[i][0].test(h)) return REFERRER_NAMES[i][1];
+    return h.replace(/^www\./, '');
+  }
+  var DEVICE_NAMES = { mobile: 'Celular', desktop: 'Computador', laptop: 'Notebook', tablet: 'Tablet' };
+
+  function visBars(id, rows, empty) {
+    var max = rows.reduce(function (m, r) { return Math.max(m, r.count); }, 0);
+    fill(id, rows.length ? rows.map(function (r) {
+      return el('div', { class: 'hbar', title: r.name + ': ' + r.count }, [
+        el('span', { class: 'hbar-label', text: r.name }),
+        el('span', { class: 'hbar-track' }, [el('span', { class: 'hbar-fill', style: 'width:' + Math.max(2, Math.round(r.count / max * 100)) + '%' })]),
+        el('span', { class: 'hbar-value', text: String(r.count) })
+      ]);
+    }) : [el('p', { class: 'muted', text: empty })]);
+  }
+
+  /* Junta linhas com o mesmo nome (ex.: instagram.com e l.instagram.com → Instagram). */
+  function mergeRows(rows, nameOf) {
+    var by = {};
+    rows.forEach(function (r) { var n = nameOf(r.name); by[n] = (by[n] || 0) + r.count; });
+    return Object.keys(by).map(function (n) { return { name: n, count: by[n] }; }).sort(function (a, b) { return b.count - a.count; });
+  }
+
+  function renderVisitors() {
+    var d = vis.data;
+    if (!d) return;
+    $('#visPeriod').textContent = '· ' + PERIOD_LABEL[vis.period];
+    if (!d.configured) {
+      fill('#kpiVisitors', []);
+      $('#visChart').innerHTML = '';
+      fill('#visRefBars', []); fill('#visDevBars', []); fill('#visCityBars', []);
+      $('#visNote').textContent = 'Falta a chave do Umami no servidor. Em cloud.umami.is → Settings → API keys, crie a chave e rode na pasta worker: & .\\definir-chaves.ps1 UMAMI_API_KEY';
+      return;
+    }
+    var t = d.totals;
+    var start = periodStart(vis.period);
+    var paid = (dash.orders || []).filter(function (o) { return o.status === 'paid' && (o.paidAt || o.createdAt || 0) >= start; }).length;
+    var mins = Math.floor(t.avgSeconds / 60);
+    fill('#kpiVisitors', [
+      kpi('Visitantes', String(t.visitors), 'pessoas diferentes'),
+      kpi('Visitas', String(t.visits), t.visitors ? (t.visits / t.visitors).toFixed(1).replace('.', ',') + ' por pessoa' : ''),
+      kpi('Páginas vistas', String(t.pageviews), t.visits ? Math.round((1 - t.bounces / t.visits) * 100) + '% viram mais de uma página' : ''),
+      kpi('Tempo médio', t.avgSeconds ? (mins ? mins + ' min ' : '') + (t.avgSeconds % 60) + ' s' : '—', 'por visita'),
+      kpi('Conversão', t.visitors ? (paid / t.visitors * 100).toFixed(1).replace('.', ',') + '%' : '—', paid + ' pedido(s) pago(s) ÷ visitantes'),
+      d.active != null ? kpi('Agora no site', String(d.active), 'últimos 5 minutos', d.active ? 'ok' : '') : null
+    ]);
+    var started = new Date(d.countStart).toLocaleDateString('pt-BR');
+    $('#visNote').textContent = 'Contagem sem cookies pelo Umami, desde ' + started + '. Atualizado às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + '.';
+
+    /* gráfico: visitantes por dia (ou por hora em "Hoje") */
+    var box = $('#visChart');
+    box.innerHTML = '';
+    var pts = (d.series && d.series.points) || [];
+    var max = pts.reduce(function (m, p) { return Math.max(m, p.visitors); }, 0);
+    if (!max) {
+      box.appendChild(el('p', { class: 'muted chart-empty', text: 'Ainda sem visitas no período.' }));
+    } else {
+      var hourly = d.series.unit === 'hour';
+      var label = function (at) { var s = String(at); return hourly ? s.slice(11, 13) + 'h' : s.slice(8, 10) + '/' + s.slice(5, 7); };
+      box.appendChild(el('span', { class: 'axis-max', text: max + ' visitante' + (max === 1 ? '' : 's') }));
+      box.appendChild(el('div', { class: 'daychart-plot' }, pts.map(function (p) {
+        var txt = label(p.at) + ': ' + p.visitors + ' visitante' + (p.visitors === 1 ? '' : 's');
+        return el('div', { class: 'daybar', tabindex: '0', title: txt, 'aria-label': txt }, [
+          el('span', { class: 'daybar-fill vis-fill' + (p.visitors ? '' : ' is-zero'), style: 'height:' + (p.visitors ? Math.max(3, p.visitors / max * 100) : 0) + '%' })
+        ]);
+      })));
+      box.appendChild(el('div', { class: 'daychart-axis' }, [el('span', { text: label(pts[0].at) }), el('span', { text: label(pts[pts.length - 1].at) })]));
+    }
+
+    visBars('#visRefBars', mergeRows(d.referrers || [], referrerName), 'Sem dados ainda.');
+    visBars('#visDevBars', mergeRows(d.devices || [], function (n) { return DEVICE_NAMES[n] || n; }), 'Sem dados ainda.');
+    visBars('#visCityBars', d.cities || [], 'Sem dados ainda.');
   }
 
   function renderDayChart(byDay, start) {
@@ -2517,6 +2619,7 @@
         dash.period = chip.getAttribute('data-period');
         Array.prototype.forEach.call(document.querySelectorAll('[data-period]'), function (c) { c.classList.toggle('is-active', c === chip); });
         renderDashboard();
+        loadVisitors();
       });
     });
     document.querySelector('[data-tab="pedidos"]').addEventListener('click', loadOrders);

@@ -782,3 +782,44 @@ test('conta do cliente: login com Google confere assinatura, destinatário e val
     global.fetch = realFetch;
   }
 });
+
+test('visitantes: painel recebe os números do Umami pelo servidor (a chave fica no servidor)', async function () {
+  var s = scenario();
+  var realFetch = global.fetch;
+  var seen = [];
+  global.fetch = async function (url, opts) {
+    url = String(url);
+    if (url.indexOf('https://api.umami.is/v1/websites/') === 0) {
+      seen.push({ url: url, key: opts && opts.headers && opts.headers['x-umami-api-key'] });
+      if (url.indexOf('/stats?') >= 0) return new Response(JSON.stringify({ visitors: { value: 40, prev: 0 }, visits: { value: 50 }, pageviews: { value: 120 }, bounces: { value: 20 }, totaltime: { value: 5000 } }));
+      if (url.indexOf('/active?') >= 0) return new Response(JSON.stringify({ visitors: 3 }));
+      if (url.indexOf('/pageviews?') >= 0) return new Response(JSON.stringify({ pageviews: [], sessions: [{ x: '2026-10-26 00:00:00', y: 12 }, { x: '2026-10-27 00:00:00', y: 28 }] }));
+      if (url.indexOf('type=referrer') >= 0) return new Response(JSON.stringify([{ x: 'l.instagram.com', y: 20 }, { x: '', y: 15 }]));
+      if (url.indexOf('type=device') >= 0) return new Response(JSON.stringify([{ x: 'mobile', y: 33 }, { x: 'desktop', y: 7 }]));
+      if (url.indexOf('type=city') >= 0) return new Response(JSON.stringify([{ x: 'Goiânia', y: 30 }]));
+    }
+    return s.fetch(url, opts);
+  };
+  try {
+    var worker = (await import('../worker/src/index.js')).default;
+    var admin = { Authorization: 'Bearer gh-admin' };
+    assert.equal((await call(worker, s.env, 'GET', '/api/admin/visitors')).status, 401, 'só com a chave do painel');
+    var off = await call(worker, s.env, 'GET', '/api/admin/visitors', null, admin);
+    assert.equal(off.data.configured, false, 'sem UMAMI_API_KEY avisa o que falta');
+    s.env.UMAMI_API_KEY = 'api_segredo';
+    s.env.UMAMI_WEBSITE_ID = 'b5e473b2-ecee-410a-a581-880b6b7ec1cb';
+    var r = await call(worker, s.env, 'GET', '/api/admin/visitors?start=0', null, admin);
+    assert.equal(r.status, 200, JSON.stringify(r.data));
+    assert.equal(r.data.totals.visitors, 40);
+    assert.equal(r.data.totals.avgSeconds, 100, '5000 s ÷ 50 visitas');
+    assert.equal(r.data.active, 3);
+    assert.equal(r.data.series.points.length, 2);
+    assert.equal(r.data.referrers[0].name, 'l.instagram.com');
+    assert.ok(seen.every(function (x) { return x.key === 'api_segredo'; }), 'chave enviada só para o Umami');
+    assert.ok(!JSON.stringify(r.data).includes('api_segredo'), 'a chave não volta para o navegador');
+    var startAt = Number(new URL(seen[0].url).searchParams.get('startAt'));
+    assert.equal(startAt, Date.UTC(2026, 9, 26, 3), '"Tudo" começa no dia em que a contagem foi ligada');
+  } finally {
+    global.fetch = realFetch;
+  }
+});
