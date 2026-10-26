@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://akylla-shop-api.akyllashop.workers.dev https://api.akyllashop.com https://viacep.com.br https://nominatim.openstreetmap.org https://router.project-osrm.org; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cloud.umami.is; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://akylla-shop-api.akyllashop.workers.dev https://api.akyllashop.com https://viacep.com.br https://nominatim.openstreetmap.org https://router.project-osrm.org https://cloud.umami.is https://api-gateway.umami.dev; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#060913">
   <title>Política de Privacidade — Akylla Shop</title>
@@ -77,7 +77,7 @@
           </ul>
 
           <h2>2. Cookies, pixels e analytics</h2>
-          <p>Este site <strong>não usa cookies de publicidade, pixels de rastreamento ou ferramentas de analytics</strong>. A única persistência local é a sacola de compras descrita acima, que você pode apagar a qualquer momento limpando os dados do site nas configurações do seu navegador.</p>
+          <p>Este site <strong>não usa cookies nem pixels de publicidade</strong>. Para saber quantas pessoas visitam a loja usamos o <strong>Umami</strong>, uma medição <strong>sem cookies</strong> e sem identificar ninguém: ela conta visitas, páginas vistas, o site de origem, o tipo de aparelho. Não enviamos nome, telefone, e-mail ou endereço para essa medição. A sacola e os dados que você pediu para lembrar ficam só no seu navegador e podem ser apagados limpando os dados do site.</p>
 
           <h2>3. Terceiros envolvidos</h2>
           <p>Para o site funcionar, alguns recursos são carregados de provedores externos, que tratam dados conforme as próprias políticas:</p>
@@ -88,6 +88,7 @@
             <li><strong>Cloudflare</strong> — hospeda o servidor de pedidos (registra acessos técnicos e guarda os pedidos).</li>
             <li><strong>Google</strong> — quando você escolhe "Entrar com Google", confirma sua identidade e nos envia seu nome e e-mail.</li>
             <li><strong>Resend</strong> — envia o e-mail com o código de acesso à conta.</li>
+            <li><strong>Umami</strong> — medição de visitas sem cookies (dados agregados, sem identificar o visitante).</li>
             <li><strong>CallMeBot</strong> — serviço que entrega ao WhatsApp da loja o aviso de cada venda (com os dados do pedido).</li>
             <li><strong>WhatsApp (Meta)</strong> — canal de atendimento e de envio do comprovante, regido pela política de privacidade do próprio WhatsApp.</li>
           </ul>
@@ -133,6 +134,8 @@
   </footer>
 
   <script src="assets/js/config.js?v=20261021-1" defer></script>
+
+  <script src="assets/js/analytics.js?v=20261026-1" defer></script>
   <script>
     window.addEventListener('DOMContentLoaded', function () {
       var year = (window.AKYLLA_CONFIG && window.AKYLLA_CONFIG.year) || new Date().getFullYear();

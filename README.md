@@ -462,6 +462,15 @@ Pode ligar só o Google primeiro: o site mostra só o botão do Google.
 - **Arquivos:** `worker/src/auth.js` (servidor) e `assets/js/conta.js` (site).
 - **Dados (KV):** `conta:<e-mail>`, `sess:<hash>` e `otp:<e-mail>`.
 
+### 5.4 Visitantes do site (Umami)
+
+A loja conta os visitantes com o **Umami**: grátis, **sem cookies** (não precisa de aviso de cookies na LGPD) e sem identificar ninguém.
+
+- **O que mostra:** visitantes, visitas, páginas vistas, de onde vieram (Instagram, Google, WhatsApp…), cidade e país, celular ou computador.
+- **Onde ver:** no painel do Umami ([cloud.umami.is](https://cloud.umami.is)).
+- **Para ligar:** coloque o código do site do Umami (Website ID) em `analytics.umamiWebsiteId`, no arquivo `assets/js/config.js`. Com o campo vazio, nada é medido.
+- **Testes no PC** (`127.0.0.1`) não entram na contagem.
+
 ---
 
 ## 6. Preços, promoções, estoque e frete
