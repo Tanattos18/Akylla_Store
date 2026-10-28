@@ -1062,7 +1062,7 @@ window.AKYLLA_PRODUCTS = [
     "category": "drones",
     "visual": "drone",
     "price": 22580,
-    "stock": 2,
+    "stock": 1,
     "summary": "Câmera HD, sensor de obstáculos e estrutura articulada.",
     "description": "Drone articulado com câmera HD, sensor de obstáculos e controle remoto em 2.4 GHz. Dobrável e fácil de transportar, ideal para primeiros voos e registros aéreos.",
     "image": "assets/img/products/drone-wrj12618.webp",
