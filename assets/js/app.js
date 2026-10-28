@@ -737,6 +737,16 @@
     if (multiple) showDialogPhoto(product, 0);
   }
 
+  /* Link direto para um produto (ofertas no WhatsApp, posts): akyllashop.com/?produto=<id> abre os detalhes. */
+  function openLinkedProduct() {
+    var id = '';
+    try { id = new URLSearchParams(window.location.search).get('produto') || ''; } catch (e) { return; }
+    if (!id || !productById(id)) return;
+    var catalog = document.getElementById('produtos');
+    if (catalog && catalog.scrollIntoView) catalog.scrollIntoView();
+    window.setTimeout(function () { openProductDialog(id); }, 150);
+  }
+
   function openProductDialog(id) {
     var product = productById(id);
     if (!product) return;
@@ -2417,6 +2427,7 @@
   setupCatalog();
   setupCart();
   setupProductDialog();
+  openLinkedProduct();
   setupCheckout();
   setupDelivery();
   setupMercadoPago();

@@ -1563,7 +1563,9 @@
     var live = state.products.filter(function (p) { return !p.hidden && sellable(p) > 0 && !bought[p.id]; });
     var score = function (p) { var i = Promo.priceFor(p, state.config); return (cats[p.category] ? 10 : 0) + (i.active ? 3 : 0) + (p.bestseller ? 2 : 0); };
     live.sort(function (a, b) { return score(b) - score(a); });
-    return live[0] || null;
+    /* sorteia entre os 5 mais indicados para o cliente: cada clique em "Oferta" traz uma sugestão diferente */
+    var top = live.slice(0, 5);
+    return top.length ? top[Math.floor(Math.random() * top.length)] : null;
   }
 
   function offerLink(c) {
@@ -1572,8 +1574,8 @@
     if (!p || !digits) return '';
     var info = Promo.priceFor(p, state.config);
     var first = String(c.name || '').trim().split(/\s+/)[0] || '';
-    var link = 'https://akyllashop.com/?origem=whatsapp-oferta-' + p.id.slice(0, 20);
-    var text = 'Oi' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop 🧡 ' +
+    var link = 'https://akyllashop.com/?produto=' + encodeURIComponent(p.id) + '&origem=whatsapp-oferta-' + p.id.slice(0, 20);
+    var text = 'Oi' + (first ? ', ' + first : '') + '! Aqui é da Akylla Shop. ' +
       (c.paid ? 'Como você já é nosso cliente, separei uma oferta especial: ' : 'Separei uma oferta pra você: ') +
       p.shortName + (info.active ? ' de ' + brl(info.original) + ' por ' + brl(info.price) : ' por ' + brl(info.price)) + ' no PIX' +
       (info.active && info.until ? ' (até ' + Promo.formatDay(info.until) + ')' : '') + '. Quer que eu separe o seu? ' + link +
