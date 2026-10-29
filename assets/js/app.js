@@ -740,7 +740,19 @@
   /* Link direto para um produto (ofertas no WhatsApp, posts): akyllashop.com/?produto=<id> abre os detalhes. */
   function openLinkedProduct() {
     var id = '';
-    try { id = new URLSearchParams(window.location.search).get('produto') || ''; } catch (e) { return; }
+    var origem = '';
+    try {
+      var q = new URLSearchParams(window.location.search);
+      id = q.get('produto') || '';
+      origem = q.get('origem') || '';
+    } catch (e) { return; }
+    /* links antigos das ofertas: ?origem=whatsapp-oferta-<id do produto, até 20 letras> */
+    if (!id && /^whatsapp-oferta-/.test(origem)) {
+      var slug = origem.slice('whatsapp-oferta-'.length);
+      var found = PRODUCTS.find(function (p) { return p.id === slug; }) ||
+        (slug.length >= 20 ? PRODUCTS.find(function (p) { return p.id.indexOf(slug) === 0; }) : null);
+      id = found ? found.id : '';
+    }
     if (!id || !productById(id)) return;
     var catalog = document.getElementById('produtos');
     if (catalog && catalog.scrollIntoView) catalog.scrollIntoView();
